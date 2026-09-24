@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JEVO — Agent Memory</title>
+  <style>
+    :root{
+      --bg:#0b0d0b;
+      --panel:#0f120f;
+      --panel2:#121612;
+      --text:#eef2e7;
+      --muted:#899184;
+      --line:rgba(238,242,231,.11);
+      --line2:rgba(238,242,231,.20);
+      --accent:#d7ff3f;
+      --accent-soft:rgba(215,255,63,.08);
+      --danger:#ff7168;
+      --warn:#ffbf63;
+      --mono:"SFMono-Regular","SF Mono","Roboto Mono","Cascadia Code",Menlo,monospace;
+      --sans:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      --max:1540px;
+    }
+
+    *{box-sizing:border-box}
+    html{background:var(--bg)}
+    body{
+      margin:0;
+      color:var(--text);
+      font-family:var(--sans);
+      background:
+        linear-gradient(rgba(255,255,255,.017) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(255,255,255,.017) 1px,transparent 1px),
+        var(--bg);
+      background-size:40px 40px;
+    }
+
+    a{color:inherit;text-decoration:none}
+    button,input{font:inherit;color:inherit}
+    .shell{width:min(calc(100% - 32px),var(--max));margin:0 auto}
+    .tiny{
+      font-family:var(--mono);
+      font-size:8px;
+      letter-spacing:.09em;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+
+    .topbar{
+      position:sticky;
+      top:0;
+      z-index:50;
+      background:rgba(11,13,11,.94);
+      backdrop-filter:blur(14px);
+      border-bottom:1px solid var(--line);
+    }
+
+    .topbar-inner{
+      min-height:58px;
+      display:grid;
+      grid-template-columns:220px 1fr auto;
+      align-items:center;
+      gap:24px;
+    }
+
+    .brand{
+      font-family:var(--mono);
+      font-weight:800;
+      letter-spacing:-.07em;
+      font-size:18px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+
+    .mark{width:22px;height:22px;border:1px solid var(--line2);position:relative}
+    .mark:before,.mark:after{content:"";position:absolute;left:50%;top:50%;background:var(--accent)}
+    .mark:before{width:1px;height:28px;transform:translate(-50%,-50%) rotate(45deg)}
+    .mark:after{width:28px;height:1px;transform:translate(-50%,-50%) rotate(-45deg)}
+
+    .crumbs{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      font-family:var(--mono);
+      font-size:9px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--muted);
+    }
+    .crumbs strong{color:var(--text);font-weight:500}
+
+    .agent-state{
+      display:flex;
+      gap:16px;
+      align-items:center;
+      font-family:var(--mono);
+      font-size:8px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--muted);
+    }
+    .dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+    .agent-state b{color:var(--accent);font-weight:500}
+
+    .memory-strip{
+      border-bottom:1px solid var(--line);
+      background:rgba(11,13,11,.72);
+    }
+
+    .memory-strip-inner{
+      min-height:128px;
+      display:grid;
+      grid-template-columns:1.45fr repeat(5,minmax(120px,.58fr));
+      align-items:stretch;
+    }
+
+    .memory-main{
+      padding-right:28px;
+      border-right:1px solid var(--line);
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+    }
+
+    .memory-title{
+      font-size:44px;
+      line-height:.9;
+      font-weight:780;
+      letter-spacing:-.065em;
+      text-transform:uppercase;
+    }
+
+    .memory-sub{
+      margin-top:12px;
+      color:var(--muted);
+      font-size:11px;
+      line-height:1.6;
+      max-width:720px;
+    }
+
+    .stat{
+      padding:22px 16px;
+      border-right:1px solid var(--line);
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+    }
+    .stat:last-child{border-right:0}
+    .stat strong{
+      margin-top:10px;
+      font-family:var(--mono);
+      font-size:22px;
+      font-weight:500;
+      letter-spacing:-.05em;
+    }
+    .stat .accent{color:var(--accent)}
+
+    .controls{
+      border-bottom:1px solid var(--line);
+      background:rgba(11,13,11,.56);
+    }
+
+    .controls-inner{
+      min-height:62px;
+      display:grid;
+      grid-template-columns:1fr auto;
+      align-items:center;
+      gap:16px;
+    }
+
+    .search{
+      width:min(430px,100%);
+      height:38px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.015);
+      padding:0 12px;
+      outline:none;
+      font-family:var(--mono);
+      font-size:9px;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+    }
+
+    .filters{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    .filter-btn{
+      height:34px;
+      padding:0 10px;
+      border:1px solid var(--line);
+      background:transparent;
+      font-family:var(--mono);
+      font-size:8px;
+      text-transform:uppercase;
+      letter-spacing:.07em;
+      color:var(--muted);
+      cursor:pointer;
+    }
+    .filter-btn.active{
+      color:var(--accent);
+      border-color:rgba(215,255,63,.28);
+      background:var(--accent-soft);
+    }
+
+    .workspace{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) 410px;
+      border-bottom:1px solid var(--line);
+      align-items:start;
+    }
+
+    .main{
+      min-width:0;
+      border-right:1px solid var(--line);
+    }
+
+    .rail{
+      min-width:0;
+      background:rgba(13,16,13,.72);
+      position:sticky;
+      top:58px;
+      align-self:start;
+    }
+
+    .block{border-bottom:1px solid var(--line)}
+    .block-head{
+      min-height:64px;
+      padding:0 22px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:20px;
+      border-bottom:1px solid var(--line);
+    }
+
+    .block-title{
+      font-family:var(--mono);
+      font-size:10px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .block-meta{
+      font-family:var(--mono);
+      font-size:8px;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .timeline{
+      position:relative;
+      padding:10px 22px 24px;
+    }
+
+    .timeline:before{
+      content:"";
+      position:absolute;
+      top:28px;
+      bottom:28px;
+      left:49px;
+      width:1px;
+      background:var(--line);
+    }
+
+    .memory-row{
+      position:relative;
+      display:grid;
+      grid-template-columns:54px 118px minmax(0,1fr) 110px;
+      gap:18px;
+      align-items:start;
+      padding:18px 0;
+      border-bottom:1px solid rgba(238,242,231,.065);
+      cursor:pointer;
+      transition:background .16s ease;
+    }
+
+    .memory-row:hover{background:rgba(255,255,255,.014)}
+    .memory-row.active{
+      background:linear-gradient(90deg,rgba(215,255,63,.045),transparent 75%);
+    }
+
+    .memory-dot{
+      width:11px;
+      height:11px;
+      margin:3px auto 0;
+      border-radius:50%;
+      border:2px solid #6d7569;
+      background:var(--bg);
+      position:relative;
+      z-index:2;
+    }
+
+    .memory-row.active .memory-dot{
+      border-color:var(--accent);
+      background:var(--accent);
+      box-shadow:0 0 0 5px rgba(215,255,63,.06);
+    }
+
+    .memory-time{
+      font-family:var(--mono);
+      font-size:9px;
+      color:var(--muted);
+      line-height:1.55;
+    }
+
+    .memory-copy strong{
+      display:block;
+      font-size:14px;
+      font-weight:580;
+      letter-spacing:-.025em;
+    }
+
+    .memory-copy p{
+      margin:7px 0 0;
+      color:#abb2a5;
+      font-size:11px;
+      line-height:1.65;
+    }
+
+    .memory-tags{
+      margin-top:10px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:5px;
+    }
+
+    .tag{
+      padding:4px 6px;
+      border:1px solid var(--line);
+      font-family:var(--mono);
+      font-size:7px;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.06em;
+    }
+
+    .memory-type{
+      justify-self:end;
+      padding:6px 7px;
+      border:1px solid var(--line);
+      font-family:var(--mono);
+      font-size:7px;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+      color:var(--muted);
+    }
+
+    .memory-type.hot{
+      color:var(--accent);
+      border-color:rgba(215,255,63,.25);
+      background:var(--accent-soft);
+    }
+
+    .cycle-grid{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      border-left:1px solid var(--line);
+    }
+
+    .cycle-card{
+      min-height:180px;
+      padding:18px;
+      border-right:1px solid var(--line);
+      border-bottom:1px solid var(--line);
+      cursor:pointer;
+      transition:background .16s ease;
+    }
+
+    .cycle-card:hover{background:rgba(255,255,255,.014)}
+    .cycle-card.active{background:var(--accent-soft)}
+
+    .cycle-card strong{
+      display:block;
+      margin-top:12px;
+      font-family:var(--mono);
+      font-size:24px;
+      font-weight:500;
+      letter-spacing:-.05em;
+    }
+
+    .cycle-card p{
+      margin:12px 0 0;
+      color:var(--muted);
+      font-size:10px;
+      line-height:1.6;
+    }
+
+    .cycle-footer{
+      margin-top:18px;
+      padding-top:12px;
+      border-top:1px solid var(--line);
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      font-family:var(--mono);
+      font-size:7px;
+      color:var(--muted);
+      text-transform:uppercase;
+    }
+
+    .comparison{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      min-height:390px;
+    }
+
+    .compare-panel{
+      padding:22px;
+    }
+    .compare-panel + .compare-panel{border-left:1px solid var(--line)}
+
+    .compare-title{
+      margin-top:14px;
+      font-size:26px;
+      letter-spacing:-.05em;
+    }
+
+    .compare-list{
+      margin-top:20px;
+      border-top:1px solid var(--line);
+    }
+
+    .compare-row{
+      display:grid;
+      grid-template-columns:150px 1fr auto;
+      gap:16px;
+      align-items:center;
+      padding:13px 0;
+      border-bottom:1px solid var(--line);
+      font-family:var(--mono);
+      font-size:8px;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+
+    .compare-row strong{color:var(--text);font-weight:500}
+    .compare-row .delta{color:var(--accent)}
+
+    .rank-map{
+      margin-top:22px;
+      display:grid;
+      gap:10px;
+    }
+
+    .rank-line{
+      display:grid;
+      grid-template-columns:60px 1fr 48px;
+      gap:12px;
+      align-items:center;
+      font-family:var(--mono);
+      font-size:8px;
+      color:var(--muted);
+    }
+
+    .rank-bar{
+      height:4px;
+      background:rgba(238,242,231,.08);
+    }
+    .rank-bar span{
+      display:block;
+      height:100%;
+      width:var(--w);
+      background:var(--accent);
+    }
+
+    .rail-section{border-bottom:1px solid var(--line)}
+    .rail-head{
+      min-height:58px;
+      padding:0 18px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      border-bottom:1px solid var(--line);
+    }
+
+    .rail-body{padding:20px 18px}
+
+    .memory-id{
+      font-family:var(--mono);
+      font-size:42px;
+      line-height:.9;
+      letter-spacing:-.07em;
+      color:var(--accent);
+    }
+
+    .detail-title{
+      margin-top:20px;
+      font-size:26px;
+      line-height:1;
+      letter-spacing:-.05em;
+    }
+
+    .detail-copy{
+      margin-top:12px;
+      color:#aeb5a8;
+      font-size:11px;
+      line-height:1.7;
+    }
+
+    .facts{
+      margin-top:22px;
+      border-top:1px solid var(--line);
+    }
+
+    .fact{
+      display:flex;
+      justify-content:space-between;
+      gap:14px;
+      padding:10px 0;
+      border-bottom:1px solid var(--line);
+      font-family:var(--mono);
+      font-size:8px;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+    .fact strong{color:var(--text);font-weight:500}
+
+    .related-list{
+      display:grid;
+      gap:0;
+      border-top:1px solid var(--line);
+    }
+
+    .related-item{
+      padding:13px 0;
+      border-bottom:1px solid var(--line);
+    }
+
+    .related-item strong{
+      display:block;
+      font-size:13px;
+      font-weight:560;
+    }
+
+    .related-item span{
+      display:block;
+      margin-top:5px;
+      color:var(--muted);
+      font-family:var(--mono);
+      font-size:7px;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+    }
+
+    .lower{
+      border-bottom:1px solid var(--line);
+    }
+
+    .lower-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr 1fr;
+    }
+
+    .lower-card{
+      min-height:230px;
+      padding:22px;
+      border-right:1px solid var(--line);
+    }
+    .lower-card:last-child{border-right:0}
+
+    .lower-card h3{
+      margin:14px 0 0;
+      font-size:24px;
+      letter-spacing:-.05em;
+    }
+
+    .lower-card p{
+      margin:12px 0 0;
+      color:var(--muted);
+      font-size:11px;
+      line-height:1.65;
+    }
+
+    .mini-list{
+      margin-top:18px;
+      display:grid;
+      gap:9px;
+    }
+
+    .mini-line{
+      display:flex;
+      justify-content:space-between;
+      gap:14px;
+      border-bottom:1px solid rgba(238,242,231,.065);
+      padding-bottom:8px;
+      font-family:var(--mono);
+      font-size:8px;
+      color:var(--muted);
+      text-transform:uppercase;
+    }
+    .mini-line strong{color:var(--text);font-weight:500}
+
+    @media(max-width:1100px){
+      .memory-strip-inner{grid-template-columns:1.2fr repeat(3,1fr)}
+      .memory-strip-inner .stat:nth-last-child(-n+2){display:none}
+      .workspace{grid-template-columns:1fr}
+      .main{border-right:0}
+      .rail{position:static;border-top:1px solid var(--line)}
+      .cycle-grid{grid-template-columns:1fr 1fr}
+      .comparison{grid-template-columns:1fr}
+      .compare-panel + .compare-panel{border-left:0;border-top:1px solid var(--line)}
+      .lower-grid{grid-template-columns:1fr}
+      .lower-card{border-right:0;border-bottom:1px solid var(--line)}
+    }
+
+    @media(max-width:760px){
+      .shell{width:min(calc(100% - 20px),var(--max))}
+      .topbar-inner{grid-template-columns:1fr auto}
+      .crumbs{display:none}
+      .agent-state span:not(:first-child),.agent-state b{display:none}
+      .memory-strip-inner{grid-template-columns:1fr 1fr}
+      .memory-main{grid-column:1/-1;border-right:0;border-bottom:1px solid var(--line);padding:20px 0}
+      .memory-strip-inner .stat:nth-of-type(n+4){display:none}
+      .controls-inner{grid-template-columns:1fr}
+      .filters{justify-content:flex-start;padding-bottom:12px}
+      .search{width:100%}
+      .memory-row{
+        grid-template-columns:38px 1fr 84px;
+      }
+      .memory-row .memory-time{display:none}
+      .cycle-grid{grid-template-columns:1fr}
+      .comparison{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="shell topbar-inner">
+      <a class="brand" href="#">
+        <span class="mark"></span>
+        JEVO
+      </a>
+
+      <div class="crumbs">
+        <span>Agent</span>
+        <span>/</span>
+        <strong>Memory</strong>
+      </div>
+
+      <div class="agent-state">
+        <span class="dot"></span>
+        <span>JEV <b>ACTIVE</b></span>
+        <span>Memory state synced</span>
+      </div>
+    </div>
+  </div>
+
+  <section class="memory-strip">
+    <div class="shell memory-strip-inner">
+      <div class="memory-main">
+        <div class="tiny">Persistent agent state</div>
+        <div class="memory-title">Agent Memory</div>
+        <div class="memory-sub">
+          Every meaningful state change is retained so JEVO can compare what was true,
+          what changed, why it changed, and what action followed.
+        </div>
+      </div>
+
+      <div class="stat">
+        <span class="tiny">Decisions retained</span>
+        <strong class="accent">6,921</strong>
+      </div>
+      <div class="stat">
+        <span class="tiny">Cycles indexed</span>
+        <strong>9841</strong>
+      </div>
+      <div class="stat">
+        <span class="tiny">Rank changes</span>
+        <strong>1,284</strong>
+      </div>
+      <div class="stat">
+        <span class="tiny">Pair proposals</span>
+        <strong>243</strong>
+      </div>
+      <div class="stat">
+        <span class="tiny">Launch states</span>
+        <strong>37</strong>
+      </div>
+    </div>
+  </section>
+
+  <section class="controls">
+    <div class="shell controls-inner">
+      <input id="search" class="search" type="search" placeholder="Search asset, decision, pair, cycle..." />
+
+      <div class="filters">
+        <button class="filter-btn active" data-filter="all">All Memory</button>
+        <button class="filter-btn" data-filter="decision">Decisions</button>
+        <button class="filter-btn" data-filter="ranking">Rank Changes</button>
+        <button class="filter-btn" data-filter="pairing">Pairings</button>
+        <button class="filter-btn" data-filter="launch">Launch</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="shell workspace">
+    <main class="main">
+      <section class="block">
+        <div class="block-head">
+          <div class="block-title">Memory Timeline</div>
+          <div class="block-meta">Newest first / observable state changes</div>
+        </div>
+
+        <div class="timeline">
+          <div class="memory-row active"
+            data-type="ranking"
+            data-search="nvda promote ranking rank 01 04"
+            data-id="MEM-9841-221"
+            data-title="NVDA promoted #04 → #01"
+            data-copy="Narrative momentum, pair compatibility and social velocity changed enough to move NVDA to the top-ranked opportunity."
+            data-cycle="9841"
+            data-asset="NVDA"
+            data-decision="PROMOTE"
+            data-before="#04 / 93.7"
+            data-after="#01 / 96.8">
+            <div><div class="memory-dot"></div></div>
+            <div class="memory-time">14:31:20<br/>Cycle 9841</div>
+            <div class="memory-copy">
+              <strong>NVDA promoted #04 → #01</strong>
+              <p>Opportunity score changed 93.7 → 96.8 after JEV completed a new decision cycle.</p>
+              <div class="memory-tags">
+                <span class="tag">NVDA</span>
+                <span class="tag">PROMOTE</span>
+                <span class="tag">96.8</span>
+              </div>
+            </div>
+            <div class="memory-type hot">Rank Change</div>
+          </div>
+
+          <div class="memory-row"
+            data-type="pairing"
+            data-search="nvda gpu pair pairing launch candidate"
+            data-id="MEM-9841-214"
+            data-title="NVDA × $GPU became Launch Candidate"
+            data-copy="The pair score increased after the AI infrastructure narrative accelerated and the curated thesis remained valid."
+            data-cycle="9841"
+            data-asset="NVDA × $GPU"
+            data-decision="STRONG PAIR"
+            data-before="Curated / 93.8"
+            data-after="Launch Candidate / 95.4">
+            <div><div class="memory-dot"></div></div>
+            <div class="memory-time">14:31:15<br/>Cycle 9841</div>
+            <div class="memory-copy">
+              <strong>NVDA × $GPU became Launch Candidate</strong>
+              <p>Pair score increased 93.8 → 95.4 after narrative validation.</p>
+              <div class="memory-tags">
+                <span class="tag">NVDA × $GPU</span>
+                <span class="tag">95.4</span>
+                <span class="tag">Launch Candidate</span>
+              </div>
+            </div>
+            <div class="memory-type hot">Pairing</div>
+          </div>
+
+          <div class="memory-row"
+            data-type="decision"
+            data-search="jev decision narrative acceleration nvda"
+            data-id="MEM-9841-209"
+            data-title="JEV classified AI infrastructure as accelerating"
+            data-copy="The narrative cluster changed from STRONG to ACCELERATING and materially affected NVDA's current decision state."
+            data-cycle="9841"
+            data-asset="AI Infrastructure"
+            data-decision="ACCELERATING"
+            data-before="Strong / 91.2"
+            data-after="Accelerating / 98.0">
+            <div><div class="memory-dot"></div></div>
+            <div class="memory-time">14:31:12<br/>Cycle 9841</div>
+            <div class="memory-copy">
+              <strong>AI infrastructure changed state</strong>
+              <p>JEV reclassified the dominant narrative from STRONG → ACCELERATING.</p>
+              <div class="memory-tags">
+                <span class="tag">Narrative</span>
+                <span class="tag">98.0</span>
+                <span class="tag">JEV</span>
+              </div>
+            </div>
+            <div class="memory-type">Decision</div>
+          </div>
+
+          <div class="memory-row"
+            data-type="pairing"
+            data-search="pltr eye curated pairing"
+            data-id="MEM-9839-194"
+            data-title="PLTR × $EYE moved to Curated"
+            data-copy="Human curation approved the pair thesis while the independent pair score remained above the publish threshold."
+            data-cycle="9839"
+            data-asset="PLTR × $EYE"
+            data-decision="CURATE"
+            data-before="Proposed / 88.4"
+            data-after="Curated / 90.1">
+            <div><div class="memory-dot"></div></div>
+            <div class="memory-time">13:52:41<br/>Cycle 9839</div>
+            <div class="memory-copy">
+              <strong>PLTR × $EYE moved to Curated</strong>
+              <p>Pair thesis passed the current human-curation step with score 90.1.</p>
+              <div class="memory-tags">
+                <span class="tag">PLTR</span>
+                <span class="tag">$EYE</span>
+                <span class="tag">Curated</span>
+              </div>
+            </div>
+            <div class="memory-type">Pairing</div>
+          </div>
+
+          <div class="memory-row"
+            data-type="ranking"
+            data-search="tsla demoted rank 01 03"
+            data-id="MEM-9838-182"
+            data-title="TSLA demoted #01 → #03"
+            data-copy="Robotics momentum remained high but relative narrative acceleration weakened versus NVDA and PLTR."
+            data-cycle="9838"
+            data-asset="TSLA"
+            data-decision="DEMOTE"
+            data-before="#01 / 95.0"
+            data-after="#03 / 91.8">
+            <div><div class="memory-dot"></div></div>
+            <div class="memory-time">13:39:08<br/>Cycle 9838</div>
+            <div class="memory-copy">
+              <strong>TSLA demoted #01 → #03</strong>
+              <p>Relative opportunity score decreased as the active narrative cluster shifted.</p>
+              <div class="memory-tags">
+                <span class="tag">TSLA</span>
+                <span class="tag">DEMOTE</span>
+                <span class="tag">91.8</span>
+              </div>
+            </div>
+            <div class="memory-type hot">Rank Change</div>
+          </div>
+
+          <div class="memory-row"
+            data-type="launch"
+            data-search="launch lc 203 confirmed onchain"
+            data-id="MEM-9811-097"
+            data-title="Launch cycle LC-203 confirmed"
+            data-copy="The previous approved launch completed controlled execution and the confirmation state was written to agent memory."
+            data-cycle="9811"
+            data-asset="Prior Launch"
+            data-decision="CONFIRMED"
+            data-before="Submitted"
+            data-after="Confirmed">
+            <div><div class="memory-dot"></div></div>
+            <div class="memory-time">10:18:33<br/>Cycle 9811</div>
+            <div class="memory-copy">
+              <strong>Launch cycle LC-203 confirmed</strong>
+              <p>Controlled execution completed and the onchain state transitioned SUBMITTED → CONFIRMED.</p>
+              <div class="memory-tags">
+                <span class="tag">Launch</span>
+                <span class="tag">Confirmed</span>
+                <span class="tag">LC-203</span>
+              </div>
+            </div>
+            <div class="memory-type hot">Launch</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="block">
+        <div class="block-head">
+          <div class="block-title">Decision Cycles</div>
+          <div class="block-meta">Compare recent autonomous evaluations</div>
+        </div>
+
+        <div class="cycle-grid">
+          <div class="cycle-card active">
+            <span class="tiny">Cycle</span>
+            <strong>9841</strong>
+            <p>NVDA promoted to #01. AI infrastructure accelerated. $GPU became Launch Candidate.</p>
+            <div class="cycle-footer">
+              <span>43 candidates</span>
+              <span>18 changes</span>
+            </div>
+          </div>
+
+          <div class="cycle-card">
+            <span class="tiny">Cycle</span>
+            <strong>9840</strong>
+            <p>NVDA remained #04. TSLA held #01. AI infrastructure classified as STRONG.</p>
+            <div class="cycle-footer">
+              <span>41 candidates</span>
+              <span>11 changes</span>
+            </div>
+          </div>
+
+          <div class="cycle-card">
+            <span class="tiny">Cycle</span>
+            <strong>9839</strong>
+            <p>PLTR × $EYE moved to Curated. Retail-reflexivity signals began to rise.</p>
+            <div class="cycle-footer">
+              <span>39 candidates</span>
+              <span>09 changes</span>
+            </div>
+          </div>
+
+          <div class="cycle-card">
+            <span class="tiny">Cycle</span>
+            <strong>9838</strong>
+            <p>TSLA demoted from #01 after relative robotics narrative strength weakened.</p>
+            <div class="cycle-footer">
+              <span>40 candidates</span>
+              <span>13 changes</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="block">
+        <div class="block-head">
+          <div class="block-title">State Comparison</div>
+          <div class="block-meta">Cycle 9840 → Cycle 9841</div>
+        </div>
+
+        <div class="comparison">
+          <div class="compare-panel">
+            <span class="tiny">Previous state / 9840</span>
+            <div class="compare-title">Before the change</div>
+
+            <div class="compare-list">
+              <div class="compare-row"><span>NVDA rank</span><strong>#04</strong><span>—</span></div>
+              <div class="compare-row"><span>Opportunity</span><strong>93.7</strong><span>—</span></div>
+              <div class="compare-row"><span>Narrative</span><strong>91.2 / Strong</strong><span>—</span></div>
+              <div class="compare-row"><span>Pair score</span><strong>93.8</strong><span>—</span></div>
+              <div class="compare-row"><span>Pair state</span><strong>Curated</strong><span>—</span></div>
+            </div>
+          </div>
+
+          <div class="compare-panel">
+            <span class="tiny">Current state / 9841</span>
+            <div class="compare-title">After JEV re-evaluated</div>
+
+            <div class="compare-list">
+              <div class="compare-row"><span>NVDA rank</span><strong>#01</strong><span class="delta">+3</span></div>
+              <div class="compare-row"><span>Opportunity</span><strong>96.8</strong><span class="delta">+3.1</span></div>
+              <div class="compare-row"><span>Narrative</span><strong>98.0 / Accelerating</strong><span class="delta">+6.8</span></div>
+              <div class="compare-row"><span>Pair score</span><strong>95.4</strong><span class="delta">+1.6</span></div>
+              <div class="compare-row"><span>Pair state</span><strong>Launch Candidate</strong><span class="delta">↑</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="block">
+        <div class="block-head">
+          <div class="block-title">NVDA Memory Path</div>
+          <div class="block-meta">Opportunity score / last 8h</div>
+        </div>
+
+        <div style="padding:22px">
+          <div class="rank-map">
+            <div class="rank-line"><span>08:00</span><div class="rank-bar"><span style="--w:84.2%"></span></div><span>84.2</span></div>
+            <div class="rank-line"><span>10:00</span><div class="rank-bar"><span style="--w:87.1%"></span></div><span>87.1</span></div>
+            <div class="rank-line"><span>12:00</span><div class="rank-bar"><span style="--w:90.4%"></span></div><span>90.4</span></div>
+            <div class="rank-line"><span>14:00</span><div class="rank-bar"><span style="--w:93.7%"></span></div><span>93.7</span></div>
+            <div class="rank-line"><span>NOW</span><div class="rank-bar"><span style="--w:96.8%"></span></div><span>96.8</span></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <aside class="rail">
+      <section class="rail-section">
+        <div class="rail-head">
+          <span class="tiny">Selected memory</span>
+          <span class="tiny" id="detail-cycle">Cycle 9841</span>
+        </div>
+
+        <div class="rail-body">
+          <div class="memory-id" id="detail-id">MEM-9841-221</div>
+          <div class="detail-title" id="detail-title">NVDA promoted #04 → #01</div>
+          <p class="detail-copy" id="detail-copy">
+            Narrative momentum, pair compatibility and social velocity changed enough to move NVDA to the top-ranked opportunity.
+          </p>
+
+          <div class="facts">
+            <div class="fact"><span>Asset</span><strong id="detail-asset">NVDA</strong></div>
+            <div class="fact"><span>Decision</span><strong id="detail-decision">PROMOTE</strong></div>
+            <div class="fact"><span>Previous</span><strong id="detail-before">#04 / 93.7</strong></div>
+            <div class="fact"><span>Current</span><strong id="detail-after">#01 / 96.8</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="rail-section">
+        <div class="rail-head">
+          <span class="tiny">Related Memory</span>
+          <span class="tiny">Current chain</span>
+        </div>
+
+        <div class="rail-body">
+          <div class="related-list">
+            <div class="related-item">
+              <strong>AI infrastructure → Accelerating</strong>
+              <span>Decision / cycle 9841</span>
+            </div>
+            <div class="related-item">
+              <strong>NVDA opportunity 93.7 → 96.8</strong>
+              <span>Score change / cycle 9841</span>
+            </div>
+            <div class="related-item">
+              <strong>NVDA × $GPU 93.8 → 95.4</strong>
+              <span>Pairing / cycle 9841</span>
+            </div>
+            <div class="related-item">
+              <strong>Launch Candidate state created</strong>
+              <span>Lifecycle / cycle 9841</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="rail-section">
+        <div class="rail-head">
+          <span class="tiny">Memory Integrity</span>
+          <span class="tiny">Structured state</span>
+        </div>
+
+        <div class="rail-body">
+          <div class="facts" style="margin-top:0">
+            <div class="fact"><span>Raw chain-of-thought</span><strong>Not stored</strong></div>
+            <div class="fact"><span>Structured evidence</span><strong>Stored</strong></div>
+            <div class="fact"><span>Input features</span><strong>Stored</strong></div>
+            <div class="fact"><span>Previous state</span><strong>Stored</strong></div>
+            <div class="fact"><span>Decision output</span><strong>Stored</strong></div>
+            <div class="fact"><span>Cycle ID</span><strong>Stored</strong></div>
+          </div>
+        </div>
+      </section>
+    </aside>
+  </section>
+
+  <section class="lower">
+    <div class="shell lower-grid">
+      <div class="lower-card">
+        <span class="tiny">What memory means</span>
+        <h3>JEVO does not reset every cycle.</h3>
+        <p>
+          Each evaluation is compared against a previous state so ranking, narrative,
+          pairing and launch changes remain explainable over time.
+        </p>
+      </div>
+
+      <div class="lower-card">
+        <span class="tiny">Current memory scope</span>
+        <div class="mini-list">
+          <div class="mini-line"><span>Opportunity states</span><strong>Tracked</strong></div>
+          <div class="mini-line"><span>JEV decisions</span><strong>Tracked</strong></div>
+          <div class="mini-line"><span>Pairing lifecycle</span><strong>Tracked</strong></div>
+          <div class="mini-line"><span>Launch lifecycle</span><strong>Tracked</strong></div>
+        </div>
+      </div>
+
+      <div class="lower-card">
+        <span class="tiny">Latest memory write</span>
+        <h3>14 seconds ago.</h3>
+        <div class="mini-list">
+          <div class="mini-line"><span>Cycle</span><strong>9841</strong></div>
+          <div class="mini-line"><span>Asset</span><strong>NVDA</strong></div>
+          <div class="mini-line"><span>Action</span><strong>PROMOTE</strong></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    const rows = [...document.querySelectorAll(".memory-row")];
+    const filters = [...document.querySelectorAll(".filter-btn")];
+    const search = document.getElementById("search");
+    let activeFilter = "all";
+
+    function selectMemory(row){
+      rows.forEach(r=>r.classList.remove("active"));
+      row.classList.add("active");
+
+      document.getElementById("detail-id").textContent = row.dataset.id;
+      document.getElementById("detail-title").textContent = row.dataset.title;
+      document.getElementById("detail-copy").textContent = row.dataset.copy;
+      document.getElementById("detail-cycle").textContent = "Cycle " + row.dataset.cycle;
+      document.getElementById("detail-asset").textContent = row.dataset.asset;
+      document.getElementById("detail-decision").textContent = row.dataset.decision;
+      document.getElementById("detail-before").textContent = row.dataset.before;
+      document.getElementById("detail-after").textContent = row.dataset.after;
+    }
+
+    function applyFilters(){
+      const q = search.value.trim().toLowerCase();
+
+      rows.forEach(row=>{
+        const typeMatch = activeFilter === "all" || row.dataset.type === activeFilter;
+        const searchMatch = !q || row.dataset.search.includes(q);
+        row.style.display = typeMatch && searchMatch ? "grid" : "none";
+      });
+
+      const activeVisible = rows.find(r=>r.classList.contains("active") && r.style.display !== "none");
+      if(!activeVisible){
+        const firstVisible = rows.find(r=>r.style.display !== "none");
+        if(firstVisible) selectMemory(firstVisible);
+      }
+    }
+
+    rows.forEach(row=>{
+      row.addEventListener("click",()=>selectMemory(row));
+      row.addEventListener("mouseenter",()=>selectMemory(row));
+    });
+
+    filters.forEach(btn=>{
+      btn.addEventListener("click",()=>{
+        filters.forEach(b=>b.classList.remove("active"));
+        btn.classList.add("active");
+        activeFilter = btn.dataset.filter;
+        applyFilters();
+      });
+    });
+
+    search.addEventListener("input",applyFilters);
+  </script>
+</body>
+</html>

@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NVDA — JEVO Intelligence</title>
+  <style>
+    :root {
+      --bg:#0b0d0b;
+      --panel:#0f120f;
+      --panel2:#121612;
+      --text:#eef2e7;
+      --muted:#899184;
+      --line:rgba(238,242,231,.11);
+      --line2:rgba(238,242,231,.2);
+      --accent:#d7ff3f;
+      --accent-soft:rgba(215,255,63,.08);
+      --danger:#ff7168;
+      --mono:"SFMono-Regular","SF Mono","Roboto Mono","Cascadia Code",Menlo,monospace;
+      --sans:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      --max:1540px;
+    }
+
+    *{box-sizing:border-box}
+    html{background:var(--bg)}
+    body{
+      margin:0;
+      color:var(--text);
+      font-family:var(--sans);
+      background:
+        linear-gradient(rgba(255,255,255,.017) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(255,255,255,.017) 1px,transparent 1px),
+        var(--bg);
+      background-size:40px 40px;
+    }
+
+    a{color:inherit;text-decoration:none}
+    button{font:inherit;color:inherit}
+    .shell{width:min(calc(100% - 32px),var(--max));margin:0 auto}
+    .muted{color:var(--muted)}
+    .accent{color:var(--accent)}
+    .tiny{
+      font-family:var(--mono);
+      font-size:8px;
+      letter-spacing:.09em;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+
+    .topbar{
+      position:sticky;
+      top:0;
+      z-index:50;
+      background:rgba(11,13,11,.94);
+      backdrop-filter:blur(14px);
+      border-bottom:1px solid var(--line);
+    }
+
+    .topbar-inner{
+      min-height:58px;
+      display:grid;
+      grid-template-columns:220px 1fr auto;
+      align-items:center;
+      gap:24px;
+    }
+
+    .brand{
+      font-family:var(--mono);
+      font-weight:800;
+      letter-spacing:-.07em;
+      font-size:18px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+
+    .mark{
+      width:22px;height:22px;border:1px solid var(--line2);position:relative
+    }
+    .mark:before,.mark:after{
+      content:"";position:absolute;left:50%;top:50%;background:var(--accent)
+    }
+    .mark:before{width:1px;height:28px;transform:translate(-50%,-50%) rotate(45deg)}
+    .mark:after{width:28px;height:1px;transform:translate(-50%,-50%) rotate(-45deg)}
+
+    .crumbs{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      font-family:var(--mono);
+      font-size:9px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--muted);
+    }
+    .crumbs strong{color:var(--text);font-weight:500}
+
+    .agent-state{
+      display:flex;
+      gap:16px;
+      align-items:center;
+      font-family:var(--mono);
+      font-size:8px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--muted);
+    }
+    .dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+    .agent-state b{color:var(--accent);font-weight:500}
+
+    .asset-strip{
+      border-bottom:1px solid var(--line);
+      background:rgba(11,13,11,.72);
+    }
+
+    .asset-strip-inner{
+      min-height:112px;
+      display:grid;
+      grid-template-columns:1.4fr repeat(5,minmax(120px,.6fr));
+      align-items:stretch;
+    }
+
+    .asset-main{
+      display:flex;
+      align-items:center;
+      gap:22px;
+      padding-right:28px;
+      border-right:1px solid var(--line);
+    }
+
+    .ticker{
+      font-size:56px;
+      line-height:1;
+      font-weight:800;
+      letter-spacing:-.08em;
+    }
+
+    .asset-meta{
+      display:grid;
+      gap:7px;
+    }
+
+    .asset-meta strong{
+      font-size:14px;
+      font-weight:550;
+    }
+
+    .pill{
+      width:max-content;
+      padding:5px 7px;
+      border:1px solid rgba(215,255,63,.25);
+      background:var(--accent-soft);
+      color:var(--accent);
+      font-family:var(--mono);
+      font-size:8px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .stat{
+      padding:22px 16px;
+      border-right:1px solid var(--line);
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+    }
+
+    .stat:last-child{border-right:0}
+    .stat strong{
+      margin-top:10px;
+      font-family:var(--mono);
+      font-size:22px;
+      font-weight:500;
+      letter-spacing:-.05em;
+    }
+
+    .app-top{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) 390px;
+      align-items:stretch;
+      border-bottom:1px solid var(--line);
+    }
+
+    .top-left{
+      min-width:0;
+      border-right:1px solid var(--line);
+      display:flex;
+      flex-direction:column;
+    }
+
+    .top-right{
+      min-width:0;
+      background:rgba(13,16,13,.72);
+      display:flex;
+      flex-direction:column;
+    }
+
+    .block{border-bottom:1px solid var(--line)}
+    .top-left .block:last-child,
+    .top-right .block:last-child{border-bottom:0}
+
+    .block-head{
+      min-height:64px;
+      padding:0 22px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:20px;
+      border-bottom:1px solid var(--line);
+    }
+
+    .block-title{
+      font-family:var(--mono);
+      font-size:10px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--text);
+    }
+
+    .block-meta{
+      font-family:var(--mono);
+      font-size:8px;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .decision-grid{
+      display:grid;
+      grid-template-columns:1.15fr .85fr;
+      min-height:280px;
+    }
+
+    .decision-summary{
+      padding:28px 22px;
+      border-right:1px solid var(--line);
+    }
+
+    .decision-kicker{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-family:var(--mono);
+      font-size:9px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--muted);
+    }
+
+    .decision-line{
+      margin-top:22px;
+      display:flex;
+      align-items:baseline;
+      gap:18px;
+      flex-wrap:wrap;
+    }
+
+    .decision-line strong{
+      font-size:48px;
+      line-height:.9;
+      letter-spacing:-.07em;
+      color:var(--accent);
+    }
+
+    .decision-line span{
+      font-family:var(--mono);
+      font-size:18px;
+      color:var(--text);
+    }
+
+    .decision-copy{
+      max-width:720px;
+      margin-top:22px;
+      color:#b3baae;
+      line-height:1.65;
+      font-size:13px;
+    }
+
+    .why-now{
+      padding:28px 22px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+    }
+
+    .why-now h2{
+      margin:16px 0 0;
+      font-size:32px;
+      line-height:1;
+      letter-spacing:-.05em;
+      max-width:420px;
+    }
+
+    .why-now h2 span{color:var(--accent)}
+
+    .why-now p{
+      margin:20px 0 0;
+      font-size:12px;
+      line-height:1.65;
+      color:var(--muted);
+    }
+
+    .signal-table{width:100%}
+    .signal-fill{
+      min-height:740px;
+      display:flex;
+      flex-direction:column;
+    }
+
+    .row{
+      display:grid;
+      grid-template-columns:46px minmax(170px,1.1fr) minmax(220px,1fr) 74px 90px;
+      align-items:center;
+      min-height:90px;
+      border-bottom:1px solid rgba(238,242,231,.065);
+      cursor:pointer;
+      position:relative;
+      transition:background .16s ease;
+      flex:1;
+    }
+
+    .row:hover{background:rgba(255,255,255,.015)}
+    .row.active{
+      background:linear-gradient(90deg,rgba(215,255,63,.05),transparent 74%);
+    }
+    .row.active:before{
+      content:"";position:absolute;left:0;top:12px;bottom:12px;width:2px;background:var(--accent)
+    }
+
+    .row > div{padding:0 14px}
+    .idx{font-family:var(--mono);font-size:8px;color:#65705f}
+    .signal-name strong{display:block;font-size:14px;font-weight:560}
+    .signal-name small{
+      display:block;margin-top:4px;
+      font-family:var(--mono);font-size:7px;text-transform:uppercase;color:var(--muted)
+    }
+
+    .barwrap{display:grid;grid-template-columns:1fr 34px;gap:10px;align-items:center}
+    .bar{height:3px;background:rgba(238,242,231,.08)}
+    .bar span{display:block;height:100%;width:var(--w);background:#788174}
+    .row.active .bar span{background:var(--accent)}
+    .score{font-family:var(--mono);font-size:10px;text-align:right}
+    .delta{font-family:var(--mono);font-size:9px;color:var(--accent)}
+    .state{font-family:var(--mono);font-size:8px;color:var(--muted);text-transform:uppercase;text-align:right}
+
+    .inspect-body{
+      padding:22px 18px;
+      display:flex;
+      flex-direction:column;
+      min-height:438px;
+    }
+
+    .big-number{
+      font-family:var(--mono);
+      font-size:64px;
+      line-height:.8;
+      color:var(--accent);
+      letter-spacing:-.09em;
+    }
+
+    .inspect-title{
+      margin-top:20px;
+      font-size:25px;
+      letter-spacing:-.05em;
+    }
+
+    .inspect-copy{
+      margin-top:12px;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.7;
+    }
+
+    .facts{
+      margin-top:22px;
+      border-top:1px solid var(--line);
+    }
+
+    .fact{
+      display:flex;
+      justify-content:space-between;
+      gap:14px;
+      padding:10px 0;
+      border-bottom:1px solid var(--line);
+      font-family:var(--mono);
+      font-size:8px;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+    .fact strong{color:var(--text);font-weight:500}
+
+    .pairing-fill{
+      display:flex;
+      flex-direction:column;
+      min-height:430px;
+    }
+
+    .pair-rail{
+      padding:20px 18px 22px;
+      flex:1;
+      display:flex;
+      flex-direction:column;
+    }
+
+    .pair-item{
+      padding:18px 0;
+      border-bottom:1px solid var(--line);
+      cursor:pointer;
+    }
+    .pair-top{
+      display:flex;
+      justify-content:space-between;
+      gap:14px;
+      align-items:baseline;
+    }
+    .pair-top strong{
+      font-size:24px;
+      letter-spacing:-.055em;
+    }
+    .pair-top strong span{color:var(--accent)}
+    .pair-top em{
+      font-family:var(--mono);
+      font-style:normal;
+      font-size:11px;
+    }
+
+    .pair-item p{
+      margin:9px 0 0;
+      color:var(--muted);
+      font-size:11px;
+      line-height:1.55;
+    }
+
+    .cta{
+      margin-top:auto;
+      height:44px;
+      border:1px solid var(--line2);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:0 14px;
+      font-family:var(--mono);
+      font-size:9px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .fullwidth{
+      border-bottom:1px solid var(--line);
+    }
+
+    .trace-list{
+      padding:0 22px 18px;
+    }
+    .trace-row{
+      display:grid;
+      grid-template-columns:72px 1fr 90px;
+      gap:16px;
+      padding:18px 0;
+      border-bottom:1px solid rgba(238,242,231,.065);
+      font-family:var(--mono);
+      font-size:9px;
+      line-height:1.5;
+    }
+    .trace-row time{color:#64705e}
+    .trace-row .label{color:#aab2a4}
+    .trace-row .label strong{color:var(--text);font-weight:500}
+    .trace-row .type{text-align:right;color:var(--muted);text-transform:uppercase}
+    .trace-row .type.hot{color:var(--accent)}
+
+    .memory-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      min-height:330px;
+    }
+
+    .memory-card{
+      padding:22px;
+      min-height:260px;
+    }
+    .memory-card + .memory-card{border-left:1px solid var(--line)}
+
+    .rank-path{
+      margin-top:28px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      font-family:var(--mono);
+    }
+    .rank-node{
+      min-width:86px;
+      padding:14px 10px;
+      border:1px solid var(--line);
+      text-align:center;
+      font-size:14px;
+    }
+    .rank-node.current{
+      border-color:rgba(215,255,63,.3);
+      color:var(--accent);
+      background:var(--accent-soft);
+    }
+    .rank-arrow{color:#596156;font-size:18px}
+
+    .score-history{
+      margin-top:28px;
+      display:grid;
+      gap:14px;
+      max-width:540px;
+    }
+
+    .history-line{
+      display:grid;
+      grid-template-columns:58px 1fr 46px;
+      align-items:center;
+      gap:14px;
+      font-family:var(--mono);
+      font-size:10px;
+    }
+
+    .history-line .hbar{height:4px;background:rgba(238,242,231,.08)}
+    .history-line .hbar span{
+      display:block;height:100%;width:var(--w);background:var(--accent)
+    }
+
+    @media(max-width:1100px){
+      .asset-strip-inner{grid-template-columns:1.2fr repeat(3,1fr)}
+      .asset-strip-inner .stat:nth-last-child(-n+2){display:none}
+      .app-top{grid-template-columns:1fr}
+      .top-left{border-right:0}
+      .top-right{border-top:1px solid var(--line)}
+      .decision-grid{grid-template-columns:1fr}
+      .decision-summary{border-right:0;border-bottom:1px solid var(--line)}
+      .memory-grid{grid-template-columns:1fr}
+      .memory-card + .memory-card{border-left:0;border-top:1px solid var(--line)}
+    }
+
+    @media(max-width:760px){
+      .shell{width:min(calc(100% - 20px),var(--max))}
+      .topbar-inner{grid-template-columns:1fr auto}
+      .crumbs{display:none}
+      .agent-state span:not(:first-child),.agent-state b{display:none}
+      .asset-strip-inner{grid-template-columns:1fr 1fr}
+      .asset-main{grid-column:1/-1;border-right:0;border-bottom:1px solid var(--line);padding:18px 0}
+      .asset-strip-inner .stat:nth-of-type(n+4){display:none}
+      .ticker{font-size:48px}
+
+      .row{
+        grid-template-columns:34px 1fr 56px;
+        min-height:84px;
+      }
+      .row > div:nth-child(3),.row > div:nth-child(5){display:none}
+
+      .trace-row{
+        grid-template-columns:66px 1fr;
+      }
+      .trace-row .type{display:none}
+
+      .rank-node{min-width:70px;padding:12px 8px;font-size:12px}
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="shell topbar-inner">
+      <a class="brand" href="#">
+        <span class="mark"></span>
+        JEVO
+      </a>
+
+      <div class="crumbs">
+        <span>Agent</span>
+        <span>/</span>
+        <span>Stock Intelligence</span>
+        <span>/</span>
+        <strong>NVDA</strong>
+      </div>
+
+      <div class="agent-state">
+        <span class="dot"></span>
+        <span>JEV <b>ACTIVE</b></span>
+        <span>Cycle 9841</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="asset-strip">
+    <div class="shell asset-strip-inner">
+      <div class="asset-main">
+        <div class="ticker">NVDA</div>
+        <div class="asset-meta">
+          <strong>NVIDIA Stock Token</strong>
+          <span class="pill">Rank #01 / Rising</span>
+        </div>
+      </div>
+
+      <div class="stat">
+        <span class="tiny">Opportunity</span>
+        <strong class="accent">96.8</strong>
+      </div>
+      <div class="stat">
+        <span class="tiny">Previous rank</span>
+        <strong>#04</strong>
+      </div>
+      <div class="stat">
+        <span class="tiny">JEV decision</span>
+        <strong class="accent">PROMOTE</strong>
+      </div>
+      <div class="stat">
+        <span class="tiny">Confidence</span>
+        <strong>94%</strong>
+      </div>
+      <div class="stat">
+        <span class="tiny">Last evaluated</span>
+        <strong>14s</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="shell app-top">
+    <main class="top-left">
+      <section class="block">
+        <div class="block-head">
+          <div class="block-title">Decision Summary</div>
+          <div class="block-meta">Current state / cycle_9841</div>
+        </div>
+
+        <div class="decision-grid">
+          <div class="decision-summary">
+            <div class="decision-kicker">
+              <span class="dot"></span>
+              JEV decision published
+            </div>
+
+            <div class="decision-line">
+              <strong>PROMOTE</strong>
+              <span>#04 → #01</span>
+            </div>
+
+            <p class="decision-copy">
+              JEVO detected accelerating AI infrastructure momentum together with
+              elevated retail attention, persistent cultural relevance and a stronger
+              crypto-native pairing thesis. The result is a state change, not a static score.
+            </p>
+          </div>
+
+          <div class="why-now">
+            <div>
+              <span class="tiny">Why now?</span>
+              <h2>AI infrastructure shifted from <span>strong</span> to <span>accelerating.</span></h2>
+            </div>
+            <p>
+              Narrative pressure increased faster than competing assets while pairability
+              remained high enough to push NVDA above its previous ranking state.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="block signal-fill">
+        <div class="block-head">
+          <div class="block-title">JEV Evaluation</div>
+          <div class="block-meta">Hover or click signal to inspect</div>
+        </div>
+
+        <div class="signal-table">
+          <div class="row active"
+            data-title="Narrative Momentum"
+            data-score="98"
+            data-copy="AI infrastructure became the dominant narrative cluster in this cycle and contributed the largest positive change versus the previous state."
+            data-delta="+7.2"
+            data-state="Accelerating"
+            data-source="Narrative cluster"
+            data-age="18s">
+            <div class="idx">01</div>
+            <div class="signal-name"><strong>Narrative Momentum</strong><small>AI infrastructure</small></div>
+            <div class="barwrap"><div class="bar"><span style="--w:98%"></span></div><div class="score">98</div></div>
+            <div class="delta">+7.2</div>
+            <div class="state">Accelerating</div>
+          </div>
+
+          <div class="row"
+            data-title="Pair Compatibility"
+            data-score="96"
+            data-copy="NVDA translates cleanly into the $GPU concept with strong symbolic compression and minimal narrative loss."
+            data-delta="+5.8"
+            data-state="Very high"
+            data-source="Pairing engine"
+            data-age="21s">
+            <div class="idx">02</div>
+            <div class="signal-name"><strong>Pair Compatibility</strong><small>Stock × meme coherence</small></div>
+            <div class="barwrap"><div class="bar"><span style="--w:96%"></span></div><div class="score">96</div></div>
+            <div class="delta">+5.8</div>
+            <div class="state">Very high</div>
+          </div>
+
+          <div class="row"
+            data-title="Cultural Relevance"
+            data-score="95"
+            data-copy="NVDA remains immediately recognizable across retail, developer and AI-native communities."
+            data-delta="+2.1"
+            data-state="Persistent"
+            data-source="Cultural model"
+            data-age="24s">
+            <div class="idx">03</div>
+            <div class="signal-name"><strong>Cultural Relevance</strong><small>Recognition / simplicity</small></div>
+            <div class="barwrap"><div class="bar"><span style="--w:95%"></span></div><div class="score">95</div></div>
+            <div class="delta">+2.1</div>
+            <div class="state">Persistent</div>
+          </div>
+
+          <div class="row"
+            data-title="Meme Compatibility"
+            data-score="94"
+            data-copy="GPU and compute culture provide a compact meme primitive that is easy to understand without a complicated explanation."
+            data-delta="+3.4"
+            data-state="High"
+            data-source="Meme classifier"
+            data-age="28s">
+            <div class="idx">04</div>
+            <div class="signal-name"><strong>Meme Compatibility</strong><small>Memetic translation</small></div>
+            <div class="barwrap"><div class="bar"><span style="--w:94%"></span></div><div class="score">94</div></div>
+            <div class="delta">+3.4</div>
+            <div class="state">High</div>
+          </div>
+
+          <div class="row"
+            data-title="Crypto Adjacency"
+            data-score="92"
+            data-copy="Compute, autonomous agents and AI infrastructure remain tightly connected to active crypto-native narratives."
+            data-delta="+1.9"
+            data-state="High"
+            data-source="Crypto overlap"
+            data-age="31s">
+            <div class="idx">05</div>
+            <div class="signal-name"><strong>Crypto Adjacency</strong><small>AI × crypto overlap</small></div>
+            <div class="barwrap"><div class="bar"><span style="--w:92%"></span></div><div class="score">92</div></div>
+            <div class="delta">+1.9</div>
+            <div class="state">High</div>
+          </div>
+
+          <div class="row"
+            data-title="Market Momentum"
+            data-score="91"
+            data-copy="Market conditions are supportive, but JEVO does not treat market momentum as the sole reason for promotion."
+            data-delta="+0.8"
+            data-state="Supportive"
+            data-source="Market provider"
+            data-age="14s">
+            <div class="idx">06</div>
+            <div class="signal-name"><strong>Market Momentum</strong><small>Price / volume / volatility</small></div>
+            <div class="barwrap"><div class="bar"><span style="--w:91%"></span></div><div class="score">91</div></div>
+            <div class="delta">+0.8</div>
+            <div class="state">Supportive</div>
+          </div>
+
+          <div class="row"
+            data-title="Social Velocity"
+            data-score="89"
+            data-copy="Conversation velocity increased materially versus the previous decision cycle and strengthened the timing case."
+            data-delta="+18.4%"
+            data-state="Rising"
+            data-source="Social provider"
+            data-age="19s">
+            <div class="idx">07</div>
+            <div class="signal-name"><strong>Social Velocity</strong><small>Attention change</small></div>
+            <div class="barwrap"><div class="bar"><span style="--w:89%"></span></div><div class="score">89</div></div>
+            <div class="delta">+18.4%</div>
+            <div class="state">Rising</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <aside class="top-right">
+      <section class="block">
+        <div class="block-head">
+          <div class="block-title">Selected Signal</div>
+          <div class="block-meta">Live inspector</div>
+        </div>
+        <div class="inspect-body">
+          <div class="big-number" id="inspect-score">98</div>
+          <div class="inspect-title" id="inspect-title">Narrative Momentum</div>
+          <p class="inspect-copy" id="inspect-copy">
+            AI infrastructure became the dominant narrative cluster in this cycle and contributed the largest positive change versus the previous state.
+          </p>
+
+          <div class="facts">
+            <div class="fact"><span>Delta</span><strong id="inspect-delta">+7.2</strong></div>
+            <div class="fact"><span>State</span><strong id="inspect-state">Accelerating</strong></div>
+            <div class="fact"><span>Source</span><strong id="inspect-source">Narrative cluster</strong></div>
+            <div class="fact"><span>Data age</span><strong id="inspect-age">18s</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="block pairing-fill">
+        <div class="block-head">
+          <div class="block-title">Pairing Opportunities</div>
+          <div class="block-meta">3 candidates</div>
+        </div>
+        <div class="pair-rail">
+          <div class="pair-item">
+            <div class="pair-top"><strong>NVDA × <span>$GPU</span></strong><em>95.4</em></div>
+            <p>AI infrastructure × GPU culture × developer relevance.</p>
+          </div>
+          <div class="pair-item">
+            <div class="pair-top"><strong>NVDA × <span>$CUDA</span></strong><em>88.2</em></div>
+            <p>Developer-native technical identity with narrower reach.</p>
+          </div>
+          <div class="pair-item">
+            <div class="pair-top"><strong>NVDA × <span>$COMPUTE</span></strong><em>86.7</em></div>
+            <p>Broader compute thesis with lower symbolic compression.</p>
+          </div>
+
+          <a class="cta" href="#">
+            <span>Open pairing analysis</span>
+            <span>↗</span>
+          </a>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <section class="shell fullwidth">
+    <div class="block">
+      <div class="block-head">
+        <div class="block-title">Decision Trace</div>
+        <div class="block-meta">Observable events only</div>
+      </div>
+
+      <div class="trace-list">
+        <div class="trace-row">
+          <time>14:31:04</time>
+          <div class="label"><strong>Market data updated.</strong> Price, volume and volatility features refreshed.</div>
+          <div class="type">Observe</div>
+        </div>
+        <div class="trace-row">
+          <time>14:31:07</time>
+          <div class="label"><strong>Narrative signal detected.</strong> AI infrastructure exceeded prior baseline.</div>
+          <div class="type hot">Signal</div>
+        </div>
+        <div class="trace-row">
+          <time>14:31:12</time>
+          <div class="label"><strong>JEV decision completed.</strong> NVDA qualified for promotion.</div>
+          <div class="type hot">Jev</div>
+        </div>
+        <div class="trace-row">
+          <time>14:31:15</time>
+          <div class="label"><strong>Pair compatibility updated.</strong> $GPU remained highest-coherence concept.</div>
+          <div class="type">Pair</div>
+        </div>
+        <div class="trace-row">
+          <time>14:31:20</time>
+          <div class="label"><strong>NVDA promoted #04 → #01.</strong> New state published.</div>
+          <div class="type hot">Action</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="block-head">
+        <div class="block-title">Agent Memory</div>
+        <div class="block-meta">Historical movement / last 8h</div>
+      </div>
+
+      <div class="memory-grid">
+        <div class="memory-card">
+          <span class="tiny">Rank history</span>
+          <div class="rank-path">
+            <span class="rank-node">#07</span>
+            <span class="rank-arrow">→</span>
+            <span class="rank-node">#05</span>
+            <span class="rank-arrow">→</span>
+            <span class="rank-node">#04</span>
+            <span class="rank-arrow">→</span>
+            <span class="rank-node">#02</span>
+            <span class="rank-arrow">→</span>
+            <span class="rank-node current">#01</span>
+          </div>
+        </div>
+
+        <div class="memory-card">
+          <span class="tiny">Opportunity score history</span>
+          <div class="score-history">
+            <div class="history-line"><span>08:00</span><div class="hbar"><span style="--w:84.2%"></span></div><span>84.2</span></div>
+            <div class="history-line"><span>10:00</span><div class="hbar"><span style="--w:87.1%"></span></div><span>87.1</span></div>
+            <div class="history-line"><span>12:00</span><div class="hbar"><span style="--w:90.4%"></span></div><span>90.4</span></div>
+            <div class="history-line"><span>14:00</span><div class="hbar"><span style="--w:93.7%"></span></div><span>93.7</span></div>
+            <div class="history-line"><span>NOW</span><div class="hbar"><span style="--w:96.8%"></span></div><span>96.8</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    function selectSignal(row){
+      document.querySelectorAll(".row").forEach(r=>r.classList.remove("active"));
+      row.classList.add("active");
+
+      document.getElementById("inspect-score").textContent=row.dataset.score;
+      document.getElementById("inspect-title").textContent=row.dataset.title;
+      document.getElementById("inspect-copy").textContent=row.dataset.copy;
+      document.getElementById("inspect-delta").textContent=row.dataset.delta;
+      document.getElementById("inspect-state").textContent=row.dataset.state;
+      document.getElementById("inspect-source").textContent=row.dataset.source;
+      document.getElementById("inspect-age").textContent=row.dataset.age;
+    }
+
+    document.querySelectorAll(".row").forEach(row=>{
+      row.addEventListener("mouseenter",()=>selectSignal(row));
+      row.addEventListener("click",()=>selectSignal(row));
+    });
+  </script>
+</body>
+</html>

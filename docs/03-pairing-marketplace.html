@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JEVO — Pairing Marketplace</title>
+  <style>
+    :root{
+      --bg:#0b0d0b;
+      --panel:#0f120f;
+      --panel2:#121612;
+      --text:#eef2e7;
+      --muted:#899184;
+      --line:rgba(238,242,231,.11);
+      --line2:rgba(238,242,231,.20);
+      --accent:#d7ff3f;
+      --accent-soft:rgba(215,255,63,.08);
+      --danger:#ff7168;
+      --warn:#ffbf63;
+      --mono:"SFMono-Regular","SF Mono","Roboto Mono","Cascadia Code",Menlo,monospace;
+      --sans:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      --max:1540px;
+    }
+
+    *{box-sizing:border-box}
+    html{background:var(--bg)}
+    body{
+      margin:0;
+      color:var(--text);
+      font-family:var(--sans);
+      background:
+        linear-gradient(rgba(255,255,255,.017) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(255,255,255,.017) 1px,transparent 1px),
+        var(--bg);
+      background-size:40px 40px;
+    }
+
+    a{color:inherit;text-decoration:none}
+    button,input,select{font:inherit;color:inherit}
+    .shell{width:min(calc(100% - 32px),var(--max));margin:0 auto}
+    .tiny{
+      font-family:var(--mono);
+      font-size:8px;
+      letter-spacing:.09em;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+
+    .topbar{
+      position:sticky;
+      top:0;
+      z-index:50;
+      background:rgba(11,13,11,.94);
+      backdrop-filter:blur(14px);
+      border-bottom:1px solid var(--line);
+    }
+
+    .topbar-inner{
+      min-height:58px;
+      display:grid;
+      grid-template-columns:220px 1fr auto;
+      align-items:center;
+      gap:24px;
+    }
+
+    .brand{
+      font-family:var(--mono);
+      font-weight:800;
+      letter-spacing:-.07em;
+      font-size:18px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+
+    .mark{width:22px;height:22px;border:1px solid var(--line2);position:relative}
+    .mark:before,.mark:after{content:"";position:absolute;left:50%;top:50%;background:var(--accent)}
+    .mark:before{width:1px;height:28px;transform:translate(-50%,-50%) rotate(45deg)}
+    .mark:after{width:28px;height:1px;transform:translate(-50%,-50%) rotate(-45deg)}
+
+    .crumbs{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      font-family:var(--mono);
+      font-size:9px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--muted);
+    }
+    .crumbs strong{color:var(--text);font-weight:500}
+
+    .agent-state{
+      display:flex;
+      gap:16px;
+      align-items:center;
+      font-family:var(--mono);
+      font-size:8px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--muted);
+    }
+    .dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+    .agent-state b{color:var(--accent);font-weight:500}
+
+    .market-head{
+      border-bottom:1px solid var(--line);
+      background:rgba(11,13,11,.72);
+    }
+
+    .market-head-inner{
+      min-height:138px;
+      display:grid;
+      grid-template-columns:1.25fr repeat(4,minmax(120px,.55fr));
+      align-items:stretch;
+    }
+
+    .market-title{
+      padding:28px 28px 28px 0;
+      border-right:1px solid var(--line);
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+    }
+
+    .market-title h1{
+      margin:10px 0 0;
+      font-size:44px;
+      line-height:.92;
+      letter-spacing:-.06em;
+      text-transform:uppercase;
+    }
+
+    .market-title p{
+      margin:14px 0 0;
+      max-width:650px;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.65;
+    }
+
+    .stat{
+      padding:22px 16px;
+      border-right:1px solid var(--line);
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+    }
+    .stat:last-child{border-right:0}
+    .stat strong{
+      margin-top:10px;
+      font-family:var(--mono);
+      font-size:22px;
+      font-weight:500;
+      letter-spacing:-.05em;
+    }
+    .stat .accent{color:var(--accent)}
+
+    .controls{
+      border-bottom:1px solid var(--line);
+      background:rgba(11,13,11,.55);
+    }
+
+    .controls-inner{
+      min-height:64px;
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:16px;
+      align-items:center;
+    }
+
+    .search-wrap{
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+
+    .search{
+      width:min(440px,100%);
+      height:38px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.015);
+      padding:0 12px;
+      outline:none;
+      font-family:var(--mono);
+      font-size:9px;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+    }
+
+    .search:focus{border-color:rgba(215,255,63,.25)}
+
+    .filters{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    .filter-btn{
+      height:34px;
+      padding:0 10px;
+      border:1px solid var(--line);
+      background:transparent;
+      font-family:var(--mono);
+      font-size:8px;
+      text-transform:uppercase;
+      letter-spacing:.07em;
+      color:var(--muted);
+      cursor:pointer;
+    }
+    .filter-btn.active{
+      color:var(--accent);
+      border-color:rgba(215,255,63,.28);
+      background:var(--accent-soft);
+    }
+
+    .workspace{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) 410px;
+      align-items:stretch;
+      border-bottom:1px solid var(--line);
+    }
+
+    .list{
+      border-right:1px solid var(--line);
+      min-width:0;
+    }
+
+    .list-head,
+    .pair-row{
+      display:grid;
+      grid-template-columns:54px minmax(170px,1.1fr) minmax(170px,.95fr) 92px 120px 110px;
+      align-items:center;
+    }
+
+    .list-head{
+      min-height:48px;
+      border-bottom:1px solid var(--line);
+      font-family:var(--mono);
+      font-size:8px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--muted);
+    }
+
+    .list-head > div,
+    .pair-row > div{padding:0 14px}
+
+    .pair-row{
+      min-height:98px;
+      border-bottom:1px solid rgba(238,242,231,.065);
+      cursor:pointer;
+      position:relative;
+      transition:background .16s ease;
+    }
+    .pair-row:hover{background:rgba(255,255,255,.015)}
+    .pair-row.active{
+      background:linear-gradient(90deg,rgba(215,255,63,.055),transparent 72%);
+    }
+    .pair-row.active:before{
+      content:"";
+      position:absolute;
+      left:0;
+      top:12px;
+      bottom:12px;
+      width:2px;
+      background:var(--accent);
+    }
+
+    .rank{
+      font-family:var(--mono);
+      font-size:9px;
+      color:#667060;
+    }
+
+    .pair-name strong{
+      display:block;
+      font-size:26px;
+      line-height:1;
+      letter-spacing:-.055em;
+      font-weight:720;
+    }
+    .pair-name strong span{color:var(--accent)}
+    .pair-name small{
+      display:block;
+      margin-top:7px;
+      font-family:var(--mono);
+      font-size:7px;
+      color:var(--muted);
+      text-transform:uppercase;
+    }
+
+    .stock-cell strong{
+      display:block;
+      font-size:14px;
+      font-weight:560;
+    }
+    .stock-cell small{
+      display:block;
+      margin-top:5px;
+      font-family:var(--mono);
+      font-size:7px;
+      color:var(--muted);
+      text-transform:uppercase;
+    }
+
+    .score{
+      font-family:var(--mono);
+      font-size:15px;
+    }
+
+    .status{
+      width:max-content;
+      padding:6px 7px;
+      border:1px solid var(--line);
+      font-family:var(--mono);
+      font-size:7px;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+      color:var(--muted);
+    }
+    .status.hot{
+      color:var(--accent);
+      border-color:rgba(215,255,63,.25);
+      background:var(--accent-soft);
+    }
+    .status.warn{
+      color:var(--warn);
+      border-color:rgba(255,191,99,.22);
+    }
+
+    .why{
+      font-family:var(--mono);
+      font-size:8px;
+      color:var(--muted);
+      text-transform:uppercase;
+      line-height:1.45;
+    }
+
+    .inspector{
+      background:rgba(13,16,13,.72);
+      min-width:0;
+      display:flex;
+      flex-direction:column;
+    }
+
+    .inspector-head{
+      min-height:58px;
+      border-bottom:1px solid var(--line);
+      padding:0 18px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+    }
+
+    .inspector-body{
+      padding:22px 18px;
+      flex:1;
+      display:flex;
+      flex-direction:column;
+    }
+
+    .inspect-pair{
+      font-size:40px;
+      line-height:.92;
+      letter-spacing:-.065em;
+      font-weight:760;
+    }
+    .inspect-pair span{color:var(--accent)}
+
+    .inspect-stock{
+      margin-top:10px;
+      font-family:var(--mono);
+      font-size:8px;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .score-card{
+      margin-top:22px;
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      border-top:1px solid var(--line);
+      border-left:1px solid var(--line);
+    }
+
+    .score-card > div{
+      padding:15px;
+      border-right:1px solid var(--line);
+      border-bottom:1px solid var(--line);
+    }
+
+    .score-card strong{
+      display:block;
+      margin-top:8px;
+      font-family:var(--mono);
+      font-size:20px;
+      font-weight:500;
+    }
+
+    .thesis{
+      margin-top:22px;
+      padding-top:18px;
+      border-top:1px solid var(--line);
+    }
+
+    .thesis p{
+      margin:10px 0 0;
+      color:#aeb5a8;
+      font-size:12px;
+      line-height:1.7;
+    }
+
+    .thesis-grid{
+      margin-top:18px;
+      display:grid;
+      gap:10px;
+    }
+
+    .thesis-item{
+      display:grid;
+      grid-template-columns:92px 1fr;
+      gap:14px;
+      padding:10px 0;
+      border-bottom:1px solid rgba(238,242,231,.065);
+    }
+
+    .thesis-item strong{
+      font-family:var(--mono);
+      font-size:8px;
+      text-transform:uppercase;
+      letter-spacing:.07em;
+      color:var(--muted);
+      font-weight:500;
+    }
+
+    .thesis-item span{
+      font-size:11px;
+      line-height:1.55;
+      color:#bcc2b7;
+    }
+
+    .lifecycle{
+      margin-top:22px;
+      border-top:1px solid var(--line);
+      padding-top:18px;
+    }
+
+    .life-steps{
+      margin-top:12px;
+      display:grid;
+      grid-template-columns:repeat(6,1fr);
+      border-top:1px solid var(--line);
+      border-left:1px solid var(--line);
+    }
+
+    .life-step{
+      min-height:54px;
+      padding:9px 6px;
+      border-right:1px solid var(--line);
+      border-bottom:1px solid var(--line);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      font-family:var(--mono);
+      font-size:7px;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+    .life-step.done{color:var(--text)}
+    .life-step.current{
+      color:var(--accent);
+      background:var(--accent-soft);
+    }
+
+    .cta{
+      margin-top:auto;
+      height:44px;
+      border:1px solid var(--line2);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:0 14px;
+      font-family:var(--mono);
+      font-size:9px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .lower{
+      border-bottom:1px solid var(--line);
+    }
+
+    .lower-head{
+      min-height:64px;
+      padding:0 22px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:20px;
+      border-bottom:1px solid var(--line);
+    }
+
+    .lower-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr 1fr;
+    }
+
+    .lower-card{
+      min-height:220px;
+      padding:22px;
+      border-right:1px solid var(--line);
+    }
+    .lower-card:last-child{border-right:0}
+
+    .lower-card h3{
+      margin:14px 0 0;
+      font-size:24px;
+      letter-spacing:-.05em;
+    }
+
+    .lower-card p{
+      margin:12px 0 0;
+      color:var(--muted);
+      font-size:11px;
+      line-height:1.65;
+    }
+
+    .mini-list{
+      margin-top:18px;
+      display:grid;
+      gap:9px;
+    }
+
+    .mini-line{
+      display:flex;
+      justify-content:space-between;
+      gap:14px;
+      border-bottom:1px solid rgba(238,242,231,.065);
+      padding-bottom:8px;
+      font-family:var(--mono);
+      font-size:8px;
+      color:var(--muted);
+      text-transform:uppercase;
+    }
+    .mini-line strong{color:var(--text);font-weight:500}
+
+    @media(max-width:1100px){
+      .market-head-inner{grid-template-columns:1fr repeat(2,1fr)}
+      .market-head-inner .stat:nth-last-child(-n+2){display:none}
+      .workspace{grid-template-columns:1fr}
+      .list{border-right:0}
+      .inspector{border-top:1px solid var(--line)}
+      .lower-grid{grid-template-columns:1fr}
+      .lower-card{border-right:0;border-bottom:1px solid var(--line)}
+    }
+
+    @media(max-width:760px){
+      .shell{width:min(calc(100% - 20px),var(--max))}
+      .topbar-inner{grid-template-columns:1fr auto}
+      .crumbs{display:none}
+      .agent-state span:not(:first-child),.agent-state b{display:none}
+      .market-head-inner{grid-template-columns:1fr 1fr}
+      .market-title{grid-column:1/-1;border-right:0;border-bottom:1px solid var(--line)}
+      .controls-inner{grid-template-columns:1fr}
+      .filters{justify-content:flex-start;padding-bottom:12px}
+      .search{width:100%}
+      .list-head{display:none}
+      .pair-row{
+        grid-template-columns:34px 1fr 58px;
+        min-height:92px;
+      }
+      .pair-row > div:nth-child(3),
+      .pair-row > div:nth-child(5),
+      .pair-row > div:nth-child(6){display:none}
+      .life-steps{grid-template-columns:repeat(3,1fr)}
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="shell topbar-inner">
+      <a class="brand" href="#">
+        <span class="mark"></span>
+        JEVO
+      </a>
+
+      <div class="crumbs">
+        <span>Agent</span>
+        <span>/</span>
+        <strong>Pairing Marketplace</strong>
+      </div>
+
+      <div class="agent-state">
+        <span class="dot"></span>
+        <span>JEV <b>ACTIVE</b></span>
+        <span>Cycle 9841</span>
+      </div>
+    </div>
+  </div>
+
+  <section class="market-head">
+    <div class="shell market-head-inner">
+      <div class="market-title">
+        <span class="tiny">Stock × Meme Market</span>
+        <h1>Pairing Marketplace</h1>
+        <p>
+          JEVO converts qualified stock opportunities into meme concepts with independent
+          narrative theses. Rankings do not automatically become pairings.
+        </p>
+      </div>
+
+      <div class="stat">
+        <span class="tiny">Active proposals</span>
+        <strong class="accent">18</strong>
+      </div>
+      <div class="stat">
+        <span class="tiny">High-conviction</span>
+        <strong>06</strong>
+      </div>
+      <div class="stat">
+        <span class="tiny">Curated</span>
+        <strong>04</strong>
+      </div>
+      <div class="stat">
+        <span class="tiny">Launch candidates</span>
+        <strong>02</strong>
+      </div>
+    </div>
+  </section>
+
+  <section class="controls">
+    <div class="shell controls-inner">
+      <div class="search-wrap">
+        <input id="search" class="search" type="search" placeholder="Search stock, meme, narrative..." />
+      </div>
+
+      <div class="filters">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="agent-proposed">Agent Proposed</button>
+        <button class="filter-btn" data-filter="curated">Curated</button>
+        <button class="filter-btn" data-filter="launch-candidate">Launch Candidate</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="shell workspace">
+    <div class="list">
+      <div class="list-head">
+        <div>#</div>
+        <div>Pair</div>
+        <div>Stock opportunity</div>
+        <div>Score</div>
+        <div>Status</div>
+        <div>Why now</div>
+      </div>
+
+      <div class="pair-row active"
+        data-category="launch-candidate"
+        data-search="nvda gpu ai infrastructure compute"
+        data-pair="NVDA × <span>$GPU</span>"
+        data-stock="NVDA / Rank #01"
+        data-score="95.4"
+        data-status="Launch Candidate"
+        data-statusclass="hot"
+        data-why="AI infrastructure accelerating"
+        data-why-stock="NVDA sits at the center of the current AI infrastructure and GPU compute narrative."
+        data-why-meme="$GPU is a compact crypto-native representation of the compute layer behind the AI narrative."
+        data-why-pair="The pair connects a recognizable public-market asset with a meme primitive already native to crypto and developer culture."
+        data-why-now="Narrative pressure, social velocity and crypto adjacency all strengthened in the latest cycle."
+        data-narrative="98"
+        data-cultural="96"
+        data-meme="94"
+        data-crypto="91"
+        data-timing="95">
+        <div class="rank">01</div>
+        <div class="pair-name"><strong>NVDA × <span>$GPU</span></strong><small>AI infrastructure / compute culture</small></div>
+        <div class="stock-cell"><strong>NVDA</strong><small>Rank #01 / Opportunity 96.8</small></div>
+        <div class="score">95.4</div>
+        <div><span class="status hot">Launch Candidate</span></div>
+        <div class="why">AI infra accelerating</div>
+      </div>
+
+      <div class="pair-row"
+        data-category="agent-proposed"
+        data-search="tsla bot robotics autonomy"
+        data-pair="TSLA × <span>$BOT</span>"
+        data-stock="TSLA / Rank #02"
+        data-score="92.6"
+        data-status="Agent Proposed"
+        data-statusclass=""
+        data-why="Robotics momentum rising"
+        data-why-stock="TSLA remains highly associated with autonomy, robotics and retail attention."
+        data-why-meme="$BOT is a simple cultural primitive for autonomous machines and agent systems."
+        data-why-pair="The pair maps a familiar stock identity to an equally familiar crypto-native automation concept."
+        data-why-now="Robotics and physical-AI narratives are gaining momentum across both market and social signals."
+        data-narrative="93"
+        data-cultural="94"
+        data-meme="91"
+        data-crypto="88"
+        data-timing="92">
+        <div class="rank">02</div>
+        <div class="pair-name"><strong>TSLA × <span>$BOT</span></strong><small>Robotics / autonomous systems</small></div>
+        <div class="stock-cell"><strong>TSLA</strong><small>Rank #02 / Opportunity 94.2</small></div>
+        <div class="score">92.6</div>
+        <div><span class="status">Agent Proposed</span></div>
+        <div class="why">Robotics momentum rising</div>
+      </div>
+
+      <div class="pair-row"
+        data-category="curated"
+        data-search="pltr eye intelligence surveillance"
+        data-pair="PLTR × <span>$EYE</span>"
+        data-stock="PLTR / Rank #03"
+        data-score="90.1"
+        data-status="Curated"
+        data-statusclass="warn"
+        data-why="Intelligence narrative persistent"
+        data-why-stock="PLTR is culturally associated with intelligence software, defense data and surveillance themes."
+        data-why-meme="$EYE compresses the observation and intelligence narrative into a simple visual meme identity."
+        data-why-pair="The stock and meme share a direct symbolic link without requiring complex explanation."
+        data-why-now="The intelligence-systems narrative remains persistent even as its growth rate is lower than AI infrastructure."
+        data-narrative="91"
+        data-cultural="93"
+        data-meme="90"
+        data-crypto="84"
+        data-timing="88">
+        <div class="rank">03</div>
+        <div class="pair-name"><strong>PLTR × <span>$EYE</span></strong><small>Intelligence / surveillance culture</small></div>
+        <div class="stock-cell"><strong>PLTR</strong><small>Rank #03 / Opportunity 91.7</small></div>
+        <div class="score">90.1</div>
+        <div><span class="status warn">Curated</span></div>
+        <div class="why">Narrative persistent</div>
+      </div>
+
+      <div class="pair-row"
+        data-category="agent-proposed"
+        data-search="gme respawn retail meme reflexivity"
+        data-pair="GME × <span>$RESPAWN</span>"
+        data-stock="GME / Rank #05"
+        data-score="88.9"
+        data-status="Agent Proposed"
+        data-statusclass=""
+        data-why="Retail reflexivity returned"
+        data-why-stock="GME retains one of the strongest retail and meme-native identities in public markets."
+        data-why-meme="$RESPAWN expresses return, persistence and cyclical attention in a crypto-native way."
+        data-why-pair="The pair is intentionally cultural rather than technical, matching GME's reflexive market identity."
+        data-why-now="Retail attention returned while market saturation remains below its previous peak."
+        data-narrative="87"
+        data-cultural="98"
+        data-meme="96"
+        data-crypto="90"
+        data-timing="84">
+        <div class="rank">04</div>
+        <div class="pair-name"><strong>GME × <span>$RESPAWN</span></strong><small>Retail reflexivity / meme equity</small></div>
+        <div class="stock-cell"><strong>GME</strong><small>Rank #05 / Opportunity 87.9</small></div>
+        <div class="score">88.9</div>
+        <div><span class="status">Agent Proposed</span></div>
+        <div class="why">Retail reflexivity returned</div>
+      </div>
+
+      <div class="pair-row"
+        data-category="curated"
+        data-search="amd silicon chip compute"
+        data-pair="AMD × <span>$SILICON</span>"
+        data-stock="AMD / Rank #06"
+        data-score="86.4"
+        data-status="Curated"
+        data-statusclass="warn"
+        data-why="Compute cluster remains active"
+        data-why-stock="AMD participates in the same compute and AI infrastructure cluster but with lower cultural intensity than NVDA."
+        data-why-meme="$SILICON broadens the idea from GPU-specific culture into chip and compute infrastructure."
+        data-why-pair="The concept is coherent, but less culturally compressed and less immediately recognizable than $GPU."
+        data-why-now="Compute infrastructure remains strong, though the market narrative is more concentrated around NVDA."
+        data-narrative="88"
+        data-cultural="82"
+        data-meme="84"
+        data-crypto="85"
+        data-timing="87">
+        <div class="rank">05</div>
+        <div class="pair-name"><strong>AMD × <span>$SILICON</span></strong><small>Chips / compute infrastructure</small></div>
+        <div class="stock-cell"><strong>AMD</strong><small>Rank #06 / Opportunity 82.6</small></div>
+        <div class="score">86.4</div>
+        <div><span class="status warn">Curated</span></div>
+        <div class="why">Compute cluster active</div>
+      </div>
+
+      <div class="pair-row"
+        data-category="agent-proposed"
+        data-search="coin block crypto rails"
+        data-pair="COIN × <span>$BLOCK</span>"
+        data-stock="COIN / Rank #08"
+        data-score="84.7"
+        data-status="Agent Proposed"
+        data-statusclass=""
+        data-why="Crypto-market overlap stable"
+        data-why-stock="COIN is natively adjacent to crypto infrastructure and exchange culture."
+        data-why-meme="$BLOCK is simple but more generic, reducing distinctiveness despite strong crypto adjacency."
+        data-why-pair="The thesis is coherent but competes with many existing blockchain and block-related meme identities."
+        data-why-now="Crypto overlap is stable, while saturation risk prevents a higher pairing score."
+        data-narrative="82"
+        data-cultural="86"
+        data-meme="80"
+        data-crypto="98"
+        data-timing="81">
+        <div class="rank">06</div>
+        <div class="pair-name"><strong>COIN × <span>$BLOCK</span></strong><small>Crypto infrastructure / exchange culture</small></div>
+        <div class="stock-cell"><strong>COIN</strong><small>Rank #08 / Opportunity 79.8</small></div>
+        <div class="score">84.7</div>
+        <div><span class="status">Agent Proposed</span></div>
+        <div class="why">Crypto overlap stable</div>
+      </div>
+    </div>
+
+    <aside class="inspector">
+      <div class="inspector-head">
+        <span class="tiny">Selected pairing</span>
+        <span class="tiny">JEV pairing analysis</span>
+      </div>
+
+      <div class="inspector-body">
+        <div class="inspect-pair" id="inspect-pair">NVDA × <span>$GPU</span></div>
+        <div class="inspect-stock" id="inspect-stock">NVDA / Rank #01</div>
+
+        <div class="score-card">
+          <div>
+            <span class="tiny">Pair score</span>
+            <strong id="inspect-score" class="accent">95.4</strong>
+          </div>
+          <div>
+            <span class="tiny">Status</span>
+            <strong id="inspect-status">Launch Candidate</strong>
+          </div>
+          <div>
+            <span class="tiny">Narrative fit</span>
+            <strong id="inspect-narrative">98</strong>
+          </div>
+          <div>
+            <span class="tiny">Timing</span>
+            <strong id="inspect-timing">95</strong>
+          </div>
+        </div>
+
+        <div class="thesis">
+          <span class="tiny">Pair thesis</span>
+          <div class="thesis-grid">
+            <div class="thesis-item">
+              <strong>Why stock?</strong>
+              <span id="why-stock">NVDA sits at the center of the current AI infrastructure and GPU compute narrative.</span>
+            </div>
+            <div class="thesis-item">
+              <strong>Why meme?</strong>
+              <span id="why-meme">$GPU is a compact crypto-native representation of the compute layer behind the AI narrative.</span>
+            </div>
+            <div class="thesis-item">
+              <strong>Why pair?</strong>
+              <span id="why-pair">The pair connects a recognizable public-market asset with a meme primitive already native to crypto and developer culture.</span>
+            </div>
+            <div class="thesis-item">
+              <strong>Why now?</strong>
+              <span id="why-now">Narrative pressure, social velocity and crypto adjacency all strengthened in the latest cycle.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="lifecycle">
+          <span class="tiny">Pairing lifecycle</span>
+          <div class="life-steps">
+            <div class="life-step done">Detected</div>
+            <div class="life-step done">Analyzed</div>
+            <div class="life-step done">Proposed</div>
+            <div class="life-step done">Curated</div>
+            <div class="life-step current">Launch Candidate</div>
+            <div class="life-step">Launched</div>
+          </div>
+        </div>
+
+        <a class="cta" href="#">
+          <span>Open pairing detail</span>
+          <span>↗</span>
+        </a>
+      </div>
+    </aside>
+  </section>
+
+  <section class="lower">
+    <div class="shell">
+      <div class="lower-head">
+        <span class="tiny">Marketplace context</span>
+        <span class="tiny">Why this is not just top-stock sorting</span>
+      </div>
+
+      <div class="lower-grid">
+        <div class="lower-card">
+          <span class="tiny">Independent thesis</span>
+          <h3>Pair score ≠ stock rank.</h3>
+          <p>
+            A stock can rank highly without producing the strongest meme pairing.
+            Pairing evaluation has its own narrative, cultural, crypto and timing model.
+          </p>
+        </div>
+
+        <div class="lower-card">
+          <span class="tiny">Current pipeline</span>
+          <h3>Agent proposed → human curated.</h3>
+          <div class="mini-list">
+            <div class="mini-line"><span>Agent Proposed</span><strong>08</strong></div>
+            <div class="mini-line"><span>Curated</span><strong>04</strong></div>
+            <div class="mini-line"><span>Launch Candidate</span><strong>02</strong></div>
+          </div>
+        </div>
+
+        <div class="lower-card">
+          <span class="tiny">Decision freshness</span>
+          <h3>Every proposal has a current state.</h3>
+          <div class="mini-list">
+            <div class="mini-line"><span>Last regeneration</span><strong>42s ago</strong></div>
+            <div class="mini-line"><span>Next evaluation</span><strong>04:18</strong></div>
+            <div class="mini-line"><span>Active cycle</span><strong>9841</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    const rows = [...document.querySelectorAll(".pair-row")];
+    const filters = [...document.querySelectorAll(".filter-btn")];
+    const search = document.getElementById("search");
+    let activeFilter = "all";
+
+    function selectRow(row){
+      rows.forEach(r=>r.classList.remove("active"));
+      row.classList.add("active");
+
+      document.getElementById("inspect-pair").innerHTML = row.dataset.pair;
+      document.getElementById("inspect-stock").textContent = row.dataset.stock;
+      document.getElementById("inspect-score").textContent = row.dataset.score;
+      document.getElementById("inspect-status").textContent = row.dataset.status;
+      document.getElementById("inspect-narrative").textContent = row.dataset.narrative;
+      document.getElementById("inspect-timing").textContent = row.dataset.timing;
+
+      document.getElementById("why-stock").textContent = row.dataset.whyStock;
+      document.getElementById("why-meme").textContent = row.dataset.whyMeme;
+      document.getElementById("why-pair").textContent = row.dataset.whyPair;
+      document.getElementById("why-now").textContent = row.dataset.whyNow;
+    }
+
+    function applyFilters(){
+      const q = search.value.trim().toLowerCase();
+
+      rows.forEach(row=>{
+        const categoryMatch = activeFilter === "all" || row.dataset.category === activeFilter;
+        const searchMatch = !q || row.dataset.search.includes(q);
+        row.style.display = categoryMatch && searchMatch ? "grid" : "none";
+      });
+
+      const firstVisible = rows.find(r=>r.style.display !== "none");
+      if(firstVisible && !rows.some(r=>r.classList.contains("active") && r.style.display !== "none")){
+        selectRow(firstVisible);
+      }
+    }
+
+    rows.forEach(row=>{
+      row.addEventListener("mouseenter",()=>selectRow(row));
+      row.addEventListener("click",()=>selectRow(row));
+    });
+
+    filters.forEach(btn=>{
+      btn.addEventListener("click",()=>{
+        filters.forEach(b=>b.classList.remove("active"));
+        btn.classList.add("active");
+        activeFilter = btn.dataset.filter;
+        applyFilters();
+      });
+    });
+
+    search.addEventListener("input",applyFilters);
+  </script>
+</body>
+</html>

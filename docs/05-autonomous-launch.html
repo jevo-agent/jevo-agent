@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JEVO — Autonomous Launch</title>
+  <style>
+    :root{
+      --bg:#0b0d0b;
+      --panel:#0f120f;
+      --panel2:#121612;
+      --text:#eef2e7;
+      --muted:#899184;
+      --line:rgba(238,242,231,.11);
+      --line2:rgba(238,242,231,.20);
+      --accent:#d7ff3f;
+      --accent-soft:rgba(215,255,63,.08);
+      --danger:#ff7168;
+      --warn:#ffbf63;
+      --mono:"SFMono-Regular","SF Mono","Roboto Mono","Cascadia Code",Menlo,monospace;
+      --sans:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      --max:1540px;
+    }
+
+    *{box-sizing:border-box}
+    html{background:var(--bg)}
+    body{
+      margin:0;
+      color:var(--text);
+      font-family:var(--sans);
+      background:
+        linear-gradient(rgba(255,255,255,.017) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(255,255,255,.017) 1px,transparent 1px),
+        var(--bg);
+      background-size:40px 40px;
+    }
+
+    a{color:inherit;text-decoration:none}
+    button{font:inherit;color:inherit}
+    .shell{width:min(calc(100% - 32px),var(--max));margin:0 auto}
+    .tiny{
+      font-family:var(--mono);
+      font-size:8px;
+      letter-spacing:.09em;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+
+    .topbar{
+      position:sticky;
+      top:0;
+      z-index:50;
+      background:rgba(11,13,11,.94);
+      backdrop-filter:blur(14px);
+      border-bottom:1px solid var(--line);
+    }
+
+    .topbar-inner{
+      min-height:58px;
+      display:grid;
+      grid-template-columns:220px 1fr auto;
+      align-items:center;
+      gap:24px;
+    }
+
+    .brand{
+      font-family:var(--mono);
+      font-weight:800;
+      letter-spacing:-.07em;
+      font-size:18px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+
+    .mark{width:22px;height:22px;border:1px solid var(--line2);position:relative}
+    .mark:before,.mark:after{content:"";position:absolute;left:50%;top:50%;background:var(--accent)}
+    .mark:before{width:1px;height:28px;transform:translate(-50%,-50%) rotate(45deg)}
+    .mark:after{width:28px;height:1px;transform:translate(-50%,-50%) rotate(-45deg)}
+
+    .crumbs{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      font-family:var(--mono);
+      font-size:9px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--muted);
+    }
+    .crumbs strong{color:var(--text);font-weight:500}
+
+    .agent-state{
+      display:flex;
+      gap:16px;
+      align-items:center;
+      font-family:var(--mono);
+      font-size:8px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--muted);
+    }
+    .dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+    .agent-state b{color:var(--accent);font-weight:500}
+
+    .launch-strip{
+      border-bottom:1px solid var(--line);
+      background:rgba(11,13,11,.72);
+    }
+
+    .launch-strip-inner{
+      min-height:132px;
+      display:grid;
+      grid-template-columns:1.5fr repeat(5,minmax(120px,.58fr));
+      align-items:stretch;
+    }
+
+    .launch-main{
+      padding-right:28px;
+      border-right:1px solid var(--line);
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+    }
+
+    .launch-title{
+      font-size:44px;
+      line-height:.9;
+      font-weight:780;
+      letter-spacing:-.07em;
+    }
+    .launch-title span{color:var(--accent)}
+
+    .launch-sub{
+      margin-top:11px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .pill{
+      padding:5px 7px;
+      border:1px solid rgba(215,255,63,.25);
+      background:var(--accent-soft);
+      color:var(--accent);
+      font-family:var(--mono);
+      font-size:8px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .launch-sub .muted{
+      font-family:var(--mono);
+      font-size:8px;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .stat{
+      padding:22px 16px;
+      border-right:1px solid var(--line);
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+    }
+    .stat:last-child{border-right:0}
+    .stat strong{
+      margin-top:10px;
+      font-family:var(--mono);
+      font-size:22px;
+      font-weight:500;
+      letter-spacing:-.05em;
+    }
+    .stat .accent{color:var(--accent)}
+
+    .workspace{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) 420px;
+      align-items:start;
+      border-bottom:1px solid var(--line);
+    }
+
+    .main{
+      min-width:0;
+      border-right:1px solid var(--line);
+    }
+
+    .rail{
+      min-width:0;
+      background:rgba(13,16,13,.72);
+      position:sticky;
+      top:58px;
+      align-self:start;
+    }
+
+    .block{border-bottom:1px solid var(--line)}
+    .block-head{
+      min-height:64px;
+      padding:0 22px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:20px;
+      border-bottom:1px solid var(--line);
+    }
+
+    .block-title{
+      font-family:var(--mono);
+      font-size:10px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .block-meta{
+      font-family:var(--mono);
+      font-size:8px;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .countdown-zone{
+      display:grid;
+      grid-template-columns:1fr .88fr;
+      min-height:360px;
+    }
+
+    .countdown-main{
+      padding:28px 22px;
+      border-right:1px solid var(--line);
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+    }
+
+    .countdown{
+      margin-top:20px;
+      font-family:var(--mono);
+      font-size:clamp(64px,8vw,118px);
+      line-height:.82;
+      letter-spacing:-.09em;
+      color:var(--accent);
+    }
+
+    .countdown-note{
+      margin-top:20px;
+      max-width:700px;
+      color:#afb6aa;
+      font-size:12px;
+      line-height:1.68;
+    }
+
+    .launch-state{
+      padding:28px 22px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+    }
+
+    .state-title{
+      margin-top:14px;
+      font-size:34px;
+      line-height:.95;
+      letter-spacing:-.055em;
+    }
+    .state-title span{color:var(--accent)}
+
+    .state-copy{
+      margin-top:16px;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.65;
+    }
+
+    .state-facts{
+      margin-top:24px;
+      border-top:1px solid var(--line);
+    }
+
+    .fact{
+      display:flex;
+      justify-content:space-between;
+      gap:14px;
+      padding:10px 0;
+      border-bottom:1px solid var(--line);
+      font-family:var(--mono);
+      font-size:8px;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+    .fact strong{color:var(--text);font-weight:500}
+
+    .timeline{
+      display:grid;
+      grid-template-columns:repeat(6,1fr);
+      border-left:1px solid var(--line);
+    }
+
+    .phase{
+      min-height:180px;
+      padding:18px 16px;
+      border-right:1px solid var(--line);
+      position:relative;
+      cursor:pointer;
+      transition:background .16s ease;
+    }
+
+    .phase:hover{background:rgba(255,255,255,.014)}
+    .phase.active{background:var(--accent-soft)}
+    .phase.active:before{
+      content:"";
+      position:absolute;
+      left:-1px;
+      top:0;
+      bottom:0;
+      width:2px;
+      background:var(--accent);
+    }
+
+    .phase-time{
+      font-family:var(--mono);
+      font-size:9px;
+      color:var(--muted);
+    }
+
+    .phase-name{
+      margin-top:18px;
+      font-size:16px;
+      line-height:1.18;
+      letter-spacing:-.035em;
+      font-weight:600;
+    }
+
+    .phase-status{
+      margin-top:10px;
+      font-family:var(--mono);
+      font-size:8px;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+
+    .phase.complete .phase-status{color:var(--text)}
+    .phase.active .phase-status{color:var(--accent)}
+
+    .phase-desc{
+      margin-top:24px;
+      color:var(--muted);
+      font-size:10px;
+      line-height:1.55;
+    }
+
+    .checks-grid{
+      display:grid;
+      grid-template-columns:1.15fr .85fr;
+      min-height:520px;
+    }
+
+    .checks{
+      border-right:1px solid var(--line);
+    }
+
+    .check-row{
+      min-height:64px;
+      display:grid;
+      grid-template-columns:42px 1fr 110px;
+      align-items:center;
+      border-bottom:1px solid rgba(238,242,231,.065);
+    }
+
+    .check-row > div{padding:0 14px}
+    .check-icon{
+      width:20px;
+      height:20px;
+      border:1px solid rgba(215,255,63,.3);
+      display:grid;
+      place-items:center;
+      color:var(--accent);
+      font-family:var(--mono);
+      font-size:10px;
+    }
+
+    .check-name strong{
+      display:block;
+      font-size:13px;
+      font-weight:560;
+    }
+    .check-name small{
+      display:block;
+      margin-top:4px;
+      color:var(--muted);
+      font-family:var(--mono);
+      font-size:7px;
+      text-transform:uppercase;
+    }
+
+    .check-state{
+      text-align:right;
+      font-family:var(--mono);
+      font-size:8px;
+      color:var(--accent);
+      text-transform:uppercase;
+    }
+
+    .checks-summary{
+      padding:28px 22px;
+    }
+
+    .readiness{
+      font-family:var(--mono);
+      font-size:72px;
+      line-height:.8;
+      letter-spacing:-.09em;
+      color:var(--accent);
+    }
+
+    .ready-title{
+      margin-top:20px;
+      font-size:28px;
+      letter-spacing:-.05em;
+    }
+
+    .ready-copy{
+      margin-top:14px;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.68;
+    }
+
+    .activity-list{
+      padding:0 22px 18px;
+    }
+
+    .activity-row{
+      display:grid;
+      grid-template-columns:82px 1fr 110px;
+      gap:18px;
+      padding:15px 0;
+      border-bottom:1px solid rgba(238,242,231,.065);
+      font-family:var(--mono);
+      font-size:9px;
+      line-height:1.5;
+    }
+
+    .activity-row time{color:#66705f}
+    .activity-row span{color:#aeb5a8}
+    .activity-row strong{color:var(--text);font-weight:500}
+    .activity-row .type{text-align:right;color:var(--muted);text-transform:uppercase}
+    .activity-row .type.hot{color:var(--accent)}
+
+    .rail-section{border-bottom:1px solid var(--line)}
+    .rail-head{
+      min-height:58px;
+      padding:0 18px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      border-bottom:1px solid var(--line);
+    }
+
+    .rail-body{padding:20px 18px}
+
+    .wallet-id{
+      font-size:28px;
+      line-height:1;
+      letter-spacing:-.05em;
+    }
+
+    .wallet-address{
+      margin-top:12px;
+      font-family:var(--mono);
+      font-size:9px;
+      color:var(--muted);
+      word-break:break-all;
+      line-height:1.55;
+    }
+
+    .contract-list{
+      margin-top:4px;
+      border-top:1px solid var(--line);
+    }
+
+    .contract-row{
+      padding:11px 0;
+      border-bottom:1px solid var(--line);
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:12px;
+      font-family:var(--mono);
+      font-size:8px;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+    .contract-row strong{color:var(--text);font-weight:500}
+
+    .tx-state{
+      font-size:38px;
+      line-height:.92;
+      letter-spacing:-.055em;
+      color:var(--accent);
+      font-weight:740;
+    }
+
+    .tx-copy{
+      margin-top:12px;
+      color:var(--muted);
+      font-size:11px;
+      line-height:1.65;
+    }
+
+    .cta{
+      margin-top:16px;
+      height:44px;
+      border:1px solid var(--line2);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:0 14px;
+      font-family:var(--mono);
+      font-size:9px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .cta.primary{
+      background:var(--accent);
+      color:#090b08;
+      border-color:var(--accent);
+      font-weight:700;
+    }
+
+    .token-grid{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      border-left:1px solid var(--line);
+    }
+
+    .token-cell{
+      min-height:110px;
+      padding:18px;
+      border-right:1px solid var(--line);
+      border-bottom:1px solid var(--line);
+    }
+
+    .token-cell strong{
+      display:block;
+      margin-top:11px;
+      font-family:var(--mono);
+      font-size:16px;
+      font-weight:500;
+    }
+
+    @media(max-width:1100px){
+      .launch-strip-inner{grid-template-columns:1.2fr repeat(3,1fr)}
+      .launch-strip-inner .stat:nth-last-child(-n+2){display:none}
+      .workspace{grid-template-columns:1fr}
+      .main{border-right:0}
+      .rail{position:static;border-top:1px solid var(--line)}
+      .countdown-zone,.checks-grid{grid-template-columns:1fr}
+      .countdown-main,.checks{border-right:0;border-bottom:1px solid var(--line)}
+      .timeline{grid-template-columns:repeat(3,1fr)}
+    }
+
+    @media(max-width:760px){
+      .shell{width:min(calc(100% - 20px),var(--max))}
+      .topbar-inner{grid-template-columns:1fr auto}
+      .crumbs{display:none}
+      .agent-state span:not(:first-child),.agent-state b{display:none}
+      .launch-strip-inner{grid-template-columns:1fr 1fr}
+      .launch-main{grid-column:1/-1;border-right:0;border-bottom:1px solid var(--line);padding:20px 0}
+      .launch-strip-inner .stat:nth-of-type(n+4){display:none}
+      .launch-title{font-size:38px}
+      .timeline{grid-template-columns:1fr 1fr}
+      .token-grid{grid-template-columns:1fr 1fr}
+      .activity-row{grid-template-columns:70px 1fr}
+      .activity-row .type{display:none}
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="shell topbar-inner">
+      <a class="brand" href="#">
+        <span class="mark"></span>
+        JEVO
+      </a>
+
+      <div class="crumbs">
+        <span>Pairing</span>
+        <span>/</span>
+        <span>NVDA × $GPU</span>
+        <span>/</span>
+        <strong>Autonomous Launch</strong>
+      </div>
+
+      <div class="agent-state">
+        <span class="dot"></span>
+        <span>JEV <b>ACTIVE</b></span>
+        <span>Launch cycle LC-204</span>
+      </div>
+    </div>
+  </div>
+
+  <section class="launch-strip">
+    <div class="shell launch-strip-inner">
+      <div class="launch-main">
+        <div class="launch-title">NVDA × <span>$GPU</span></div>
+        <div class="launch-sub">
+          <span class="pill">Preparing</span>
+          <span class="muted">Next agent launch / policy controlled</span>
+        </div>
+      </div>
+
+      <div class="stat">
+        <span class="tiny">Opportunity</span>
+        <strong class="accent">96.8</strong>
+      </div>
+      <div class="stat">
+        <span class="tiny">Pair score</span>
+        <strong>95.4</strong>
+      </div>
+      <div class="stat">
+        <span class="tiny">Readiness</span>
+        <strong class="accent">READY</strong>
+      </div>
+      <div class="stat">
+        <span class="tiny">Policy checks</span>
+        <strong>8 / 8</strong>
+      </div>
+      <div class="stat">
+        <span class="tiny">Network</span>
+        <strong>Robinhood Chain</strong>
+      </div>
+    </div>
+  </section>
+
+  <div class="shell workspace">
+    <main class="main">
+      <section class="block">
+        <div class="block-head">
+          <div class="block-title">Launch Countdown</div>
+          <div class="block-meta">Current transition / pairing validation</div>
+        </div>
+
+        <div class="countdown-zone">
+          <div class="countdown-main">
+            <div>
+              <span class="tiny">Time until controlled execution</span>
+              <div class="countdown" id="countdown">23:41:08</div>
+              <p class="countdown-note">
+                This countdown represents a real launch lifecycle state. JEVO moves through
+                validation stages before any transaction can be submitted.
+              </p>
+            </div>
+          </div>
+
+          <div class="launch-state">
+            <div>
+              <span class="tiny">Current stage</span>
+              <div class="state-title">PAIRING VALIDATION <span>ACTIVE.</span></div>
+              <p class="state-copy">
+                JEV pairing analysis is complete. The protocol is validating the selected
+                Stock Token, meme metadata and launch-policy constraints before contract preparation.
+              </p>
+            </div>
+
+            <div class="state-facts">
+              <div class="fact"><span>Launch cycle</span><strong>LC-204</strong></div>
+              <div class="fact"><span>Selected pair</span><strong>NVDA × $GPU</strong></div>
+              <div class="fact"><span>Decision source</span><strong>JEV</strong></div>
+              <div class="fact"><span>Human guardian</span><strong>Required / MVP</strong></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="block">
+        <div class="block-head">
+          <div class="block-title">24H Launch Cycle</div>
+          <div class="block-meta">State-driven / click stage to inspect</div>
+        </div>
+
+        <div class="timeline">
+          <div class="phase complete"
+            data-stage="Candidate Selected"
+            data-time="T-24H"
+            data-copy="JEVO selected NVDA × $GPU after opportunity and pairing thresholds were met."
+            data-status="Complete">
+            <div class="phase-time">T-24H</div>
+            <div class="phase-name">Candidate Selected</div>
+            <div class="phase-status">Complete ✓</div>
+            <div class="phase-desc">Opportunity + pair thesis locked for launch review.</div>
+          </div>
+
+          <div class="phase complete"
+            data-stage="Narrative Validation"
+            data-time="T-18H"
+            data-copy="Narrative pressure and why-now context were revalidated against the current market state."
+            data-status="Complete">
+            <div class="phase-time">T-18H</div>
+            <div class="phase-name">Narrative Validation</div>
+            <div class="phase-status">Complete ✓</div>
+            <div class="phase-desc">Narrative remained above the launch threshold.</div>
+          </div>
+
+          <div class="phase active"
+            data-stage="Pairing Validation"
+            data-time="T-12H"
+            data-copy="Pairing score, metadata, Stock Token identity and policy constraints are being validated."
+            data-status="Active">
+            <div class="phase-time">T-12H</div>
+            <div class="phase-name">Pairing Validation</div>
+            <div class="phase-status">Active ●</div>
+            <div class="phase-desc">Current stage / policy and pair checks running.</div>
+          </div>
+
+          <div class="phase"
+            data-stage="Contract Preparation"
+            data-time="T-06H"
+            data-copy="Approved launch parameters will be assembled for the Launch Executor and Pons adapter."
+            data-status="Pending">
+            <div class="phase-time">T-06H</div>
+            <div class="phase-name">Contract Preparation</div>
+            <div class="phase-status">Pending ○</div>
+            <div class="phase-desc">Executor payload and metadata package prepared.</div>
+          </div>
+
+          <div class="phase"
+            data-stage="Final Policy Check"
+            data-time="T-01H"
+            data-copy="Agent permissions, transaction simulation and launch limits will be verified before approval."
+            data-status="Pending">
+            <div class="phase-time">T-01H</div>
+            <div class="phase-name">Final Policy Check</div>
+            <div class="phase-status">Pending ○</div>
+            <div class="phase-desc">Guardian review and final transaction simulation.</div>
+          </div>
+
+          <div class="phase"
+            data-stage="Controlled Execution"
+            data-time="T-00"
+            data-copy="If every policy check passes, the approved transaction is submitted through the Launch Executor."
+            data-status="Pending">
+            <div class="phase-time">T-00</div>
+            <div class="phase-name">Controlled Execution</div>
+            <div class="phase-status">Pending ○</div>
+            <div class="phase-desc">Submit → confirm → publish onchain proof.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="block">
+        <div class="block-head">
+          <div class="block-title">Final Policy Check</div>
+          <div class="block-meta">All checks must pass before execution</div>
+        </div>
+
+        <div class="checks-grid">
+          <div class="checks">
+            <div class="check-row">
+              <div><span class="check-icon">✓</span></div>
+              <div class="check-name"><strong>Valid Stock Token</strong><small>Canonical asset identity verified</small></div>
+              <div class="check-state">Passed</div>
+            </div>
+            <div class="check-row">
+              <div><span class="check-icon">✓</span></div>
+              <div class="check-name"><strong>Approved Pairing Asset</strong><small>Pairing asset allowed by current adapter config</small></div>
+              <div class="check-state">Passed</div>
+            </div>
+            <div class="check-row">
+              <div><span class="check-icon">✓</span></div>
+              <div class="check-name"><strong>Token Metadata</strong><small>Name, symbol and metadata package valid</small></div>
+              <div class="check-state">Passed</div>
+            </div>
+            <div class="check-row">
+              <div><span class="check-icon">✓</span></div>
+              <div class="check-name"><strong>Contract Parameters</strong><small>Launch parameters within approved bounds</small></div>
+              <div class="check-state">Passed</div>
+            </div>
+            <div class="check-row">
+              <div><span class="check-icon">✓</span></div>
+              <div class="check-name"><strong>Launch Limits</strong><small>Policy limits respected</small></div>
+              <div class="check-state">Passed</div>
+            </div>
+            <div class="check-row">
+              <div><span class="check-icon">✓</span></div>
+              <div class="check-name"><strong>Duplicate Check</strong><small>No conflicting token candidate detected</small></div>
+              <div class="check-state">Passed</div>
+            </div>
+            <div class="check-row">
+              <div><span class="check-icon">✓</span></div>
+              <div class="check-name"><strong>Agent Permission</strong><small>Executor permission valid for approved action</small></div>
+              <div class="check-state">Passed</div>
+            </div>
+            <div class="check-row">
+              <div><span class="check-icon">✓</span></div>
+              <div class="check-name"><strong>Transaction Simulation</strong><small>Preflight simulation returned no blocking error</small></div>
+              <div class="check-state">Passed</div>
+            </div>
+          </div>
+
+          <aside class="checks-summary">
+            <span class="tiny">Launch readiness</span>
+            <div class="readiness">8/8</div>
+            <div class="ready-title">Policy checks are currently passing.</div>
+            <p class="ready-copy">
+              Passing checks do not execute a transaction by themselves. During the MVP,
+              human guardian approval remains required before the final execution stage.
+            </p>
+
+            <div class="state-facts">
+              <div class="fact"><span>Simulation</span><strong>Passed</strong></div>
+              <div class="fact"><span>Emergency pause</span><strong>Available</strong></div>
+              <div class="fact"><span>Guardian</span><strong>Awaiting stage</strong></div>
+              <div class="fact"><span>Executor</span><strong>Restricted</strong></div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="block">
+        <div class="block-head">
+          <div class="block-title">Launch Activity</div>
+          <div class="block-meta">Observable events only</div>
+        </div>
+
+        <div class="activity-list">
+          <div class="activity-row">
+            <time>16:00:02</time>
+            <span><strong>Candidate selected.</strong> NVDA × $GPU entered launch cycle LC-204.</span>
+            <span class="type hot">Selection</span>
+          </div>
+          <div class="activity-row">
+            <time>16:00:09</time>
+            <span><strong>JEV launch decision completed.</strong> Candidate qualified for validation.</span>
+            <span class="type hot">JEV</span>
+          </div>
+          <div class="activity-row">
+            <time>16:01:10</time>
+            <span><strong>Narrative validation completed.</strong> AI infrastructure state remained accelerating.</span>
+            <span class="type">Validation</span>
+          </div>
+          <div class="activity-row">
+            <time>16:04:31</time>
+            <span><strong>Pairing validation started.</strong> Canonical asset and pair metadata checks running.</span>
+            <span class="type">Validation</span>
+          </div>
+          <div class="activity-row">
+            <time>16:05:12</time>
+            <span><strong>Agent wallet permission verified.</strong> Launch Executor action remains within policy.</span>
+            <span class="type">Policy</span>
+          </div>
+          <div class="activity-row">
+            <time>16:06:04</time>
+            <span><strong>Awaiting next launch stage.</strong> Contract preparation has not started yet.</span>
+            <span class="type">State</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="block">
+        <div class="block-head">
+          <div class="block-title">Token Specification</div>
+          <div class="block-meta">Prepared launch metadata</div>
+        </div>
+
+        <div class="token-grid">
+          <div class="token-cell">
+            <span class="tiny">Name</span>
+            <strong>GPU</strong>
+          </div>
+          <div class="token-cell">
+            <span class="tiny">Symbol</span>
+            <strong>$GPU</strong>
+          </div>
+          <div class="token-cell">
+            <span class="tiny">Pair</span>
+            <strong>NVDA Stock Token</strong>
+          </div>
+          <div class="token-cell">
+            <span class="tiny">Launch mechanism</span>
+            <strong>Pons</strong>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <aside class="rail">
+      <section class="rail-section">
+        <div class="rail-head">
+          <span class="tiny">Selected stage</span>
+          <span class="tiny" id="stage-time">T-12H</span>
+        </div>
+
+        <div class="rail-body">
+          <div class="tx-state" id="stage-title">PAIRING<br />VALIDATION</div>
+          <p class="tx-copy" id="stage-copy">
+            Pairing score, metadata, Stock Token identity and policy constraints are being validated.
+          </p>
+
+          <div class="facts">
+            <div class="fact"><span>Status</span><strong id="stage-status">Active</strong></div>
+            <div class="fact"><span>Cycle</span><strong>LC-204</strong></div>
+            <div class="fact"><span>Pair</span><strong>NVDA × $GPU</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="rail-section">
+        <div class="rail-head">
+          <span class="tiny">JEVO Agent Wallet</span>
+          <span class="tiny">Restricted executor</span>
+        </div>
+
+        <div class="rail-body">
+          <div class="wallet-id">JEVO AGENT</div>
+          <div class="wallet-address">
+            0x7A4f...91B2
+          </div>
+
+          <div class="facts">
+            <div class="fact"><span>Network</span><strong>Robinhood Chain</strong></div>
+            <div class="fact"><span>Permission</span><strong>Launch Executor</strong></div>
+            <div class="fact"><span>Status</span><strong>Authorized</strong></div>
+            <div class="fact"><span>Emergency pause</span><strong>Enabled</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="rail-section">
+        <div class="rail-head">
+          <span class="tiny">Contract State</span>
+          <span class="tiny">Pending execution</span>
+        </div>
+
+        <div class="rail-body">
+          <div class="contract-list">
+            <div class="contract-row"><span>Launch Executor</span><strong>0xEXE...204</strong></div>
+            <div class="contract-row"><span>Token Factory</span><strong>0xFAC...781</strong></div>
+            <div class="contract-row"><span>Policy Contract</span><strong>0xPOL...319</strong></div>
+            <div class="contract-row"><span>Pons Adapter</span><strong>0xPON...447</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="rail-section">
+        <div class="rail-head">
+          <span class="tiny">Transaction State</span>
+          <span class="tiny">Not submitted</span>
+        </div>
+
+        <div class="rail-body">
+          <div class="tx-state">PREPARING</div>
+          <p class="tx-copy">
+            No onchain transaction has been submitted. Execution becomes available only after
+            the final policy and guardian stages are complete.
+          </p>
+
+          <a class="cta primary" href="#">
+            <span>Review launch candidate</span>
+            <span>↗</span>
+          </a>
+
+          <a class="cta" href="#">
+            <span>Emergency pause</span>
+            <span>⏸</span>
+          </a>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <script>
+    let remaining = 23 * 3600 + 41 * 60 + 8;
+
+    function updateCountdown(){
+      remaining = Math.max(0, remaining - 1);
+      const h = String(Math.floor(remaining / 3600)).padStart(2,"0");
+      const m = String(Math.floor((remaining % 3600) / 60)).padStart(2,"0");
+      const s = String(remaining % 60).padStart(2,"0");
+      document.getElementById("countdown").textContent = `${h}:${m}:${s}`;
+    }
+
+    function selectPhase(phase){
+      document.querySelectorAll(".phase").forEach(p=>p.classList.remove("active"));
+      phase.classList.add("active");
+
+      document.getElementById("stage-title").innerHTML = phase.dataset.stage.toUpperCase().replace(" ","<br />");
+      document.getElementById("stage-time").textContent = phase.dataset.time;
+      document.getElementById("stage-copy").textContent = phase.dataset.copy;
+      document.getElementById("stage-status").textContent = phase.dataset.status;
+    }
+
+    document.querySelectorAll(".phase").forEach(phase=>{
+      phase.addEventListener("click",()=>selectPhase(phase));
+    });
+
+    setInterval(updateCountdown,1000);
+  </script>
+</body>
+</html>

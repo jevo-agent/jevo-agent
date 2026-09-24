@@ -1,0 +1,3285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0b0d0b" />
+  <title>JEVO — Autonomous Market Intelligence</title>
+  <meta
+    name="description"
+    content="JEVO is an autonomous market agent powered by Jev, continuously discovering stock-to-meme opportunities."
+  />
+  <style>
+    :root {
+      --bg: #0b0d0b;
+      --panel: #101310;
+      --panel-2: #141814;
+      --text: #f0f2e9;
+      --muted: #8c9386;
+      --line: rgba(240, 242, 233, 0.12);
+      --line-strong: rgba(240, 242, 233, 0.22);
+      --accent: #d7ff3f;
+      --accent-soft: rgba(215, 255, 63, 0.12);
+      --danger: #ff695f;
+      --blue: #75a8ff;
+      --orange: #ffb34e;
+      --max: 1480px;
+      --mono: "SFMono-Regular", "SF Mono", "Roboto Mono", "Cascadia Code",
+        "Liberation Mono", Menlo, monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
+      --serif: Georgia, "Times New Roman", serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      scroll-behavior: auto;
+      background: var(--bg);
+    }
+
+    html.lenis, html.lenis body { height: auto; }
+    .lenis.lenis-smooth { scroll-behavior: auto !important; }
+    .lenis.lenis-stopped { overflow: hidden; }
+
+    .page-progress {
+      position: fixed;
+      inset: 0 auto auto 0;
+      width: 0%;
+      height: 2px;
+      background: var(--accent);
+      z-index: 100;
+      pointer-events: none;
+      box-shadow: 0 0 14px rgba(215,255,63,.28);
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px),
+        var(--bg);
+      background-size: 42px 42px;
+      font-family: var(--sans);
+      overflow-x: hidden;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    button, input { font: inherit; }
+
+    .shell {
+      width: min(calc(100% - 40px), var(--max));
+      margin: 0 auto;
+    }
+
+    .mono {
+      font-family: var(--mono);
+      letter-spacing: -.025em;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      font-family: var(--mono);
+      font-size: 11px;
+      line-height: 1;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 0 rgba(215, 255, 63, .32);
+      animation: pulse 2.1s infinite;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(215,255,63,.32); }
+      75%, 100% { box-shadow: 0 0 0 9px rgba(215,255,63,0); }
+    }
+
+    .top-strip {
+      border-bottom: 1px solid var(--line);
+      background: rgba(11, 13, 11, .88);
+      backdrop-filter: blur(16px);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .status-grid {
+      min-height: 34px;
+      display: grid;
+      grid-template-columns: 1.35fr repeat(5, auto);
+      align-items: center;
+      gap: 22px;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .status-grid .primary {
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .status-grid strong {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .status-grid .jev { color: var(--accent); }
+
+    header {
+      border-bottom: 1px solid var(--line);
+      background: rgba(11,13,11,.76);
+      backdrop-filter: blur(18px);
+    }
+
+    .nav {
+      min-height: 78px;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 28px;
+    }
+
+    .brand {
+      font-family: var(--mono);
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -.08em;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      width: fit-content;
+    }
+
+    .brand-mark {
+      width: 26px;
+      height: 26px;
+      border: 1px solid var(--line-strong);
+      display: grid;
+      place-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .brand-mark::before,
+    .brand-mark::after {
+      content: "";
+      position: absolute;
+      background: var(--accent);
+    }
+
+    .brand-mark::before {
+      width: 1px;
+      height: 34px;
+      transform: rotate(45deg);
+    }
+
+    .brand-mark::after {
+      width: 34px;
+      height: 1px;
+      transform: rotate(-45deg);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 32px;
+      font-size: 12px;
+      color: var(--muted);
+      font-family: var(--mono);
+      text-transform: uppercase;
+    }
+
+    .nav-links a:hover { color: var(--text); }
+
+    .nav-actions {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .system-pill {
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .system-pill b {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .hero {
+      min-height: 690px;
+      border-bottom: 1px solid var(--line);
+      display: grid;
+      grid-template-columns: minmax(0, 1.07fr) minmax(420px, .93fr);
+    }
+
+    .hero-copy {
+      padding: 86px 70px 70px 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border-right: 1px solid var(--line);
+    }
+
+    .hero h1 {
+      margin: 28px 0 26px;
+      max-width: 910px;
+      font-size: clamp(66px, 8.2vw, 126px);
+      line-height: .82;
+      letter-spacing: -.085em;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .hero h1 .outline {
+      color: transparent;
+      -webkit-text-stroke: 1px rgba(240,242,233,.38);
+      display: block;
+    }
+
+    .hero h1 .accent { color: var(--accent); }
+
+    .hero-lede {
+      max-width: 690px;
+      display: grid;
+      grid-template-columns: 150px 1fr;
+      gap: 34px;
+      align-items: start;
+    }
+
+    .hero-lede p {
+      margin: 0;
+      color: #c8cdc0;
+      font-size: clamp(18px, 1.6vw, 24px);
+      line-height: 1.42;
+      letter-spacing: -.035em;
+    }
+
+    .hero-bottom {
+      margin-top: 64px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .cta {
+      height: 52px;
+      padding: 0 22px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      border: 1px solid var(--accent);
+      background: var(--accent);
+      color: #080a07;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: transform .2s ease, filter .2s ease;
+    }
+
+    .cta:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.04);
+    }
+
+    .cta.secondary {
+      background: transparent;
+      border-color: var(--line-strong);
+      color: var(--text);
+    }
+
+    .cta .arrow {
+      font-size: 18px;
+      line-height: 0;
+    }
+
+    .hero-machine {
+      padding: 28px 0 28px 28px;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .machine-window {
+      flex: 1;
+      border: 1px solid var(--line);
+      background: #0d100d;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      min-height: 590px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .machine-window::before {
+      content: "";
+      position: absolute;
+      inset: 54px 0 auto 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(215,255,63,.5), transparent);
+      transform: translateX(-100%);
+      animation: machineSweep 6s linear infinite;
+      pointer-events: none;
+      z-index: 4;
+    }
+
+    @keyframes machineSweep {
+      to { transform: translateX(100%); }
+    }
+
+    .machine-top {
+      min-height: 54px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      font-family: var(--mono);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      position: relative;
+      z-index: 2;
+    }
+
+    .machine-core {
+      padding: 22px 20px;
+      min-height: 345px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      background:
+        linear-gradient(rgba(240,242,233,.028) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(240,242,233,.028) 1px, transparent 1px);
+      background-size: 34px 34px;
+    }
+
+    .cycle-banner {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: end;
+      gap: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .cycle-kicker {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .cycle-name {
+      margin-top: 7px;
+      font-family: var(--mono);
+      font-size: 22px;
+      letter-spacing: -.045em;
+    }
+
+    .cycle-id {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .08em;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+
+    .signal-stack {
+      margin-top: 12px;
+      border-top: 1px solid rgba(240,242,233,.06);
+    }
+
+    .signal-line {
+      min-height: 51px;
+      display: grid;
+      grid-template-columns: 34px 1.15fr minmax(95px, .8fr) 42px 48px;
+      gap: 12px;
+      align-items: center;
+      border-bottom: 1px solid rgba(240,242,233,.075);
+      font-family: var(--mono);
+      font-size: 10px;
+      position: relative;
+    }
+
+    .signal-line::after {
+      content: "";
+      position: absolute;
+      inset: auto 0 -1px 0;
+      width: var(--signal, 70%);
+      height: 1px;
+      background: linear-gradient(90deg, var(--accent), rgba(215,255,63,.05));
+      opacity: .68;
+    }
+
+    .signal-index { color: #596154; }
+    .signal-name { color: #b7beb0; text-transform: uppercase; letter-spacing: .045em; }
+    .signal-context { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .signal-score { color: var(--text); text-align: right; }
+    .signal-delta { color: var(--accent); text-align: right; font-size: 9px; }
+
+    .decision-bus {
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: 108px 1fr auto;
+      border: 1px solid rgba(215,255,63,.25);
+      background: rgba(215,255,63,.035);
+      min-height: 84px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .decision-bus::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: -20%;
+      width: 18%;
+      background: linear-gradient(90deg, transparent, rgba(215,255,63,.08), transparent);
+      animation: busScan 4.4s linear infinite;
+    }
+
+    @keyframes busScan { to { left: 112%; } }
+
+    .bus-label,
+    .bus-decision,
+    .bus-confidence {
+      padding: 15px 14px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .bus-label {
+      border-right: 1px solid var(--line);
+      font-family: var(--mono);
+      font-size: 9px;
+      line-height: 1.6;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .bus-decision {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .bus-decision strong {
+      color: var(--accent);
+      font-family: var(--mono);
+      font-size: 20px;
+      letter-spacing: -.04em;
+    }
+
+    .bus-decision span {
+      margin-top: 6px;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: #b7beb0;
+    }
+
+    .bus-confidence {
+      min-width: 90px;
+      border-left: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-end;
+      font-family: var(--mono);
+    }
+
+    .bus-confidence small {
+      color: var(--muted);
+      font-size: 8px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .bus-confidence strong {
+      margin-top: 6px;
+      font-size: 18px;
+      font-weight: 500;
+    }
+
+    .decision-footer {
+      margin-top: auto;
+      padding-top: 17px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      font-family: var(--mono);
+      font-size: 8px;
+      line-height: 1.55;
+      color: #687062;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    .decision-footer b {
+      display: block;
+      margin-top: 4px;
+      color: #aeb5a8;
+      font-weight: 500;
+    }
+
+    .operation {
+      border-top: 1px solid var(--line);
+      display: grid;
+      grid-template-columns: 1.5fr .75fr .75fr;
+    }
+
+    .operation > div {
+      padding: 17px 16px;
+      min-width: 0;
+    }
+
+    .operation > div + div { border-left: 1px solid var(--line); }
+
+    .tiny-label {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .08em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .operation strong {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 500;
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .operation .accent { color: var(--accent); }
+
+    .ticker-band {
+      border-bottom: 1px solid var(--line);
+      overflow: hidden;
+      background: var(--accent);
+      color: #080a07;
+    }
+
+    .ticker-track {
+      width: max-content;
+      display: flex;
+      gap: 42px;
+      padding: 9px 0;
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      animation: marquee 34s linear infinite;
+    }
+
+    @keyframes marquee {
+      to { transform: translateX(-50%); }
+    }
+
+    .section {
+      border-bottom: 1px solid var(--line);
+    }
+
+    .section-head {
+      min-height: 110px;
+      display: grid;
+      grid-template-columns: 260px 1fr auto;
+      align-items: end;
+      gap: 32px;
+      padding: 30px 0 26px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .section-index {
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    .section-title {
+      margin: 0;
+      font-size: clamp(28px, 3.1vw, 48px);
+      letter-spacing: -.055em;
+      line-height: .95;
+      text-transform: uppercase;
+    }
+
+    .section-meta {
+      font-family: var(--mono);
+      font-size: 10px;
+      line-height: 1.7;
+      text-align: right;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .agent-grid {
+      display: grid;
+      grid-template-columns: 1.12fr .88fr;
+      min-height: 620px;
+    }
+
+    .terminal {
+      border-right: 1px solid var(--line);
+      min-width: 0;
+    }
+
+    .terminal-head {
+      height: 51px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+      padding: 0 18px;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .terminal-body {
+      padding: 10px 18px 20px;
+      font-family: var(--mono);
+    }
+
+    .event-row {
+      display: grid;
+      grid-template-columns: 84px 1fr auto;
+      gap: 18px;
+      align-items: start;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(240,242,233,.07);
+      font-size: 11px;
+      line-height: 1.55;
+    }
+
+    .event-time { color: #667060; }
+    .event-copy { color: #c8cdc0; }
+    .event-copy strong { color: var(--text); font-weight: 500; }
+    .event-type {
+      font-size: 9px;
+      letter-spacing: .08em;
+      color: var(--muted);
+      text-transform: uppercase;
+      border: 1px solid var(--line);
+      padding: 4px 6px;
+    }
+
+    .event-type.hot {
+      color: var(--accent);
+      border-color: rgba(215,255,63,.28);
+      background: var(--accent-soft);
+    }
+
+    .event-row.flash {
+      animation: eventFlash 1.3s ease;
+    }
+
+    @keyframes eventFlash {
+      0% { background: rgba(215,255,63,.12); }
+      100% { background: transparent; }
+    }
+
+    .telemetry {
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .progress-wrap {
+      padding: 28px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .progress-top {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .progress-value {
+      font-family: var(--mono);
+      font-size: 58px;
+      letter-spacing: -.08em;
+      line-height: .8;
+    }
+
+    .progress-bar {
+      height: 4px;
+      background: rgba(240,242,233,.08);
+      overflow: hidden;
+    }
+
+    .progress-bar span {
+      display: block;
+      height: 100%;
+      width: 87%;
+      background: var(--accent);
+      box-shadow: 0 0 16px rgba(215,255,63,.2);
+      transition: width .5s ease;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .metric {
+      min-height: 130px;
+      padding: 22px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .metric:nth-child(odd) { border-right: 1px solid var(--line); }
+
+    .metric-value {
+      margin-top: 18px;
+      font-family: var(--mono);
+      font-size: 30px;
+      letter-spacing: -.07em;
+    }
+
+    .metric-sub {
+      margin-top: 8px;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 9px;
+      text-transform: uppercase;
+    }
+
+    .rank-layout {
+      display: grid;
+      grid-template-columns: 1fr 330px;
+    }
+
+    .rank-table { border-right: 1px solid var(--line); }
+
+    .rank-head,
+    .rank-row {
+      display: grid;
+      grid-template-columns: 80px minmax(160px, 1.2fr) 1fr 120px 120px;
+      align-items: center;
+    }
+
+    .rank-head {
+      min-height: 46px;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .rank-head > div,
+    .rank-row > div { padding: 0 16px; }
+
+    .rank-row {
+      min-height: 94px;
+      border-bottom: 1px solid rgba(240,242,233,.08);
+      transition: background .2s ease;
+      cursor: pointer;
+    }
+
+    .rank-row:hover { background: rgba(240,242,233,.025); }
+
+    .rank-no {
+      font-family: var(--mono);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .asset {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .asset-symbol {
+      font-size: 28px;
+      line-height: 1;
+      letter-spacing: -.06em;
+      font-weight: 700;
+    }
+
+    .asset-name {
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 9px;
+      text-transform: uppercase;
+      margin-top: 7px;
+    }
+
+    .score-bar {
+      display: grid;
+      grid-template-columns: 1fr 50px;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .score-track {
+      height: 3px;
+      background: rgba(240,242,233,.08);
+    }
+
+    .score-fill {
+      height: 100%;
+      background: var(--accent);
+    }
+
+    .score-value {
+      font-family: var(--mono);
+      font-size: 12px;
+      text-align: right;
+    }
+
+    .movement {
+      font-family: var(--mono);
+      font-size: 11px;
+    }
+
+    .movement.up { color: var(--accent); }
+    .movement.down { color: var(--danger); }
+    .movement.flat { color: var(--muted); }
+
+    .decision {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      width: fit-content;
+      border: 1px solid var(--line);
+      padding: 6px 8px;
+    }
+
+    .decision.promote {
+      border-color: rgba(215,255,63,.3);
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .rank-aside {
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 500px;
+    }
+
+    .big-rank {
+      font-family: var(--mono);
+      font-size: 92px;
+      line-height: .8;
+      letter-spacing: -.1em;
+      color: var(--accent);
+    }
+
+    .rank-aside h3 {
+      margin: 22px 0 12px;
+      font-size: 26px;
+      letter-spacing: -.05em;
+    }
+
+    .rank-aside p {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .trace {
+      margin-top: 28px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+    }
+
+    .trace-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 9px 0;
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .trace-item strong {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .lore {
+      display: grid;
+      grid-template-columns: .78fr 1.22fr;
+      min-height: 570px;
+    }
+
+    .lore-left {
+      padding: 58px 48px 58px 0;
+      border-right: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .lore-left blockquote {
+      margin: 48px 0 0;
+      font-family: var(--serif);
+      font-size: clamp(34px, 4vw, 63px);
+      line-height: .98;
+      letter-spacing: -.045em;
+      max-width: 660px;
+    }
+
+    .lore-left blockquote em {
+      color: var(--accent);
+      font-style: normal;
+    }
+
+    .lore-right {
+      padding: 58px 0 58px 48px;
+    }
+
+    .compare {
+      display: grid;
+      gap: 12px;
+      margin-top: 34px;
+    }
+
+    .compare-row {
+      display: grid;
+      grid-template-columns: 190px 1fr 68px;
+      align-items: center;
+      min-height: 62px;
+      border-top: 1px solid var(--line);
+      font-family: var(--mono);
+      font-size: 11px;
+    }
+
+    .compare-row:last-child { border-bottom: 1px solid var(--line); }
+
+    .compare-row .muted { color: var(--muted); }
+    .compare-row .arrow-right {
+      color: var(--accent);
+      text-align: right;
+      font-size: 20px;
+    }
+
+    .lore-copy {
+      max-width: 640px;
+      margin-top: 44px;
+      color: #aab1a2;
+      line-height: 1.75;
+      font-size: 14px;
+    }
+
+    .market-grid {
+      display: grid;
+      grid-template-columns: 1.28fr .72fr;
+      min-height: 620px;
+    }
+
+    .market-map {
+      border-right: 1px solid var(--line);
+      padding: 28px 28px 28px 0;
+      position: relative;
+    }
+
+    .field-frame {
+      height: 520px;
+      border: 1px solid var(--line);
+      position: relative;
+      overflow: hidden;
+      background:
+        linear-gradient(rgba(240,242,233,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(240,242,233,.035) 1px, transparent 1px);
+      background-size: 12.5% 20%;
+    }
+
+    .field-frame::before,
+    .field-frame::after {
+      content: "";
+      position: absolute;
+      background: rgba(240,242,233,.11);
+      z-index: 0;
+    }
+
+    .field-frame::before { left: 50%; top: 0; bottom: 0; width: 1px; }
+    .field-frame::after { top: 50%; left: 0; right: 0; height: 1px; }
+
+    .field-label {
+      position: absolute;
+      z-index: 2;
+      font-family: var(--mono);
+      font-size: 8px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: #5f675b;
+    }
+
+    .field-label.tl { top: 12px; left: 14px; }
+    .field-label.tr { top: 12px; right: 14px; text-align: right; }
+    .field-label.bl { bottom: 12px; left: 14px; }
+    .field-label.br { bottom: 12px; right: 14px; text-align: right; }
+
+    .field-axis-y,
+    .field-axis-x {
+      position: absolute;
+      z-index: 3;
+      font-family: var(--mono);
+      font-size: 8px;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .field-axis-y {
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%) rotate(-90deg);
+      transform-origin: left top;
+    }
+
+    .field-axis-x {
+      right: 14px;
+      bottom: 14px;
+    }
+
+    .field-trails {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .asset-marker {
+      position: absolute;
+      z-index: 4;
+      transform: translate(-50%, -50%);
+      display: inline-grid;
+      grid-template-columns: auto auto;
+      align-items: center;
+      gap: 10px;
+      min-width: 98px;
+      padding: 9px 10px;
+      border: 1px solid rgba(240,242,233,.18);
+      background: rgba(10,12,10,.94);
+      font-family: var(--mono);
+      font-size: 9px;
+      cursor: pointer;
+      transition: border-color .2s ease, transform .2s ease, background .2s ease;
+    }
+
+    .asset-marker:hover {
+      transform: translate(-50%, -50%) translateY(-2px);
+      border-color: rgba(240,242,233,.42);
+      background: #101410;
+    }
+
+    .asset-marker strong {
+      font-size: 11px;
+      color: #b8bfb1;
+      font-weight: 500;
+    }
+
+    .asset-marker span {
+      color: #687063;
+      font-size: 8px;
+      text-align: right;
+    }
+
+    .asset-marker.hot {
+      min-width: 122px;
+      border-color: var(--accent);
+      box-shadow: 0 0 34px rgba(215,255,63,.06);
+    }
+
+    .asset-marker.hot strong,
+    .asset-marker.hot span { color: var(--accent); }
+
+    .asset-marker::before {
+      content: "";
+      width: 5px;
+      height: 5px;
+      position: absolute;
+      left: -3px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #65705f;
+    }
+
+    .asset-marker.hot::before { background: var(--accent); }
+
+    .field-legend {
+      position: absolute;
+      z-index: 5;
+      left: 14px;
+      bottom: 14px;
+      display: flex;
+      gap: 16px;
+      font-family: var(--mono);
+      font-size: 8px;
+      color: #697164;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    .field-legend i {
+      width: 14px;
+      height: 1px;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 6px;
+      background: rgba(240,242,233,.28);
+    }
+
+    .field-legend .current i { background: var(--accent); }
+
+    .pair-preview {
+      padding: 28px;
+    }
+
+    .pair-card {
+      border-top: 1px solid var(--line);
+      padding: 18px 0;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 24px;
+    }
+
+    .pair-card:first-of-type { margin-top: 28px; }
+
+    .pair-title {
+      font-size: 29px;
+      letter-spacing: -.055em;
+      font-weight: 700;
+    }
+
+    .pair-title span { color: var(--accent); }
+
+    .pair-copy {
+      margin-top: 9px;
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 12px;
+      max-width: 420px;
+    }
+
+    .pair-score {
+      font-family: var(--mono);
+      font-size: 18px;
+      color: var(--text);
+    }
+
+    .pair-score small {
+      display: block;
+      font-size: 8px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 5px;
+      letter-spacing: .08em;
+    }
+
+    .launch-preview {
+      min-height: 470px;
+      display: grid;
+      grid-template-columns: .95fr 1.05fr;
+    }
+
+    .launch-copy {
+      border-right: 1px solid var(--line);
+      padding: 52px 48px 52px 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .launch-pair {
+      margin-top: 28px;
+      font-size: clamp(48px, 6vw, 86px);
+      line-height: .92;
+      letter-spacing: -.08em;
+      font-weight: 800;
+    }
+
+    .launch-pair span { color: var(--accent); }
+
+    .launch-meta {
+      display: flex;
+      gap: 22px;
+      flex-wrap: wrap;
+      margin-top: 32px;
+    }
+
+    .launch-meta-item {
+      min-width: 130px;
+    }
+
+    .launch-meta-item strong {
+      display: block;
+      font-family: var(--mono);
+      font-size: 18px;
+      margin-top: 8px;
+      font-weight: 500;
+    }
+
+    .countdown-wrap {
+      padding: 52px 0 52px 48px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .countdown {
+      font-family: var(--mono);
+      font-size: clamp(52px, 7vw, 98px);
+      line-height: 1;
+      letter-spacing: -.095em;
+      color: var(--accent);
+      margin-top: 24px;
+    }
+
+    .launch-cycle {
+      margin-top: 38px;
+      border-top: 1px solid var(--line);
+    }
+
+    .cycle-row {
+      display: grid;
+      grid-template-columns: 70px 1fr auto;
+      align-items: center;
+      min-height: 50px;
+      border-bottom: 1px solid var(--line);
+      font-family: var(--mono);
+      font-size: 10px;
+      text-transform: uppercase;
+    }
+
+    .cycle-row .time { color: var(--muted); }
+    .cycle-row .state { color: var(--muted); }
+    .cycle-row.complete .state { color: var(--accent); }
+    .cycle-row.active { background: rgba(215,255,63,.035); }
+    .cycle-row.active .state { color: var(--accent); }
+
+    footer {
+      padding: 48px 0 34px;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 1.2fr .8fr .8fr;
+      gap: 40px;
+      align-items: end;
+    }
+
+    .footer-brand {
+      font-size: clamp(64px, 10vw, 145px);
+      font-weight: 800;
+      letter-spacing: -.095em;
+      line-height: .7;
+    }
+
+    .footer-note {
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 11px;
+      max-width: 390px;
+    }
+
+    .footer-links {
+      display: grid;
+      justify-content: end;
+      gap: 8px;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      text-align: right;
+    }
+
+    .footer-bottom {
+      margin-top: 46px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      color: #646b60;
+      font-family: var(--mono);
+      font-size: 9px;
+      text-transform: uppercase;
+    }
+
+
+    /* ===== Pairing / Narrative Engine V4 ===== */
+    .pair-engine {
+      display: grid;
+      grid-template-columns: minmax(0, 1.08fr) minmax(360px, .92fr);
+      min-height: 660px;
+    }
+
+    .pair-engine-left {
+      border-right: 1px solid var(--line);
+      padding: 30px 34px 34px 0;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .pair-engine-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 24px;
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .pair-engine-top strong {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .decision-engine-frame {
+      border: 1px solid var(--line);
+      background:
+        radial-gradient(circle at 50% 48%, rgba(215,255,63,.12), transparent 32%),
+        linear-gradient(180deg, rgba(215,255,63,.03), transparent 24%),
+        #0c0f0c;
+      position: relative;
+      overflow: hidden;
+      min-height: 470px;
+      display: grid;
+      place-items: center;
+    }
+
+    .decision-engine-frame::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+      background-size: 42px 42px;
+      pointer-events: none;
+      opacity: .5;
+    }
+
+    .decision-engine-frame::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at center, transparent 38%, rgba(0,0,0,.16) 100%);
+      pointer-events: none;
+    }
+
+    .engine-shell {
+      position: relative;
+      width: min(560px, 88%);
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+      z-index: 2;
+    }
+
+    .engine-ring-1,
+    .engine-ring-2,
+    .engine-ring-3 {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid rgba(240,242,233,.12);
+    }
+
+    .engine-ring-1 {
+      width: 100%;
+      height: 100%;
+      opacity: .9;
+    }
+
+    .engine-ring-2 {
+      width: 72%;
+      height: 72%;
+      border-style: dashed;
+      border-color: rgba(215,255,63,.22);
+      animation: rotate 22s linear infinite;
+    }
+
+    .engine-ring-3 {
+      width: 44%;
+      height: 44%;
+      border-style: dashed;
+      border-color: rgba(215,255,63,.18);
+      animation: rotateBack 16s linear infinite;
+    }
+
+    .engine-core {
+      width: 132px;
+      height: 132px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #090b08;
+      display: grid;
+      place-items: center;
+      font-family: var(--mono);
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -.06em;
+      box-shadow: 0 0 80px rgba(215,255,63,.18);
+      z-index: 3;
+      position: relative;
+    }
+
+    .engine-core::after {
+      content: "DECISION ENGINE";
+      position: absolute;
+      left: 50%;
+      bottom: -28px;
+      transform: translateX(-50%);
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 8px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .signal-card {
+      position: absolute;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      background: rgba(11,13,11,.92);
+      min-width: 170px;
+      z-index: 3;
+    }
+
+    .signal-card .tiny {
+      font-family: var(--mono);
+      font-size: 8px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .signal-card strong {
+      display: block;
+      margin-top: 9px;
+      font-size: 18px;
+      letter-spacing: -.04em;
+      font-weight: 560;
+      line-height: 1;
+    }
+
+    .signal-card small {
+      display: block;
+      margin-top: 7px;
+      font-family: var(--mono);
+      font-size: 8px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    .signal-card.signal-hot strong {
+      color: var(--accent);
+    }
+
+    .signal-card.sc-market { top: 14%; left: -2%; }
+    .signal-card.sc-narrative { top: 22%; right: -4%; }
+    .signal-card.sc-cultural { bottom: 20%; left: -10%; }
+    .signal-card.sc-pair { bottom: 18%; right: -1%; }
+
+    .engine-output {
+      position: absolute;
+      bottom: 5%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(520px, 86%);
+      border: 1px solid rgba(215,255,63,.28);
+      background: rgba(11,13,11,.94);
+      display: grid;
+      grid-template-columns: 1.1fr .6fr .6fr;
+      z-index: 3;
+    }
+
+    .engine-output > div {
+      padding: 15px 16px;
+      min-width: 0;
+    }
+
+    .engine-output > div + div {
+      border-left: 1px solid rgba(215,255,63,.16);
+    }
+
+    .engine-output strong {
+      display: block;
+      margin-top: 8px;
+      font-family: var(--mono);
+      font-size: 18px;
+      font-weight: 500;
+    }
+
+    .engine-output .accent {
+      color: var(--accent);
+    }
+
+    .pair-engine-metrics {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      border-top: 1px solid var(--line);
+      border-left: 1px solid var(--line);
+    }
+
+    .pem {
+      min-height: 96px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      padding: 16px;
+    }
+
+    .pem strong {
+      display: block;
+      margin-top: 9px;
+      font-family: var(--mono);
+      font-size: 18px;
+      font-weight: 500;
+    }
+
+    .pair-engine-right {
+      padding: 30px 0 34px 34px;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .pair-review-head {
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 18px;
+      margin-bottom: 8px;
+    }
+
+    .pair-review-title {
+      margin: 12px 0 0;
+      font-size: clamp(40px, 4.8vw, 68px);
+      line-height: .92;
+      letter-spacing: -.075em;
+      text-transform: uppercase;
+    }
+
+    .pair-list {
+      border-top: 1px solid var(--line);
+      margin-top: 14px;
+    }
+
+    .pair-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 100px;
+      gap: 24px;
+      padding: 22px 0;
+      border-bottom: 1px solid rgba(240,242,233,.08);
+    }
+
+    .pair-row h4 {
+      margin: 0;
+      font-size: clamp(30px, 3vw, 48px);
+      line-height: .96;
+      letter-spacing: -.06em;
+      font-weight: 760;
+    }
+
+    .pair-row h4 span { color: var(--accent); }
+
+    .pair-row p {
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+      max-width: 520px;
+    }
+
+    .pair-score-block {
+      text-align: right;
+      font-family: var(--mono);
+    }
+
+    .pair-score-block strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 24px;
+      line-height: 1;
+      font-weight: 500;
+    }
+
+    .pair-review-cta {
+      margin-top: auto;
+      padding-top: 26px;
+    }
+
+    .pair-review-note {
+      margin-top: 16px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.7;
+      max-width: 470px;
+    }
+
+
+    /* ===== Pairing / Narrative Engine V5 interactive upgrade ===== */
+    .pair-engine-left {
+      position: relative;
+    }
+
+    .decision-engine-frame {
+      min-height: 560px;
+      transition: transform .25s ease, box-shadow .25s ease;
+      box-shadow: inset 0 0 0 1px rgba(240,242,233,.02);
+    }
+
+    .decision-engine-frame:hover {
+      box-shadow:
+        inset 0 0 0 1px rgba(215,255,63,.06),
+        0 20px 60px rgba(0,0,0,.18);
+    }
+
+    .engine-shell {
+      isolation: isolate;
+      transform-style: preserve-3d;
+      transition: transform .18s ease;
+    }
+
+    .engine-ring-1,
+    .engine-ring-2,
+    .engine-ring-3 {
+      pointer-events: none;
+    }
+
+    .engine-ring-1::after,
+    .engine-ring-2::after,
+    .engine-ring-3::after {
+      content: "";
+      position: absolute;
+      inset: -1px;
+      border-radius: inherit;
+      border: 1px solid transparent;
+      opacity: 0;
+      transition: opacity .22s ease;
+    }
+
+    .signal-card {
+      cursor: pointer;
+      transition:
+        transform .18s ease,
+        border-color .18s ease,
+        background .18s ease,
+        box-shadow .18s ease,
+        opacity .18s ease;
+      z-index: 4;
+    }
+
+    .signal-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(215,255,63,.22);
+      box-shadow: 0 10px 30px rgba(0,0,0,.16);
+    }
+
+    .signal-card.active {
+      border-color: rgba(215,255,63,.35);
+      background: rgba(12,14,12,.98);
+      box-shadow: 0 0 0 1px rgba(215,255,63,.08), 0 18px 30px rgba(0,0,0,.18);
+    }
+
+    .signal-card.active strong {
+      color: var(--accent);
+    }
+
+    .signal-card .contribution {
+      margin-top: 10px;
+    }
+
+    .signal-card .contribution-track {
+      height: 2px;
+      background: rgba(240,242,233,.08);
+      overflow: hidden;
+    }
+
+    .signal-card .contribution-track > span {
+      display: block;
+      height: 100%;
+      width: var(--contrib, 50%);
+      background: #79816f;
+      transition: width .28s ease, background .28s ease;
+    }
+
+    .signal-card.active .contribution-track > span {
+      background: var(--accent);
+      box-shadow: 0 0 10px rgba(215,255,63,.22);
+    }
+
+    .signal-card .contribution-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 6px;
+      font-family: var(--mono);
+      font-size: 7px;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .engine-flow {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .engine-flow path {
+      fill: none;
+      stroke: rgba(215,255,63,.18);
+      stroke-width: 1.3;
+      stroke-dasharray: 6 8;
+      opacity: .38;
+      transition: opacity .2s ease, stroke .2s ease, stroke-width .2s ease;
+    }
+
+    .engine-flow path.active {
+      stroke: rgba(215,255,63,.84);
+      stroke-width: 2.2;
+      opacity: .95;
+      animation: dashFlow 2.6s linear infinite;
+      filter: drop-shadow(0 0 6px rgba(215,255,63,.08));
+    }
+
+    @keyframes dashFlow {
+      to { stroke-dashoffset: -28; }
+    }
+
+    .signal-pulse {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 0 rgba(215,255,63,.34);
+      z-index: 5;
+      animation: pulse 2.2s infinite;
+    }
+
+    .sp-1 { top: 28%; left: 32%; }
+    .sp-2 { top: 26%; right: 30%; animation-delay: .5s; }
+    .sp-3 { bottom: 29%; left: 31%; animation-delay: 1s; }
+    .sp-4 { bottom: 28%; right: 28%; animation-delay: 1.4s; }
+
+    .engine-stage-rail {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      border-top: 1px solid var(--line);
+      border-left: 1px solid var(--line);
+    }
+
+    .stage-step {
+      min-height: 68px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: background .18s ease, border-color .18s ease;
+    }
+
+    .stage-step strong {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: .03em;
+    }
+
+    .stage-step span {
+      font-family: var(--mono);
+      font-size: 8px;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--muted);
+    }
+
+    .stage-step.active {
+      background: rgba(215,255,63,.045);
+      border-color: rgba(215,255,63,.12);
+    }
+
+    .stage-step.active strong {
+      color: var(--accent);
+    }
+
+    .pair-explainer {
+      margin-top: 16px;
+      border: 1px solid var(--line);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: center;
+      padding: 14px 16px;
+      background: rgba(255,255,255,.01);
+    }
+
+    .pair-explainer p {
+      margin: 0;
+      color: #b2b8ad;
+      font-size: 12px;
+      line-height: 1.62;
+      max-width: 620px;
+    }
+
+    .pair-explainer .tag {
+      padding: 8px 10px;
+      border: 1px solid rgba(215,255,63,.22);
+      color: var(--accent);
+      font-family: var(--mono);
+      font-size: 8px;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .pair-list {
+      margin-top: 10px;
+    }
+
+    .pair-row {
+      cursor: pointer;
+      transition: background .18s ease, border-color .18s ease, transform .18s ease;
+      position: relative;
+    }
+
+    .pair-row:hover {
+      background: rgba(240,242,233,.018);
+    }
+
+    .pair-row.active {
+      background: linear-gradient(90deg, rgba(215,255,63,.05), transparent 72%);
+      border-color: rgba(215,255,63,.14);
+    }
+
+    .pair-row.active::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 14px;
+      bottom: 14px;
+      width: 2px;
+      background: var(--accent);
+    }
+
+    .pair-row.active h4 span,
+    .pair-row.active .pair-score-block strong {
+      color: var(--accent);
+    }
+
+    .pair-thesis-micro {
+      margin-top: 12px;
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .pair-thesis-micro span {
+      padding: 4px 6px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 7px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .pair-review-note {
+      min-height: 36px;
+    }
+
+
+    /* V6 cleanup: remove decorative connector lines/dots */
+    .engine-flow,
+    .signal-pulse {
+      display: none !important;
+    }
+
+    .engine-shell::before,
+    .engine-shell::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      pointer-events: none;
+      z-index: 1;
+      opacity: .18;
+    }
+
+    .engine-shell::before {
+      width: 78%;
+      height: 1px;
+      transform: translate(-50%, -50%);
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(240,242,233,.12) 18%,
+        rgba(215,255,63,.14) 50%,
+        rgba(240,242,233,.12) 82%,
+        transparent
+      );
+    }
+
+    .engine-shell::after {
+      width: 1px;
+      height: 78%;
+      transform: translate(-50%, -50%);
+      background: linear-gradient(
+        180deg,
+        transparent,
+        rgba(240,242,233,.12) 18%,
+        rgba(215,255,63,.14) 50%,
+        rgba(240,242,233,.12) 82%,
+        transparent
+      );
+    }
+
+    .signal-card.active {
+      transform: translateY(-3px);
+    }
+
+    .signal-card.active::after {
+      content: "";
+      position: absolute;
+      inset: -1px;
+      border: 1px solid rgba(215,255,63,.28);
+      pointer-events: none;
+    }
+
+    .engine-core {
+      transition:
+        transform .22s ease,
+        box-shadow .22s ease,
+        background .22s ease;
+    }
+
+    .decision-engine-frame:has(.signal-card.active) .engine-core {
+      transform: scale(1.03);
+      box-shadow:
+        0 0 0 1px rgba(215,255,63,.12),
+        0 0 70px rgba(215,255,63,.13);
+    }
+
+    @media (max-width: 1100px) {
+      .status-grid { grid-template-columns: 1fr repeat(3, auto); }
+      .status-grid > :nth-child(5),
+      .status-grid > :nth-child(6) { display: none; }
+
+      .hero { grid-template-columns: 1fr; }
+      .hero-copy {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+        padding-right: 0;
+      }
+      .hero-machine { padding: 28px 0; }
+
+      .agent-grid,
+      .rank-layout,
+      .lore,
+      .market-grid,
+      .pair-engine,
+      .launch-preview {
+        grid-template-columns: 1fr;
+      }
+
+      .terminal,
+      .rank-table,
+      .lore-left,
+      .market-map,
+      .pair-engine-left,
+      .launch-copy {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .lore-left { padding-right: 0; }
+      .lore-right { padding-left: 0; }
+      .countdown-wrap { padding-left: 0; }
+    }
+
+    @media (max-width: 760px) {
+      .shell { width: min(calc(100% - 24px), var(--max)); }
+
+      .status-grid {
+        min-height: 38px;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+      }
+      .status-grid > :not(.primary):not(:nth-child(2)) { display: none; }
+
+      .nav {
+        min-height: 68px;
+        grid-template-columns: 1fr auto;
+      }
+
+      .nav-links { display: none; }
+      .system-pill { display: none; }
+
+      .hero-copy { padding-top: 56px; padding-bottom: 48px; }
+      .hero h1 { font-size: clamp(58px, 20vw, 88px); }
+      .hero-lede { grid-template-columns: 1fr; gap: 12px; }
+      .hero-bottom { margin-top: 42px; }
+
+      .machine-window { min-height: 620px; }
+      .signal-line { grid-template-columns: 28px 1fr 46px 42px; }
+      .signal-context { display: none; }
+      .decision-bus { grid-template-columns: 90px 1fr; }
+      .bus-confidence { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--line); align-items: flex-start; flex-direction: row; gap: 10px; }
+      .decision-footer { grid-template-columns: 1fr; }
+      .operation { grid-template-columns: 1fr; }
+      .operation > div + div {
+        border-left: 0;
+        border-top: 1px solid var(--line);
+      }
+
+      .section-head {
+        grid-template-columns: 1fr;
+        align-items: start;
+        gap: 10px;
+        min-height: 0;
+      }
+
+      .section-meta { text-align: left; }
+
+      .event-row {
+        grid-template-columns: 62px 1fr;
+      }
+      .event-type { display: none; }
+
+      .metrics { grid-template-columns: 1fr 1fr; }
+
+      .rank-head { display: none; }
+      .rank-row {
+        grid-template-columns: 50px 1fr auto;
+        min-height: 100px;
+      }
+      .rank-row > div:nth-child(3) { display: none; }
+      .rank-row > div:nth-child(5) { display: none; }
+
+      .rank-aside { min-height: 420px; }
+      .compare-row { grid-template-columns: 125px 1fr 28px; }
+
+      .pair-engine-left { padding-right: 0; }
+      .pair-engine-right { padding-left: 0; }
+      .pair-explainer { grid-template-columns: 1fr; }
+      .engine-stage-rail { grid-template-columns: 1fr 1fr; }
+      .pair-engine-metrics { grid-template-columns: 1fr 1fr; }
+      .signal-card {
+        min-width: 124px;
+        padding: 10px 10px;
+      }
+      .signal-card strong { font-size: 15px; }
+      .engine-output {
+        width: calc(100% - 24px);
+        grid-template-columns: 1fr;
+      }
+      .engine-output > div + div {
+        border-left: 0;
+        border-top: 1px solid rgba(215,255,63,.16);
+      }
+      .pair-row {
+        grid-template-columns: 1fr;
+      }
+      .pair-score-block {
+        text-align: left;
+      }
+      .market-map { padding: 18px 0; }
+      .field-frame { height: 500px; }
+      .asset-marker { min-width: 78px; padding: 8px; }
+      .asset-marker span { display: none; }
+      .asset-marker.hot { min-width: 88px; }
+      .pair-preview { padding-left: 0; padding-right: 0; }
+
+      .footer-grid { grid-template-columns: 1fr; }
+      .footer-links { justify-content: start; text-align: left; }
+      .footer-bottom { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-progress" id="page-progress"></div>
+  <div class="top-strip">
+    <div class="shell status-grid">
+      <div class="primary">
+        <span class="live-dot"></span>
+        JEVO AGENT ONLINE
+      </div>
+      <div>JEV: <strong class="jev">ACTIVE</strong></div>
+      <div>MARKET: <strong>SCANNING</strong></div>
+      <div>LAST DECISION: <strong id="last-decision">12s AGO</strong></div>
+      <div>NEXT CYCLE: <strong id="next-cycle">02:14</strong></div>
+      <div>NETWORK: <strong>ROBINHOOD CHAIN</strong></div>
+    </div>
+  </div>
+
+  <header>
+    <div class="shell nav">
+      <a class="brand" href="#top" aria-label="JEVO home">
+        <span class="brand-mark"></span>
+        JEVO
+      </a>
+
+      <nav class="nav-links" aria-label="Primary navigation">
+        <a href="#agent">Agent</a>
+        <a href="#market">Market</a>
+        <a href="#pairings">Pairings</a>
+        <a href="#launch">Launch</a>
+        <a href="#memory">Memory</a>
+      </nav>
+
+      <div class="nav-actions">
+        <div class="system-pill">Decision layer / <b>Jev</b></div>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="shell hero">
+      <div class="hero-copy">
+        <div>
+          <div class="eyebrow">
+            <span class="live-dot"></span>
+            Autonomous Market Intelligence Protocol
+          </div>
+
+          <h1>
+            Markets move.
+            <span class="outline">JEVO</span>
+            <span class="accent">decides.</span>
+          </h1>
+
+          <div class="hero-lede">
+            <div class="eyebrow">Powered by Jev</div>
+            <p>
+              An autonomous market agent continuously evaluating Stock Tokens,
+              narratives and cultural signals to discover the next
+              stock-native meme opportunity.
+            </p>
+          </div>
+        </div>
+
+        <div class="hero-bottom">
+          <a class="cta" href="#agent">
+            Watch the agent
+            <span class="arrow">↘</span>
+          </a>
+          <a class="cta secondary" href="#market">
+            View current opportunity
+          </a>
+        </div>
+      </div>
+
+      <div class="hero-machine">
+        <div class="machine-window">
+          <div class="machine-top">
+            <span>JEVO / DECISION BUS</span>
+            <span>Cycle 9841 / State delta +06</span>
+          </div>
+
+          <div class="machine-core">
+            <div class="cycle-banner">
+              <div>
+                <div class="cycle-kicker">Bounded evaluation / current priority asset</div>
+                <div class="cycle-name">NVDA / OPPORTUNITY REVIEW</div>
+              </div>
+              <div class="cycle-id">JEV ACTIVE</div>
+            </div>
+
+            <div class="signal-stack">
+              <div class="signal-line" style="--signal:91%">
+                <span class="signal-index">01</span>
+                <span class="signal-name">Market momentum</span>
+                <span class="signal-context">Price / volume / velocity</span>
+                <span class="signal-score">91</span>
+                <span class="signal-delta">+04</span>
+              </div>
+              <div class="signal-line" style="--signal:98%">
+                <span class="signal-index">02</span>
+                <span class="signal-name">Narrative momentum</span>
+                <span class="signal-context">AI infrastructure accelerating</span>
+                <span class="signal-score">98</span>
+                <span class="signal-delta">+09</span>
+              </div>
+              <div class="signal-line" style="--signal:89%">
+                <span class="signal-index">03</span>
+                <span class="signal-name">Social velocity</span>
+                <span class="signal-context">Attention delta / current cycle</span>
+                <span class="signal-score">89</span>
+                <span class="signal-delta">+18%</span>
+              </div>
+              <div class="signal-line" style="--signal:94%">
+                <span class="signal-index">04</span>
+                <span class="signal-name">Meme compatibility</span>
+                <span class="signal-context">Cultural simplicity / recognition</span>
+                <span class="signal-score">94</span>
+                <span class="signal-delta">+03</span>
+              </div>
+              <div class="signal-line" style="--signal:96%">
+                <span class="signal-index">05</span>
+                <span class="signal-name">Pair compatibility</span>
+                <span class="signal-context">NVDA × GPU thesis coherence</span>
+                <span class="signal-score">96</span>
+                <span class="signal-delta">+07</span>
+              </div>
+            </div>
+
+            <div class="decision-bus">
+              <div class="bus-label">Structured<br />decision</div>
+              <div class="bus-decision">
+                <strong>PROMOTE</strong>
+                <span>NVDA / RANK #04 → #01 / opportunity 96.8</span>
+              </div>
+              <div class="bus-confidence">
+                <small>Confidence</small>
+                <strong>94%</strong>
+              </div>
+            </div>
+
+            <div class="decision-footer">
+              <span>Previous state<b>#04 / 93.7</b></span>
+              <span>Current state<b>#01 / 96.8</b></span>
+              <span>Next action<b>PAIR REVIEW</b></span>
+            </div>
+          </div>
+
+          <div class="operation">
+            <div>
+              <div class="tiny-label">Current operation</div>
+              <strong id="operation-text">SCANNING US STOCK TOKENS</strong>
+            </div>
+            <div>
+              <div class="tiny-label">Current cycle</div>
+              <strong class="accent" id="hero-progress">87%</strong>
+            </div>
+            <div>
+              <div class="tiny-label">Latest action</div>
+              <strong>PROMOTE NVDA</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="ticker-band" aria-hidden="true">
+      <div class="ticker-track">
+        <span>OBSERVE → DECIDE → PAIR → LAUNCH</span>
+        <span>NVDA ↑ #1 / JEV PROMOTE</span>
+        <span>43 ACTIVE CANDIDATES</span>
+        <span>127 NARRATIVES DETECTED</span>
+        <span>JEV ACTIVE</span>
+        <span>OBSERVE → DECIDE → PAIR → LAUNCH</span>
+        <span>NVDA ↑ #1 / JEV PROMOTE</span>
+        <span>43 ACTIVE CANDIDATES</span>
+        <span>127 NARRATIVES DETECTED</span>
+        <span>JEV ACTIVE</span>
+      </div>
+    </div>
+
+    <section class="section" id="agent">
+      <div class="shell">
+        <div class="section-head">
+          <div class="section-index">01 / Live agent state</div>
+          <h2 class="section-title">The agent is operating now.</h2>
+          <div class="section-meta">
+            Last full scan / 07:55 UTC<br />
+            Data age / &lt; 05 min
+          </div>
+        </div>
+
+        <div class="agent-grid">
+          <div class="terminal">
+            <div class="terminal-head">
+              <span>Agent activity / observable events only</span>
+              <span id="terminal-clock">08:06:14 UTC</span>
+            </div>
+
+            <div class="terminal-body" id="event-stream">
+              <div class="event-row">
+                <span class="event-time">08:05:31</span>
+                <span class="event-copy"><strong>Market data refreshed.</strong> 42 priority assets changed since the previous delta scan.</span>
+                <span class="event-type">Observe</span>
+              </div>
+              <div class="event-row">
+                <span class="event-time">08:05:34</span>
+                <span class="event-copy"><strong>Narrative acceleration detected.</strong> AI infrastructure cluster increased above baseline.</span>
+                <span class="event-type">Signal</span>
+              </div>
+              <div class="event-row">
+                <span class="event-time">08:05:37</span>
+                <span class="event-copy"><strong>Social velocity recalculated.</strong> NVDA attention moved +18.4% versus previous cycle.</span>
+                <span class="event-type">Signal</span>
+              </div>
+              <div class="event-row">
+                <span class="event-time">08:05:41</span>
+                <span class="event-copy"><strong>JEV classification completed.</strong> NVDA qualified for promotion review.</span>
+                <span class="event-type hot">Jev decision</span>
+              </div>
+              <div class="event-row">
+                <span class="event-time">08:05:44</span>
+                <span class="event-copy"><strong>Pair compatibility evaluated.</strong> GPU concept remains the highest-coherence candidate.</span>
+                <span class="event-type">Pair</span>
+              </div>
+              <div class="event-row">
+                <span class="event-time">08:05:49</span>
+                <span class="event-copy"><strong>Opportunity score updated.</strong> NVDA moved from 93.7 → 96.8.</span>
+                <span class="event-type">Score</span>
+              </div>
+              <div class="event-row">
+                <span class="event-time">08:05:52</span>
+                <span class="event-copy"><strong>NVDA promoted #4 → #1.</strong> Ranking state published to the agent feed.</span>
+                <span class="event-type hot">Action</span>
+              </div>
+            </div>
+          </div>
+
+          <aside class="telemetry">
+            <div class="progress-wrap">
+              <div class="progress-top">
+                <div>
+                  <div class="tiny-label">Current scan cycle</div>
+                  <div class="progress-value" id="progress-value">87%</div>
+                </div>
+                <div class="section-meta">
+                  Delta scan<br />
+                  cycle_9841
+                </div>
+              </div>
+              <div class="progress-bar">
+                <span id="progress-bar"></span>
+              </div>
+            </div>
+
+            <div class="metrics">
+              <div class="metric">
+                <div class="tiny-label">Assets scanned</div>
+                <div class="metric-value mono" id="assets-scanned">2,847</div>
+                <div class="metric-sub">of 3,214 assets</div>
+              </div>
+              <div class="metric">
+                <div class="tiny-label">Signals processed</div>
+                <div class="metric-value mono" id="signals-count">18,421</div>
+                <div class="metric-sub">market + narrative + social</div>
+              </div>
+              <div class="metric">
+                <div class="tiny-label">Narratives detected</div>
+                <div class="metric-value mono">127</div>
+                <div class="metric-sub">11 materially changed</div>
+              </div>
+              <div class="metric">
+                <div class="tiny-label">Jev decisions</div>
+                <div class="metric-value mono" id="decisions-count">6,921</div>
+                <div class="metric-sub">current retained history</div>
+              </div>
+              <div class="metric">
+                <div class="tiny-label">Qualified candidates</div>
+                <div class="metric-value mono">43</div>
+                <div class="metric-sub">8 high-conviction</div>
+              </div>
+              <div class="metric">
+                <div class="tiny-label">Data freshness</div>
+                <div class="metric-value mono">&lt; 5m</div>
+                <div class="metric-sub">priority universe</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="market">
+      <div class="shell">
+        <div class="section-head">
+          <div class="section-index">02 / Opportunity rank</div>
+          <h2 class="section-title">What should exist next?</h2>
+          <div class="section-meta">
+            Last decision cycle / 12s ago<br />
+            Sort / Jevo opportunity
+          </div>
+        </div>
+
+        <div class="rank-layout">
+          <div class="rank-table">
+            <div class="rank-head">
+              <div>Rank</div>
+              <div>Asset</div>
+              <div>Pairability</div>
+              <div>Movement</div>
+              <div>Jev</div>
+            </div>
+
+            <a class="rank-row" href="#stock-preview">
+              <div class="rank-no">01</div>
+              <div class="asset">
+                <div>
+                  <div class="asset-symbol">NVDA</div>
+                  <div class="asset-name">NVIDIA Stock Token</div>
+                </div>
+              </div>
+              <div class="score-bar">
+                <div class="score-track"><div class="score-fill" style="width:96.8%"></div></div>
+                <div class="score-value">96.8</div>
+              </div>
+              <div class="movement up">▲ +3</div>
+              <div><span class="decision promote">Promote</span></div>
+            </a>
+
+            <a class="rank-row" href="#stock-preview">
+              <div class="rank-no">02</div>
+              <div class="asset">
+                <div>
+                  <div class="asset-symbol">TSLA</div>
+                  <div class="asset-name">Tesla Stock Token</div>
+                </div>
+              </div>
+              <div class="score-bar">
+                <div class="score-track"><div class="score-fill" style="width:94.2%"></div></div>
+                <div class="score-value">94.2</div>
+              </div>
+              <div class="movement up">▲ +1</div>
+              <div><span class="decision">Hold high</span></div>
+            </a>
+
+            <a class="rank-row" href="#stock-preview">
+              <div class="rank-no">03</div>
+              <div class="asset">
+                <div>
+                  <div class="asset-symbol">PLTR</div>
+                  <div class="asset-name">Palantir Stock Token</div>
+                </div>
+              </div>
+              <div class="score-bar">
+                <div class="score-track"><div class="score-fill" style="width:91.7%"></div></div>
+                <div class="score-value">91.7</div>
+              </div>
+              <div class="movement down">▼ -1</div>
+              <div><span class="decision">Re-evaluate</span></div>
+            </a>
+
+            <a class="rank-row" href="#stock-preview">
+              <div class="rank-no">04</div>
+              <div class="asset">
+                <div>
+                  <div class="asset-symbol">AAPL</div>
+                  <div class="asset-name">Apple Stock Token</div>
+                </div>
+              </div>
+              <div class="score-bar">
+                <div class="score-track"><div class="score-fill" style="width:89.4%"></div></div>
+                <div class="score-value">89.4</div>
+              </div>
+              <div class="movement flat">— 0</div>
+              <div><span class="decision">Maintain</span></div>
+            </a>
+
+            <a class="rank-row" href="#stock-preview">
+              <div class="rank-no">05</div>
+              <div class="asset">
+                <div>
+                  <div class="asset-symbol">GME</div>
+                  <div class="asset-name">GameStop Stock Token</div>
+                </div>
+              </div>
+              <div class="score-bar">
+                <div class="score-track"><div class="score-fill" style="width:87.9%"></div></div>
+                <div class="score-value">87.9</div>
+              </div>
+              <div class="movement up">▲ +4</div>
+              <div><span class="decision promote">Promote</span></div>
+            </a>
+          </div>
+
+          <aside class="rank-aside" id="stock-preview">
+            <div>
+              <div class="eyebrow">Jev decision / highest-ranked asset</div>
+              <div class="big-rank">#01</div>
+              <h3>NVDA was promoted.</h3>
+              <p>
+                Three material signals changed in the current cycle. Narrative
+                momentum accelerated, crypto-cultural adjacency remained high,
+                and pair compatibility improved against the previous state.
+              </p>
+            </div>
+
+            <div class="trace">
+              <div class="trace-item">
+                <span>Previous rank</span>
+                <strong>#04</strong>
+              </div>
+              <div class="trace-item">
+                <span>Current rank</span>
+                <strong>#01</strong>
+              </div>
+              <div class="trace-item">
+                <span>Opportunity</span>
+                <strong>96.8</strong>
+              </div>
+              <div class="trace-item">
+                <span>Confidence</span>
+                <strong>94%</strong>
+              </div>
+              <div class="trace-item">
+                <span>Next inspection</span>
+                <strong>Stock intelligence ↗</strong>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="shell lore">
+        <div class="lore-left">
+          <div>
+            <div class="eyebrow">03 / Why Jev?</div>
+            <blockquote>
+              Most AI systems are built to <span>generate.</span><br />
+              JEVO is built to <em>decide.</em>
+            </blockquote>
+          </div>
+
+          <div class="eyebrow">Decision layer / continuous evaluation</div>
+        </div>
+
+        <div class="lore-right">
+          <div class="section-title">From state to action.</div>
+
+          <div class="compare">
+            <div class="compare-row">
+              <span class="muted">Traditional AI</span>
+              <span>Input → Reason → Generate text</span>
+              <span class="arrow-right">→</span>
+            </div>
+            <div class="compare-row">
+              <span class="muted">JEVO + JEV</span>
+              <span>State → Decision → Structured action</span>
+              <span class="arrow-right">→</span>
+            </div>
+            <div class="compare-row">
+              <span class="muted">Agent memory</span>
+              <span>Previous state → Current state → Next state</span>
+              <span class="arrow-right">→</span>
+            </div>
+          </div>
+
+          <p class="lore-copy">
+            Markets continuously produce changing signals. JEVO observes those
+            signals, uses Jev as its decision layer to classify and evaluate
+            opportunity states, records what changed, and moves qualified
+            opportunities toward stock-to-meme pairing and controlled launch
+            workflows.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="pairings">
+      <div class="shell">
+        <div class="section-head">
+          <div class="section-index">04 / Pairing intelligence</div>
+          <h2 class="section-title">Narrative becomes pairing thesis.</h2>
+          <div class="section-meta">
+            Selected state / NVDA / rank #01<br />
+            Interactive decision layer
+          </div>
+        </div>
+
+        <div class="pair-engine">
+          <div class="pair-engine-left">
+            <div class="pair-engine-top">
+              <span>JEV / Pairability evaluation engine</span>
+              <span>Active narrative / <strong id="active-narrative-label">AI infrastructure</strong></span>
+            </div>
+
+            <div class="decision-engine-frame" id="decision-engine-frame">
+
+              <div class="engine-shell" id="engine-shell">
+                <div class="engine-ring-1"></div>
+                <div class="engine-ring-2"></div>
+                <div class="engine-ring-3"></div>
+
+
+                <button class="signal-card sc-market active"
+                  data-key="market"
+                  data-flow="flow-market"
+                  data-label="Market signal"
+                  data-score="91.0"
+                  data-sub="Momentum / retail attention"
+                  data-detail="Market momentum is strong enough to justify near-term evaluation pressure and keeps NVDA eligible for top-tier review."
+                  data-stage="observe"
+                  data-narrative="AI infrastructure"
+                  data-narrativefit="88"
+                  data-memefit="82"
+                  data-cryptofit="79"
+                  data-timing="91">
+                  <div class="tiny">Market signal</div>
+                  <strong>91.0</strong>
+                  <small>Momentum / retail attention</small>
+                  <div class="contribution">
+                    <div class="contribution-track"><span style="--contrib: 78%"></span></div>
+                    <div class="contribution-meta"><span>Weight</span><span>78%</span></div>
+                  </div>
+                </button>
+
+                <button class="signal-card sc-narrative signal-hot"
+                  data-key="narrative"
+                  data-flow="flow-narrative"
+                  data-label="Narrative"
+                  data-score="98.0"
+                  data-sub="AI infrastructure accelerating"
+                  data-detail="The AI infrastructure narrative is the dominant cluster this cycle. It compresses demand, cultural recognition and meme translation into one highly coherent story."
+                  data-stage="score"
+                  data-narrative="AI infrastructure"
+                  data-narrativefit="98"
+                  data-memefit="89"
+                  data-cryptofit="84"
+                  data-timing="93">
+                  <div class="tiny">Narrative</div>
+                  <strong>98.0</strong>
+                  <small>AI infrastructure accelerating</small>
+                  <div class="contribution">
+                    <div class="contribution-track"><span style="--contrib: 96%"></span></div>
+                    <div class="contribution-meta"><span>Weight</span><span>96%</span></div>
+                  </div>
+                </button>
+
+                <button class="signal-card sc-cultural"
+                  data-key="cultural"
+                  data-flow="flow-cultural"
+                  data-label="Cultural fit"
+                  data-score="95.0"
+                  data-sub="Recognition / memetic simplicity"
+                  data-detail="NVDA is easy to recognize, easy to symbolize, and culturally legible for both retail and crypto-native audiences."
+                  data-stage="translate"
+                  data-narrative="Cultural compression"
+                  data-narrativefit="92"
+                  data-memefit="95"
+                  data-cryptofit="83"
+                  data-timing="88">
+                  <div class="tiny">Cultural fit</div>
+                  <strong>95.0</strong>
+                  <small>Recognition / memetic simplicity</small>
+                  <div class="contribution">
+                    <div class="contribution-track"><span style="--contrib: 89%"></span></div>
+                    <div class="contribution-meta"><span>Weight</span><span>89%</span></div>
+                  </div>
+                </button>
+
+                <button class="signal-card sc-pair signal-hot"
+                  data-key="pair"
+                  data-flow="flow-pair"
+                  data-label="Pairability"
+                  data-score="96.0"
+                  data-sub="Crypto-native translation"
+                  data-detail="The engine can cleanly translate NVDA into the $GPU meme concept with high symbolic clarity and strong community resonance."
+                  data-stage="pair"
+                  data-narrative="Pair thesis formation"
+                  data-narrativefit="96"
+                  data-memefit="94"
+                  data-cryptofit="91"
+                  data-timing="95">
+                  <div class="tiny">Pairability</div>
+                  <strong>96.0</strong>
+                  <small>Crypto-native translation</small>
+                  <div class="contribution">
+                    <div class="contribution-track"><span style="--contrib: 93%"></span></div>
+                    <div class="contribution-meta"><span>Weight</span><span>93%</span></div>
+                  </div>
+                </button>
+
+                <div class="engine-core">JEV</div>
+
+                <div class="engine-output">
+                  <div>
+                    <div class="tiny-label">Current output</div>
+                    <strong id="engine-output-pair">NVDA × <span class="accent">$GPU</span></strong>
+                  </div>
+                  <div>
+                    <div class="tiny-label">Pair score</div>
+                    <strong class="accent" id="engine-output-score">95.4</strong>
+                  </div>
+                  <div>
+                    <div class="tiny-label">Decision</div>
+                    <strong id="engine-output-decision">STRONG PAIR</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="engine-stage-rail">
+              <div class="stage-step" data-stage-step="observe">
+                <strong>Observe</strong>
+                <span>Market data arrives</span>
+              </div>
+              <div class="stage-step" data-stage-step="score">
+                <strong>Score</strong>
+                <span>Narrative pressure computed</span>
+              </div>
+              <div class="stage-step" data-stage-step="translate">
+                <strong>Translate</strong>
+                <span>Cultural fit evaluated</span>
+              </div>
+              <div class="stage-step" data-stage-step="pair">
+                <strong>Pair</strong>
+                <span>Thesis becomes token concept</span>
+              </div>
+            </div>
+
+            <div class="pair-engine-metrics">
+              <div class="pem">
+                <div class="tiny-label">Narrative fit</div>
+                <strong id="metric-narrative-fit">98</strong>
+              </div>
+              <div class="pem">
+                <div class="tiny-label">Meme fit</div>
+                <strong id="metric-meme-fit">94</strong>
+              </div>
+              <div class="pem">
+                <div class="tiny-label">Crypto fit</div>
+                <strong id="metric-crypto-fit">91</strong>
+              </div>
+              <div class="pem">
+                <div class="tiny-label">Timing</div>
+                <strong id="metric-timing" style="color:var(--accent)">95</strong>
+              </div>
+            </div>
+
+            <div class="pair-explainer">
+              <p id="pair-engine-explainer">
+                The engine can cleanly translate NVDA into the $GPU meme concept with high symbolic clarity and strong community resonance.
+              </p>
+              <span class="tag" id="pair-engine-tag">Signal focus / Pairability</span>
+            </div>
+          </div>
+
+          <aside class="pair-engine-right">
+            <div class="pair-review-head">
+              <div class="eyebrow">Selected state / NVDA / rank #01</div>
+              <h3 class="pair-review-title">Pair theses under review.</h3>
+            </div>
+
+            <div class="pair-list">
+              <div class="pair-row active"
+                data-pair="NVDA × <span>$GPU</span>"
+                data-score="95.4"
+                data-decision="STRONG PAIR"
+                data-note="Primary thesis is strongest because the narrative, cultural and tokenization layers all converge with very low translation loss.">
+                <div>
+                  <h4>NVDA × <span>$GPU</span></h4>
+                  <p>AI infrastructure × GPU culture × developer relevance × crypto-native compute narrative.</p>
+                  <div class="pair-thesis-micro">
+                    <span>AI infra</span>
+                    <span>Developer culture</span>
+                    <span>Compute meme</span>
+                  </div>
+                </div>
+                <div class="pair-score-block">
+                  <div class="tiny-label">Pair score</div>
+                  <strong>95.4</strong>
+                </div>
+              </div>
+
+              <div class="pair-row"
+                data-pair="TSLA × <span>$BOT</span>"
+                data-score="92.6"
+                data-decision="HIGH POTENTIAL"
+                data-note="This thesis is strong on autonomy and retail recognition, but the symbolic translation is slightly broader and less compressed than NVDA × $GPU.">
+                <div>
+                  <h4>TSLA × <span>$BOT</span></h4>
+                  <p>Robotics momentum × autonomous systems × high retail recognition.</p>
+                  <div class="pair-thesis-micro">
+                    <span>Autonomy</span>
+                    <span>Robotics</span>
+                    <span>Retail reach</span>
+                  </div>
+                </div>
+                <div class="pair-score-block">
+                  <div class="tiny-label">Pair score</div>
+                  <strong>92.6</strong>
+                </div>
+              </div>
+
+              <div class="pair-row"
+                data-pair="PLTR × <span>$EYE</span>"
+                data-score="90.1"
+                data-decision="VALID THESIS"
+                data-note="The PLTR thesis has good symbolic sharpness, but the narrative is narrower and its meme adoption surface is slightly more niche.">
+                <div>
+                  <h4>PLTR × <span>$EYE</span></h4>
+                  <p>Intelligence software × surveillance culture × memetic visual simplicity.</p>
+                  <div class="pair-thesis-micro">
+                    <span>Intelligence</span>
+                    <span>Surveillance</span>
+                    <span>Visual meme</span>
+                  </div>
+                </div>
+                <div class="pair-score-block">
+                  <div class="tiny-label">Pair score</div>
+                  <strong>90.1</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="pair-review-cta">
+              <a class="cta secondary" href="#launch">
+                Explore pairing market
+                <span class="arrow">↘</span>
+              </a>
+              <p class="pair-review-note" id="pair-review-note">
+                Primary thesis is strongest because the narrative, cultural and tokenization layers all converge with very low translation loss.
+              </p>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="launch">
+      <div class="shell">
+        <div class="section-head">
+          <div class="section-index">05 / Launch candidate</div>
+          <h2 class="section-title">What happens next.</h2>
+          <div class="section-meta">
+            Policy controlled<br />
+            Human approval in MVP
+          </div>
+        </div>
+
+        <div class="launch-preview">
+          <div class="launch-copy">
+            <div>
+              <div class="eyebrow">Next agent launch / preparing</div>
+              <div class="launch-pair">NVDA × <span>$GPU</span></div>
+
+              <div class="launch-meta">
+                <div class="launch-meta-item">
+                  <div class="tiny-label">Opportunity</div>
+                  <strong>96.8</strong>
+                </div>
+                <div class="launch-meta-item">
+                  <div class="tiny-label">Pairing</div>
+                  <strong>95.4</strong>
+                </div>
+                <div class="launch-meta-item">
+                  <div class="tiny-label">Readiness</div>
+                  <strong style="color:var(--accent)">READY</strong>
+                </div>
+              </div>
+            </div>
+
+            <p class="footer-note">
+              Qualified opportunities move through narrative validation,
+              pairing validation, contract preparation and final policy checks
+              before controlled execution.
+            </p>
+          </div>
+
+          <div class="countdown-wrap">
+            <div>
+              <div class="eyebrow">Launch cycle / next transition</div>
+              <div class="countdown" id="countdown">23:41:08</div>
+            </div>
+
+            <div class="launch-cycle">
+              <div class="cycle-row complete">
+                <span class="time">T-24H</span>
+                <span>Candidate selected</span>
+                <span class="state">Complete ✓</span>
+              </div>
+              <div class="cycle-row complete">
+                <span class="time">T-18H</span>
+                <span>Narrative validation</span>
+                <span class="state">Complete ✓</span>
+              </div>
+              <div class="cycle-row active">
+                <span class="time">T-12H</span>
+                <span>Pairing validation</span>
+                <span class="state">Active ●</span>
+              </div>
+              <div class="cycle-row">
+                <span class="time">T-06H</span>
+                <span>Contract preparation</span>
+                <span class="state">Pending ○</span>
+              </div>
+              <div class="cycle-row">
+                <span class="time">T-01H</span>
+                <span>Final policy check</span>
+                <span class="state">Pending ○</span>
+              </div>
+              <div class="cycle-row">
+                <span class="time">T-00</span>
+                <span>Controlled execution</span>
+                <span class="state">Pending ○</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="memory">
+      <div class="shell">
+        <div class="section-head">
+          <div class="section-index">06 / Agent memory</div>
+          <h2 class="section-title">JEVO remembers what changed.</h2>
+          <div class="section-meta">
+            Rank history / decision cycles<br />
+            Stateful by design
+          </div>
+        </div>
+
+        <div style="padding:40px 0 50px">
+          <div class="eyebrow">NVDA / last 24 hours</div>
+          <div style="
+            margin-top:26px;
+            display:grid;
+            grid-template-columns:repeat(5,1fr);
+            border-top:1px solid var(--line);
+            border-bottom:1px solid var(--line);
+          ">
+            <div style="padding:24px 16px;border-right:1px solid var(--line)">
+              <div class="tiny-label">08:00</div>
+              <div class="metric-value">#07</div>
+              <div class="metric-sub">84.2</div>
+            </div>
+            <div style="padding:24px 16px;border-right:1px solid var(--line)">
+              <div class="tiny-label">10:00</div>
+              <div class="metric-value">#05</div>
+              <div class="metric-sub">87.1</div>
+            </div>
+            <div style="padding:24px 16px;border-right:1px solid var(--line)">
+              <div class="tiny-label">12:00</div>
+              <div class="metric-value">#04</div>
+              <div class="metric-sub">90.4</div>
+            </div>
+            <div style="padding:24px 16px;border-right:1px solid var(--line)">
+              <div class="tiny-label">14:00</div>
+              <div class="metric-value">#02</div>
+              <div class="metric-sub">93.7</div>
+            </div>
+            <div style="padding:24px 16px">
+              <div class="tiny-label">Now</div>
+              <div class="metric-value" style="color:var(--accent)">#01</div>
+              <div class="metric-sub">96.8 / promoted</div>
+            </div>
+          </div>
+
+          <div style="
+            display:grid;
+            grid-template-columns:260px 1fr auto;
+            gap:30px;
+            align-items:start;
+            padding:24px 0 0;
+          ">
+            <div class="eyebrow">Memory note</div>
+            <div style="font-size:20px;line-height:1.45;letter-spacing:-.035em;max-width:760px">
+              AI infrastructure narrative accelerated across multiple agent
+              cycles while cultural relevance and crypto adjacency remained
+              persistently high.
+            </div>
+            <a href="#" class="eyebrow" style="color:var(--accent)">Open memory ↗</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="shell">
+      <div class="footer-grid">
+        <div class="footer-brand">JEVO</div>
+
+        <p class="footer-note">
+          Autonomous market intelligence powered by Jev. Opportunity scores are
+          internal protocol signals, not investment-return predictions.
+        </p>
+
+        <div class="footer-links">
+          <a href="#agent">Agent</a>
+          <a href="#market">Market</a>
+          <a href="#pairings">Pairings</a>
+          <a href="#launch">Launch</a>
+          <a href="#memory">Memory</a>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <span>Reference interface / 01-home-agent</span>
+        <span>Robinhood Chain naming used for product context; no affiliation implied.</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.20/dist/lenis.min.js"></script>
+  <script>
+    const lenis = window.Lenis ? new Lenis({
+      duration: 1.05,
+      smoothWheel: true,
+      wheelMultiplier: 0.9,
+      touchMultiplier: 1.0
+    }) : null;
+
+    if (lenis) {
+      const lenisRaf = (time) => {
+        lenis.raf(time);
+        requestAnimationFrame(lenisRaf);
+      };
+      requestAnimationFrame(lenisRaf);
+
+      document.querySelectorAll('a[href^="#"]').forEach((link) => {
+        link.addEventListener("click", (event) => {
+          const target = link.getAttribute("href");
+          if (!target || target === "#") return;
+          const element = document.querySelector(target);
+          if (!element) return;
+          event.preventDefault();
+          lenis.scrollTo(element, { offset: -104 });
+        });
+      });
+    }
+
+    const pageProgress = document.getElementById("page-progress");
+    const updatePageProgress = () => {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = max > 0 ? window.scrollY / max : 0;
+      pageProgress.style.width = `${Math.min(100, Math.max(0, ratio * 100))}%`;
+    };
+    window.addEventListener("scroll", updatePageProgress, { passive: true });
+    updatePageProgress();
+
+    const operations = [
+      "SCANNING US STOCK TOKENS",
+      "NORMALIZING MARKET SIGNALS",
+      "EVALUATING NARRATIVE CHANGES",
+      "RUNNING JEV DECISION CYCLE",
+      "RE-RANKING OPPORTUNITIES",
+      "EVALUATING PAIRING CANDIDATES"
+    ];
+
+    const dynamicEvents = [
+      ["MARKET DELTA RECEIVED", "Priority asset changes merged into cycle state.", "Observe"],
+      ["NARRATIVE CLUSTER UPDATED", "AI infrastructure signal increased above previous state.", "Signal"],
+      ["JEV DECISION COMPLETED", "Structured decision object validated and persisted.", "Jev decision"],
+      ["PAIRABILITY UPDATED", "NVDA × $GPU maintained high-coherence status.", "Pair"],
+      ["RANKING STATE PUBLISHED", "Updated opportunity ordering broadcast to the interface.", "Action"]
+    ];
+
+    let progress = 87;
+    let operationIndex = 0;
+    let assets = 2847;
+    let signals = 18421;
+    let decisions = 6921;
+
+    function formatNumber(value) {
+      return new Intl.NumberFormat("en-US").format(value);
+    }
+
+    function tickAgentState() {
+      progress += 1;
+      assets += Math.floor(Math.random() * 7) + 2;
+      signals += Math.floor(Math.random() * 26) + 8;
+      decisions += Math.floor(Math.random() * 4);
+
+      if (progress > 99) {
+        progress = 12;
+        assets = 426;
+        operationIndex = (operationIndex + 1) % operations.length;
+      }
+
+      document.getElementById("progress-value").textContent = progress + "%";
+      document.getElementById("hero-progress").textContent = progress + "%";
+      document.getElementById("progress-bar").style.width = progress + "%";
+      document.getElementById("assets-scanned").textContent = formatNumber(assets);
+      document.getElementById("signals-count").textContent = formatNumber(signals);
+      document.getElementById("decisions-count").textContent = formatNumber(decisions);
+      document.getElementById("operation-text").textContent = operations[operationIndex];
+    }
+
+    function addEvent() {
+      const stream = document.getElementById("event-stream");
+      const item = dynamicEvents[Math.floor(Math.random() * dynamicEvents.length)];
+      const now = new Date();
+      const time = now.toISOString().slice(11, 19);
+
+      const row = document.createElement("div");
+      row.className = "event-row flash";
+      row.innerHTML = `
+        <span class="event-time">${time}</span>
+        <span class="event-copy"><strong>${item[0]}.</strong> ${item[1]}</span>
+        <span class="event-type ${item[2] === "Jev decision" || item[2] === "Action" ? "hot" : ""}">${item[2]}</span>
+      `;
+
+      stream.appendChild(row);
+
+      while (stream.children.length > 8) {
+        stream.removeChild(stream.children[0]);
+      }
+
+      document.getElementById("last-decision").textContent = "JUST NOW";
+    }
+
+    function updateClock() {
+      const now = new Date();
+      document.getElementById("terminal-clock").textContent =
+        now.toISOString().slice(11, 19) + " UTC";
+    }
+
+    let remaining = 23 * 3600 + 41 * 60 + 8;
+    function updateCountdown() {
+      remaining = Math.max(0, remaining - 1);
+      const h = String(Math.floor(remaining / 3600)).padStart(2, "0");
+      const m = String(Math.floor((remaining % 3600) / 60)).padStart(2, "0");
+      const s = String(remaining % 60).padStart(2, "0");
+      document.getElementById("countdown").textContent = `${h}:${m}:${s}`;
+    }
+
+    let cycleSeconds = 134;
+    function updateNextCycle() {
+      cycleSeconds -= 1;
+      if (cycleSeconds < 0) cycleSeconds = 299;
+      const m = String(Math.floor(cycleSeconds / 60)).padStart(2, "0");
+      const s = String(cycleSeconds % 60).padStart(2, "0");
+      document.getElementById("next-cycle").textContent = `${m}:${s}`;
+    }
+
+
+    function setActiveSignal(card) {
+      document.querySelectorAll(".signal-card").forEach((node) => node.classList.remove("active"));
+      card.classList.add("active");
+
+      document.querySelectorAll(".stage-step").forEach((step) => {
+        step.classList.toggle("active", step.dataset.stageStep === card.dataset.stage);
+      });
+
+      const explainer = document.getElementById("pair-engine-explainer");
+      const tag = document.getElementById("pair-engine-tag");
+      const activeNarrative = document.getElementById("active-narrative-label");
+      const narrativeFit = document.getElementById("metric-narrative-fit");
+      const memeFit = document.getElementById("metric-meme-fit");
+      const cryptoFit = document.getElementById("metric-crypto-fit");
+      const timing = document.getElementById("metric-timing");
+
+      if (explainer) explainer.textContent = card.dataset.detail || "";
+      if (tag) tag.textContent = "Signal focus / " + (card.dataset.label || "");
+      if (activeNarrative) activeNarrative.textContent = card.dataset.narrative || "";
+      if (narrativeFit) narrativeFit.textContent = card.dataset.narrativefit || "";
+      if (memeFit) memeFit.textContent = card.dataset.memefit || "";
+      if (cryptoFit) cryptoFit.textContent = card.dataset.cryptofit || "";
+      if (timing) timing.textContent = card.dataset.timing || "";
+    }
+
+    document.querySelectorAll(".signal-card").forEach((card) => {
+      card.addEventListener("mouseenter", () => setActiveSignal(card));
+      card.addEventListener("click", () => setActiveSignal(card));
+    });
+
+    function setActivePair(row) {
+      document.querySelectorAll(".pair-row").forEach((node) => node.classList.remove("active"));
+      row.classList.add("active");
+
+      const outputPair = document.getElementById("engine-output-pair");
+      const outputScore = document.getElementById("engine-output-score");
+      const outputDecision = document.getElementById("engine-output-decision");
+      const note = document.getElementById("pair-review-note");
+
+      if (outputPair) outputPair.innerHTML = row.dataset.pair || "";
+      if (outputScore) outputScore.textContent = row.dataset.score || "";
+      if (outputDecision) outputDecision.textContent = row.dataset.decision || "";
+      if (note) note.textContent = row.dataset.note || "";
+    }
+
+    document.querySelectorAll(".pair-row").forEach((row) => {
+      row.addEventListener("mouseenter", () => setActivePair(row));
+      row.addEventListener("click", () => setActivePair(row));
+    });
+
+    const engineShell = document.getElementById("engine-shell");
+    const engineFrame = document.getElementById("decision-engine-frame");
+    if (engineShell && engineFrame) {
+      engineFrame.addEventListener("mousemove", (event) => {
+        const rect = engineFrame.getBoundingClientRect();
+        const px = (event.clientX - rect.left) / rect.width;
+        const py = (event.clientY - rect.top) / rect.height;
+        const rotateY = (px - 0.5) * 4;
+        const rotateX = (0.5 - py) * 4;
+        engineShell.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+      });
+
+      engineFrame.addEventListener("mouseleave", () => {
+        engineShell.style.transform = "rotateX(0deg) rotateY(0deg)";
+      });
+    }
+
+    // initialize
+    const firstSignal = document.querySelector(".signal-card.active") || document.querySelector(".signal-card");
+    if (firstSignal) setActiveSignal(firstSignal);
+    const firstPair = document.querySelector(".pair-row.active") || document.querySelector(".pair-row");
+    if (firstPair) setActivePair(firstPair);
+
+    setInterval(updateClock, 1000);
+    setInterval(updateCountdown, 1000);
+    setInterval(updateNextCycle, 1000);
+    setInterval(tickAgentState, 2600);
+    setInterval(addEvent, 6200);
+    updateClock();
+  </script>
+</body>
+</html>

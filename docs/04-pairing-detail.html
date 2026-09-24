@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NVDA × $GPU — JEVO Pairing Detail</title>
+  <style>
+    :root{
+      --bg:#0b0d0b;
+      --panel:#0f120f;
+      --panel2:#121612;
+      --text:#eef2e7;
+      --muted:#899184;
+      --line:rgba(238,242,231,.11);
+      --line2:rgba(238,242,231,.20);
+      --accent:#d7ff3f;
+      --accent-soft:rgba(215,255,63,.08);
+      --danger:#ff7168;
+      --warn:#ffbf63;
+      --mono:"SFMono-Regular","SF Mono","Roboto Mono","Cascadia Code",Menlo,monospace;
+      --sans:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      --max:1540px;
+    }
+
+    *{box-sizing:border-box}
+    html{background:var(--bg)}
+    body{
+      margin:0;
+      color:var(--text);
+      font-family:var(--sans);
+      background:
+        linear-gradient(rgba(255,255,255,.017) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(255,255,255,.017) 1px,transparent 1px),
+        var(--bg);
+      background-size:40px 40px;
+    }
+
+    a{color:inherit;text-decoration:none}
+    button{font:inherit;color:inherit}
+    .shell{width:min(calc(100% - 32px),var(--max));margin:0 auto}
+    .tiny{
+      font-family:var(--mono);
+      font-size:8px;
+      letter-spacing:.09em;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+
+    .topbar{
+      position:sticky;
+      top:0;
+      z-index:50;
+      background:rgba(11,13,11,.94);
+      backdrop-filter:blur(14px);
+      border-bottom:1px solid var(--line);
+    }
+
+    .topbar-inner{
+      min-height:58px;
+      display:grid;
+      grid-template-columns:220px 1fr auto;
+      align-items:center;
+      gap:24px;
+    }
+
+    .brand{
+      font-family:var(--mono);
+      font-weight:800;
+      letter-spacing:-.07em;
+      font-size:18px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+
+    .mark{width:22px;height:22px;border:1px solid var(--line2);position:relative}
+    .mark:before,.mark:after{content:"";position:absolute;left:50%;top:50%;background:var(--accent)}
+    .mark:before{width:1px;height:28px;transform:translate(-50%,-50%) rotate(45deg)}
+    .mark:after{width:28px;height:1px;transform:translate(-50%,-50%) rotate(-45deg)}
+
+    .crumbs{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      font-family:var(--mono);
+      font-size:9px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--muted);
+    }
+    .crumbs strong{color:var(--text);font-weight:500}
+
+    .agent-state{
+      display:flex;
+      gap:16px;
+      align-items:center;
+      font-family:var(--mono);
+      font-size:8px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--muted);
+    }
+    .dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+    .agent-state b{color:var(--accent);font-weight:500}
+
+    .pair-strip{
+      border-bottom:1px solid var(--line);
+      background:rgba(11,13,11,.72);
+    }
+
+    .pair-strip-inner{
+      min-height:126px;
+      display:grid;
+      grid-template-columns:1.4fr repeat(5,minmax(120px,.58fr));
+      align-items:stretch;
+    }
+
+    .pair-main{
+      padding-right:28px;
+      border-right:1px solid var(--line);
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+    }
+
+    .pair-title{
+      font-size:46px;
+      line-height:.9;
+      font-weight:780;
+      letter-spacing:-.07em;
+    }
+    .pair-title span{color:var(--accent)}
+
+    .pair-sub{
+      margin-top:11px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .pill{
+      padding:5px 7px;
+      border:1px solid rgba(215,255,63,.25);
+      background:var(--accent-soft);
+      color:var(--accent);
+      font-family:var(--mono);
+      font-size:8px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .pair-sub .muted{
+      font-family:var(--mono);
+      font-size:8px;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .stat{
+      padding:22px 16px;
+      border-right:1px solid var(--line);
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+    }
+    .stat:last-child{border-right:0}
+    .stat strong{
+      margin-top:10px;
+      font-family:var(--mono);
+      font-size:22px;
+      font-weight:500;
+      letter-spacing:-.05em;
+    }
+    .stat .accent{color:var(--accent)}
+
+    .workspace{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) 410px;
+      align-items:start;
+      border-bottom:1px solid var(--line);
+    }
+
+    .main{
+      min-width:0;
+      border-right:1px solid var(--line);
+    }
+
+    .rail{
+      min-width:0;
+      background:rgba(13,16,13,.72);
+      position:sticky;
+      top:58px;
+      align-self:start;
+    }
+
+    .block{border-bottom:1px solid var(--line)}
+    .block-head{
+      min-height:64px;
+      padding:0 22px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:20px;
+      border-bottom:1px solid var(--line);
+    }
+
+    .block-title{
+      font-family:var(--mono);
+      font-size:10px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+    .block-meta{
+      font-family:var(--mono);
+      font-size:8px;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .thesis-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      min-height:460px;
+    }
+
+    .thesis-main{
+      padding:28px 22px;
+      border-right:1px solid var(--line);
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+    }
+
+    .thesis-main h1{
+      margin:16px 0 0;
+      font-size:46px;
+      line-height:.94;
+      letter-spacing:-.06em;
+      max-width:700px;
+    }
+    .thesis-main h1 span{color:var(--accent)}
+
+    .thesis-main p{
+      margin:22px 0 0;
+      color:#b4baae;
+      font-size:13px;
+      line-height:1.72;
+      max-width:720px;
+    }
+
+    .thesis-proof{
+      margin-top:34px;
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      border-top:1px solid var(--line);
+      border-left:1px solid var(--line);
+    }
+
+    .proof{
+      min-height:92px;
+      padding:14px;
+      border-right:1px solid var(--line);
+      border-bottom:1px solid var(--line);
+    }
+    .proof strong{
+      display:block;
+      margin-top:9px;
+      font-family:var(--mono);
+      font-size:18px;
+      font-weight:500;
+    }
+
+    .thesis-reasons{
+      padding:28px 22px;
+      display:grid;
+      gap:18px;
+    }
+
+    .reason{
+      border-bottom:1px solid rgba(238,242,231,.07);
+      padding-bottom:16px;
+    }
+
+    .reason strong{
+      display:block;
+      font-family:var(--mono);
+      font-size:9px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--accent);
+      font-weight:500;
+    }
+
+    .reason p{
+      margin:8px 0 0;
+      color:#aeb5a8;
+      font-size:12px;
+      line-height:1.65;
+    }
+
+    .analysis-grid{
+      display:grid;
+      grid-template-columns:1.1fr .9fr;
+      min-height:520px;
+    }
+
+    .score-panel{
+      border-right:1px solid var(--line);
+    }
+
+    .score-row{
+      min-height:82px;
+      display:grid;
+      grid-template-columns:180px 1fr 54px 72px;
+      align-items:center;
+      border-bottom:1px solid rgba(238,242,231,.065);
+      cursor:pointer;
+      position:relative;
+      transition:background .16s ease;
+    }
+    .score-row:hover{background:rgba(255,255,255,.015)}
+    .score-row.active{
+      background:linear-gradient(90deg,rgba(215,255,63,.05),transparent 72%);
+    }
+    .score-row.active:before{
+      content:"";
+      position:absolute;
+      left:0;
+      top:12px;
+      bottom:12px;
+      width:2px;
+      background:var(--accent);
+    }
+
+    .score-row > div{padding:0 14px}
+    .score-name strong{
+      display:block;
+      font-size:14px;
+      font-weight:560;
+    }
+    .score-name small{
+      display:block;
+      margin-top:4px;
+      color:var(--muted);
+      font-family:var(--mono);
+      font-size:7px;
+      text-transform:uppercase;
+    }
+
+    .bar{
+      height:3px;
+      background:rgba(238,242,231,.08);
+    }
+    .bar span{
+      display:block;
+      height:100%;
+      width:var(--w);
+      background:#7b8475;
+    }
+    .score-row.active .bar span{background:var(--accent)}
+
+    .num{
+      font-family:var(--mono);
+      font-size:11px;
+      text-align:right;
+    }
+    .delta{
+      font-family:var(--mono);
+      font-size:9px;
+      text-align:right;
+      color:var(--accent);
+    }
+
+    .analysis-inspector{
+      padding:28px 22px;
+      display:flex;
+      flex-direction:column;
+    }
+
+    .big-score{
+      font-family:var(--mono);
+      font-size:72px;
+      line-height:.8;
+      color:var(--accent);
+      letter-spacing:-.09em;
+    }
+
+    .inspect-title{
+      margin-top:20px;
+      font-size:28px;
+      letter-spacing:-.05em;
+    }
+
+    .inspect-copy{
+      margin-top:14px;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.7;
+    }
+
+    .facts{
+      margin-top:26px;
+      border-top:1px solid var(--line);
+    }
+
+    .fact{
+      display:flex;
+      justify-content:space-between;
+      gap:14px;
+      padding:11px 0;
+      border-bottom:1px solid var(--line);
+      font-family:var(--mono);
+      font-size:8px;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+    .fact strong{color:var(--text);font-weight:500}
+
+    .alternatives{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+    }
+
+    .alt-card{
+      min-height:270px;
+      padding:24px 22px;
+      border-right:1px solid var(--line);
+      cursor:pointer;
+      transition:background .16s ease;
+    }
+    .alt-card:last-child{border-right:0}
+    .alt-card:hover{background:rgba(255,255,255,.015)}
+
+    .alt-name{
+      margin-top:22px;
+      font-size:38px;
+      line-height:.92;
+      letter-spacing:-.06em;
+      font-weight:740;
+    }
+    .alt-name span{color:var(--accent)}
+
+    .alt-card p{
+      margin:16px 0 0;
+      color:var(--muted);
+      font-size:11px;
+      line-height:1.65;
+      max-width:520px;
+    }
+
+    .alt-footer{
+      margin-top:28px;
+      padding-top:14px;
+      border-top:1px solid var(--line);
+      display:flex;
+      justify-content:space-between;
+      gap:16px;
+      align-items:end;
+    }
+
+    .alt-score{
+      font-family:var(--mono);
+      font-size:24px;
+    }
+
+    .history-list{
+      padding:0 22px 18px;
+    }
+
+    .history-row{
+      display:grid;
+      grid-template-columns:86px 1fr 120px;
+      gap:18px;
+      padding:16px 0;
+      border-bottom:1px solid rgba(238,242,231,.065);
+      font-family:var(--mono);
+      font-size:9px;
+      line-height:1.5;
+    }
+    .history-row time{color:#677060}
+    .history-row span{color:#aeb5a8}
+    .history-row strong{color:var(--text);font-weight:500}
+    .history-row .state{text-align:right;color:var(--accent);text-transform:uppercase}
+
+    .rail-section{border-bottom:1px solid var(--line)}
+    .rail-head{
+      min-height:58px;
+      padding:0 18px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      border-bottom:1px solid var(--line);
+    }
+
+    .rail-body{padding:20px 18px}
+
+    .decision{
+      font-size:42px;
+      line-height:.9;
+      letter-spacing:-.06em;
+      color:var(--accent);
+      font-weight:760;
+    }
+
+    .confidence{
+      margin-top:12px;
+      font-family:var(--mono);
+      font-size:10px;
+      color:var(--muted);
+    }
+
+    .rail-copy{
+      margin-top:18px;
+      color:#adb4a7;
+      font-size:12px;
+      line-height:1.7;
+    }
+
+    .lifecycle{
+      margin-top:18px;
+      display:grid;
+      gap:0;
+      border-top:1px solid var(--line);
+    }
+
+    .life-row{
+      display:grid;
+      grid-template-columns:26px 1fr auto;
+      gap:10px;
+      align-items:center;
+      min-height:44px;
+      border-bottom:1px solid var(--line);
+      font-family:var(--mono);
+      font-size:8px;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+
+    .life-row .idx{
+      color:#61695f;
+    }
+    .life-row.done .name{color:var(--text)}
+    .life-row.current .name,
+    .life-row.current .status{color:var(--accent)}
+
+    .action-card{
+      margin-top:18px;
+      border:1px solid rgba(215,255,63,.24);
+      background:var(--accent-soft);
+      padding:16px;
+    }
+
+    .action-card strong{
+      display:block;
+      font-size:16px;
+      letter-spacing:-.04em;
+    }
+
+    .action-card p{
+      margin:8px 0 0;
+      color:var(--muted);
+      font-size:10px;
+      line-height:1.6;
+    }
+
+    .cta{
+      margin-top:16px;
+      height:44px;
+      border:1px solid var(--line2);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:0 14px;
+      font-family:var(--mono);
+      font-size:9px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .cta.primary{
+      background:var(--accent);
+      border-color:var(--accent);
+      color:#090b08;
+      font-weight:700;
+    }
+
+    .full{
+      border-bottom:1px solid var(--line);
+    }
+
+    @media(max-width:1100px){
+      .pair-strip-inner{grid-template-columns:1.2fr repeat(3,1fr)}
+      .pair-strip-inner .stat:nth-last-child(-n+2){display:none}
+      .workspace{grid-template-columns:1fr}
+      .main{border-right:0}
+      .rail{position:static;border-top:1px solid var(--line)}
+      .thesis-grid,
+      .analysis-grid{grid-template-columns:1fr}
+      .thesis-main,
+      .score-panel{border-right:0;border-bottom:1px solid var(--line)}
+    }
+
+    @media(max-width:760px){
+      .shell{width:min(calc(100% - 20px),var(--max))}
+      .topbar-inner{grid-template-columns:1fr auto}
+      .crumbs{display:none}
+      .agent-state span:not(:first-child),.agent-state b{display:none}
+      .pair-strip-inner{grid-template-columns:1fr 1fr}
+      .pair-main{grid-column:1/-1;border-right:0;border-bottom:1px solid var(--line);padding:20px 0}
+      .pair-strip-inner .stat:nth-of-type(n+4){display:none}
+      .pair-title{font-size:40px}
+      .thesis-proof{grid-template-columns:1fr}
+      .score-row{
+        grid-template-columns:1fr 54px;
+      }
+      .score-row > div:nth-child(2),
+      .score-row > div:nth-child(4){display:none}
+      .alternatives{grid-template-columns:1fr}
+      .alt-card{border-right:0;border-bottom:1px solid var(--line)}
+      .history-row{grid-template-columns:70px 1fr}
+      .history-row .state{display:none}
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="shell topbar-inner">
+      <a class="brand" href="#">
+        <span class="mark"></span>
+        JEVO
+      </a>
+
+      <div class="crumbs">
+        <span>Pairing Marketplace</span>
+        <span>/</span>
+        <strong>NVDA × $GPU</strong>
+      </div>
+
+      <div class="agent-state">
+        <span class="dot"></span>
+        <span>JEV <b>ACTIVE</b></span>
+        <span>Cycle 9841</span>
+      </div>
+    </div>
+  </div>
+
+  <section class="pair-strip">
+    <div class="shell pair-strip-inner">
+      <div class="pair-main">
+        <div class="pair-title">NVDA × <span>$GPU</span></div>
+        <div class="pair-sub">
+          <span class="pill">Launch Candidate</span>
+          <span class="muted">Stock-to-meme pairing / Agent proposed → curated</span>
+        </div>
+      </div>
+
+      <div class="stat">
+        <span class="tiny">Pair score</span>
+        <strong class="accent">95.4</strong>
+      </div>
+      <div class="stat">
+        <span class="tiny">Stock rank</span>
+        <strong>#01</strong>
+      </div>
+      <div class="stat">
+        <span class="tiny">JEV decision</span>
+        <strong class="accent">STRONG PAIR</strong>
+      </div>
+      <div class="stat">
+        <span class="tiny">Confidence</span>
+        <strong>93%</strong>
+      </div>
+      <div class="stat">
+        <span class="tiny">Last evaluated</span>
+        <strong>21s</strong>
+      </div>
+    </div>
+  </section>
+
+  <div class="shell workspace">
+    <main class="main">
+      <section class="block">
+        <div class="block-head">
+          <div class="block-title">Pair Thesis</div>
+          <div class="block-meta">Primary narrative / AI infrastructure</div>
+        </div>
+
+        <div class="thesis-grid">
+          <div class="thesis-main">
+            <div>
+              <span class="tiny">Core thesis</span>
+              <h1>
+                A recognizable market asset translated into a
+                <span>crypto-native compute meme.</span>
+              </h1>
+
+              <p>
+                NVDA sits at the center of the current AI infrastructure narrative.
+                $GPU compresses the compute layer behind that narrative into a simple
+                meme identity that is legible to retail, developers and crypto-native communities.
+              </p>
+            </div>
+
+            <div class="thesis-proof">
+              <div class="proof">
+                <span class="tiny">Narrative fit</span>
+                <strong>98</strong>
+              </div>
+              <div class="proof">
+                <span class="tiny">Cultural fit</span>
+                <strong>96</strong>
+              </div>
+              <div class="proof">
+                <span class="tiny">Timing</span>
+                <strong style="color:var(--accent)">95</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="thesis-reasons">
+            <div class="reason">
+              <strong>Why NVDA?</strong>
+              <p>
+                NVDA is strongly associated with AI infrastructure, GPU compute and the current AI expansion narrative.
+              </p>
+            </div>
+
+            <div class="reason">
+              <strong>Why $GPU?</strong>
+              <p>
+                GPU is a simple crypto-native meme identity representing the compute layer behind AI culture.
+              </p>
+            </div>
+
+            <div class="reason">
+              <strong>Why this pair?</strong>
+              <p>
+                The pairing connects a recognizable public-market asset with a direct cultural symbol already familiar to developer and crypto communities.
+              </p>
+            </div>
+
+            <div class="reason">
+              <strong>Why now?</strong>
+              <p>
+                Narrative pressure, social velocity, cultural relevance and crypto adjacency all strengthened in the latest decision cycle.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="block">
+        <div class="block-head">
+          <div class="block-title">JEV Pairing Analysis</div>
+          <div class="block-meta">Hover or click factor to inspect</div>
+        </div>
+
+        <div class="analysis-grid">
+          <div class="score-panel">
+            <div class="score-row active"
+              data-title="Narrative Fit"
+              data-score="98"
+              data-copy="NVDA and $GPU share the same AI infrastructure and compute narrative with minimal translation loss."
+              data-delta="+4.8"
+              data-state="Very high"
+              data-source="Narrative engine">
+              <div class="score-name"><strong>Narrative Fit</strong><small>Stock story ↔ meme story</small></div>
+              <div class="bar"><span style="--w:98%"></span></div>
+              <div class="num">98</div>
+              <div class="delta">+4.8</div>
+            </div>
+
+            <div class="score-row"
+              data-title="Stock Relevance"
+              data-score="97"
+              data-copy="NVDA is highly recognized and closely associated with GPU compute, giving the meme concept a direct semantic anchor."
+              data-delta="+2.6"
+              data-state="Very high"
+              data-source="Stock intelligence">
+              <div class="score-name"><strong>Stock Relevance</strong><small>Identity strength</small></div>
+              <div class="bar"><span style="--w:97%"></span></div>
+              <div class="num">97</div>
+              <div class="delta">+2.6</div>
+            </div>
+
+            <div class="score-row"
+              data-title="Cultural Fit"
+              data-score="96"
+              data-copy="GPU culture is immediately legible across AI, gaming, developer and crypto communities."
+              data-delta="+3.1"
+              data-state="Very high"
+              data-source="Cultural classifier">
+              <div class="score-name"><strong>Cultural Fit</strong><small>Recognition / simplicity</small></div>
+              <div class="bar"><span style="--w:96%"></span></div>
+              <div class="num">96</div>
+              <div class="delta">+3.1</div>
+            </div>
+
+            <div class="score-row"
+              data-title="Timing"
+              data-score="95"
+              data-copy="The current cycle shows accelerating AI infrastructure narrative pressure and rising attention around compute."
+              data-delta="+6.2"
+              data-state="Accelerating"
+              data-source="Decision cycle">
+              <div class="score-name"><strong>Timing</strong><small>Why now?</small></div>
+              <div class="bar"><span style="--w:95%"></span></div>
+              <div class="num">95</div>
+              <div class="delta">+6.2</div>
+            </div>
+
+            <div class="score-row"
+              data-title="Meme Fit"
+              data-score="94"
+              data-copy="$GPU is short, concrete and culturally easy to understand without a long explanation."
+              data-delta="+1.9"
+              data-state="High"
+              data-source="Meme classifier">
+              <div class="score-name"><strong>Meme Fit</strong><small>Memetic compression</small></div>
+              <div class="bar"><span style="--w:94%"></span></div>
+              <div class="num">94</div>
+              <div class="delta">+1.9</div>
+            </div>
+
+            <div class="score-row"
+              data-title="Crypto Fit"
+              data-score="91"
+              data-copy="AI agents, compute and GPU infrastructure remain active crypto-native narratives, supporting the meme translation."
+              data-delta="+2.4"
+              data-state="High"
+              data-source="Crypto overlap">
+              <div class="score-name"><strong>Crypto Fit</strong><small>Crypto-native interpretation</small></div>
+              <div class="bar"><span style="--w:91%"></span></div>
+              <div class="num">91</div>
+              <div class="delta">+2.4</div>
+            </div>
+          </div>
+
+          <aside class="analysis-inspector">
+            <span class="tiny">Selected factor</span>
+            <div class="big-score" id="inspect-score">98</div>
+            <div class="inspect-title" id="inspect-title">Narrative Fit</div>
+            <p class="inspect-copy" id="inspect-copy">
+              NVDA and $GPU share the same AI infrastructure and compute narrative with minimal translation loss.
+            </p>
+
+            <div class="facts">
+              <div class="fact"><span>Delta</span><strong id="inspect-delta">+4.8</strong></div>
+              <div class="fact"><span>State</span><strong id="inspect-state">Very high</strong></div>
+              <div class="fact"><span>Source</span><strong id="inspect-source">Narrative engine</strong></div>
+              <div class="fact"><span>Decision</span><strong>STRONG PAIR</strong></div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="block">
+        <div class="block-head">
+          <div class="block-title">Alternative Concepts</div>
+          <div class="block-meta">Same stock / different meme thesis</div>
+        </div>
+
+        <div class="alternatives">
+          <article class="alt-card">
+            <span class="tiny">Alternative #01</span>
+            <div class="alt-name">NVDA × <span>$CUDA</span></div>
+            <p>
+              Strong developer-native specificity, but lower cultural breadth and higher technical dependency than $GPU.
+            </p>
+            <div class="alt-footer">
+              <div>
+                <span class="tiny">Pair score</span>
+                <div class="alt-score">88.2</div>
+              </div>
+              <span class="tiny">Technical / narrower</span>
+            </div>
+          </article>
+
+          <article class="alt-card">
+            <span class="tiny">Alternative #02</span>
+            <div class="alt-name">NVDA × <span>$COMPUTE</span></div>
+            <p>
+              Broad AI-infrastructure framing, but weaker symbolic compression and less immediate meme identity.
+            </p>
+            <div class="alt-footer">
+              <div>
+                <span class="tiny">Pair score</span>
+                <div class="alt-score">86.7</div>
+              </div>
+              <span class="tiny">Broad / generic</span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="block">
+        <div class="block-head">
+          <div class="block-title">Pairing History</div>
+          <div class="block-meta">State changes / current proposal</div>
+        </div>
+
+        <div class="history-list">
+          <div class="history-row">
+            <time>13:44:08</time>
+            <span><strong>Pair detected.</strong> NVDA entered high-coherence pairing review.</span>
+            <span class="state">Detected</span>
+          </div>
+          <div class="history-row">
+            <time>13:46:17</time>
+            <span><strong>JEV analysis completed.</strong> $GPU ranked above $CUDA and $COMPUTE.</span>
+            <span class="state">Analyzed</span>
+          </div>
+          <div class="history-row">
+            <time>13:49:32</time>
+            <span><strong>Proposal published.</strong> Pair score initialized at 93.8.</span>
+            <span class="state">Proposed</span>
+          </div>
+          <div class="history-row">
+            <time>14:07:21</time>
+            <span><strong>Human curation completed.</strong> Thesis copy and naming approved.</span>
+            <span class="state">Curated</span>
+          </div>
+          <div class="history-row">
+            <time>14:31:15</time>
+            <span><strong>Pair score updated.</strong> 93.8 → 95.4 after narrative acceleration.</span>
+            <span class="state">Launch Candidate</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <aside class="rail">
+      <section class="rail-section">
+        <div class="rail-head">
+          <span class="tiny">JEV pairing decision</span>
+          <span class="tiny">cycle_9841</span>
+        </div>
+
+        <div class="rail-body">
+          <div class="decision">STRONG<br />PAIR</div>
+          <div class="confidence">Confidence / 93%</div>
+
+          <p class="rail-copy">
+            The current pairing exceeds the internal threshold for launch-candidate review
+            because narrative, cultural and timing signals remain simultaneously strong.
+          </p>
+
+          <div class="facts">
+            <div class="fact"><span>Pair score</span><strong>95.4</strong></div>
+            <div class="fact"><span>Stock opportunity</span><strong>96.8</strong></div>
+            <div class="fact"><span>Stock rank</span><strong>#01</strong></div>
+            <div class="fact"><span>Last evaluated</span><strong>21s ago</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="rail-section">
+        <div class="rail-head">
+          <span class="tiny">Pairing lifecycle</span>
+          <span class="tiny">Current state</span>
+        </div>
+
+        <div class="rail-body">
+          <div class="lifecycle">
+            <div class="life-row done">
+              <span class="idx">01</span><span class="name">Detected</span><span class="status">✓</span>
+            </div>
+            <div class="life-row done">
+              <span class="idx">02</span><span class="name">Analyzed</span><span class="status">✓</span>
+            </div>
+            <div class="life-row done">
+              <span class="idx">03</span><span class="name">Proposed</span><span class="status">✓</span>
+            </div>
+            <div class="life-row done">
+              <span class="idx">04</span><span class="name">Curated</span><span class="status">✓</span>
+            </div>
+            <div class="life-row current">
+              <span class="idx">05</span><span class="name">Launch Candidate</span><span class="status">ACTIVE</span>
+            </div>
+            <div class="life-row">
+              <span class="idx">06</span><span class="name">Launched</span><span class="status">PENDING</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="rail-section">
+        <div class="rail-head">
+          <span class="tiny">Next action</span>
+          <span class="tiny">Policy controlled</span>
+        </div>
+
+        <div class="rail-body">
+          <div class="action-card">
+            <strong>Launch readiness review</strong>
+            <p>
+              Validate pairing asset, metadata, launch parameters and policy constraints before starting the launch cycle.
+            </p>
+          </div>
+
+          <a class="cta primary" href="#">
+            <span>Open launch candidate</span>
+            <span>↗</span>
+          </a>
+
+          <a class="cta" href="#">
+            <span>Back to pairing market</span>
+            <span>←</span>
+          </a>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <script>
+    function selectFactor(row){
+      document.querySelectorAll(".score-row").forEach(r=>r.classList.remove("active"));
+      row.classList.add("active");
+
+      document.getElementById("inspect-score").textContent=row.dataset.score;
+      document.getElementById("inspect-title").textContent=row.dataset.title;
+      document.getElementById("inspect-copy").textContent=row.dataset.copy;
+      document.getElementById("inspect-delta").textContent=row.dataset.delta;
+      document.getElementById("inspect-state").textContent=row.dataset.state;
+      document.getElementById("inspect-source").textContent=row.dataset.source;
+    }
+
+    document.querySelectorAll(".score-row").forEach(row=>{
+      row.addEventListener("mouseenter",()=>selectFactor(row));
+      row.addEventListener("click",()=>selectFactor(row));
+    });
+  </script>
+</body>
+</html>
