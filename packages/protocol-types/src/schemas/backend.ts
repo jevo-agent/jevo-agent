@@ -259,3 +259,13 @@ export const agentConfigVersionSchema = z.object({
   activeFrom: timestampSchema,
   createdBy: z.string().min(1),
 });
+
+// --- Meme Concept (meme_concepts table) ---
+export const memeConceptSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  tags: z.array(z.string()),
+  notes: z.string().optional(),
+  createdAt: timestampSchema,
+});
+

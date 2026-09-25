@@ -63,3 +63,5 @@ export type ProviderHealthStatus = z.infer<typeof backendSchemas.providerHealthS
 export type ProviderHealth = z.infer<typeof backendSchemas.providerHealthSchema>;
 export type ProviderRunRecord = z.infer<typeof backendSchemas.providerRunRecordSchema>;
 export type AgentConfigVersion = z.infer<typeof backendSchemas.agentConfigVersionSchema>;
+export type MemeConcept = z.infer<typeof backendSchemas.memeConceptSchema>;
+
