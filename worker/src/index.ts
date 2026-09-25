@@ -1,78 +1,82 @@
-import { Client } from "pg";
-import Redis from "ioredis";
 import { env } from "./config/env";
 import { logger } from "./observability/logger";
-
-async function checkDatabaseConnection(): Promise<boolean> {
-  const client = new Client({ connectionString: env.DATABASE_URL });
-  try {
-    await client.connect();
-    await client.query("SELECT 1;");
-    await client.end();
-    logger.info("PostgreSQL connection verified successfully");
-    return true;
-  } catch (error) {
-    logger.warn({ error: (error as Error).message }, "PostgreSQL connection could not be established. Ensure docker-compose is running.");
-    try {
-      await client.end();
-    } catch {
-      // ignore close error
-    }
-    return false;
-  }
-}
-
-async function checkRedisConnection(): Promise<boolean> {
-  const redis = new Redis(env.REDIS_URL, {
-    maxRetriesPerRequest: 1,
-    connectTimeout: 2000,
-    lazyConnect: true,
-  });
-  redis.on("error", () => {}); // swallow unhandled error event during ping check
-
-  try {
-    await redis.connect();
-    const pong = await redis.ping();
-    await redis.quit();
-    logger.info({ pong }, "Redis connection verified successfully");
-    return true;
-  } catch (error) {
-    logger.warn({ error: (error as Error).message }, "Redis connection could not be established. Ensure docker-compose is running.");
-    try {
-      await redis.quit();
-    } catch {
-      // ignore close error
-    }
-    return false;
-  }
-}
+import { pool } from "./db/client";
+import { seedAssets } from "./db/seed";
+import { createServer } from "./api/server";
+import {
+  startCycleWorker,
+  registerRepeatableCycles,
+  stopCycleWorker,
+} from "./jobs/scheduler";
+import { closeEventBus } from "./events";
 
 async function main() {
   logger.info(
     {
       nodeEnv: env.NODE_ENV,
       port: env.PORT,
+      host: env.HOST,
       providerMode: env.PROVIDER_MODE,
       jevMode: env.JEV_MODE,
       logLevel: env.LOG_LEVEL,
     },
-    "JEVO worker booting (BACKEND 00 - Foundation)",
+    "JEVO worker & API booting (BACKEND 08 - Realtime SSE & Composed Entrypoint)",
   );
 
-  logger.info("Checking infrastructure connections...");
-  const dbOk = await checkDatabaseConnection();
-  const redisOk = await checkRedisConnection();
-
-  if (dbOk && redisOk) {
-    logger.info("All infrastructure dependencies are healthy");
-  } else {
-    logger.warn("Worker booted with degraded infrastructure connectivity. Run `docker compose -f docker-compose.dev.yml up -d` to start local services.");
+  // 1. Seed initial stock assets into Postgres
+  try {
+    await seedAssets();
+  } catch (err) {
+    logger.warn({ err }, "Could not seed initial assets (proceeding anyway)");
   }
 
-  logger.info("JEVO worker foundation ready for BACKEND 01 (Database & Schema)");
+  // 2. Start BullMQ worker & scheduler
+  logger.info("Starting BullMQ cycle worker and registering schedulers...");
+  startCycleWorker();
+  await registerRepeatableCycles();
+  logger.info("Cycle worker and schedulers active");
 
+  // 3. Start Fastify server
+  const server = await createServer();
+  const address = await server.listen({ port: env.PORT, host: env.HOST });
+  logger.info({ address, port: env.PORT }, `JEVO API server listening on ${address}`);
+
+  // Graceful shutdown
+  let isShuttingDown = false;
   const shutdown = async (signal: string) => {
-    logger.info({ signal }, "Graceful shutdown initiated");
+    if (isShuttingDown) return;
+    isShuttingDown = true;
+    logger.info({ signal }, "Graceful shutdown initiated...");
+
+    try {
+      await server.close();
+      logger.info("Fastify server closed");
+    } catch (err) {
+      logger.error({ err }, "Error closing Fastify server");
+    }
+
+    try {
+      await stopCycleWorker();
+      logger.info("Cycle worker and queues closed");
+    } catch (err) {
+      logger.error({ err }, "Error stopping cycle worker");
+    }
+
+    try {
+      await closeEventBus();
+      logger.info("Redis event bus connections closed");
+    } catch (err) {
+      logger.error({ err }, "Error closing event bus");
+    }
+
+    try {
+      await pool.end();
+      logger.info("PostgreSQL connection pool closed");
+    } catch (err) {
+      logger.error({ err }, "Error closing database pool");
+    }
+
+    logger.info("Shutdown completed cleanly");
     process.exit(0);
   };
 
@@ -81,6 +85,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  logger.fatal({ err }, "Fatal crash during worker startup");
+  logger.fatal({ err }, "Fatal crash during worker & API startup");
   process.exit(1);
 });

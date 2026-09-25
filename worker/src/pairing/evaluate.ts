@@ -13,6 +13,7 @@ import {
   pairingHistory,
   protocolEvents,
 } from "../db/schema";
+import { publishProtocolEvent } from "../events";
 import type { JevProvider } from "../jev";
 import { logger } from "../observability/logger";
 import {
@@ -261,26 +262,33 @@ export async function evaluatePairing(
       .onConflictDoNothing();
 
     // Emit Section 12 PAIRING_PROPOSED protocol event
+    const pairingEvt = {
+      eventId: `evt-pairing-proposed-${record.id}`,
+      eventType: "PAIRING_PROPOSED",
+      cycleId: cycleId ?? null,
+      subjectType: "pairing",
+      subjectId: record.id,
+      payload: {
+        candidateId: record.id,
+        symbol: record.symbol,
+        memeSymbol: record.memeSymbol,
+        pairingScore: record.pairingScore,
+        lifecycleState: record.lifecycleState,
+      },
+      schemaVersion: 1,
+      actor: "JEVO_AGENT" as const,
+      createdAt: createdAt.toISOString(),
+    };
+
     await client
       .insert(protocolEvents)
       .values({
-        eventId: `evt-pairing-proposed-${record.id}`,
-        eventType: "PAIRING_PROPOSED",
-        cycleId: cycleId ?? null,
-        subjectType: "pairing",
-        subjectId: record.id,
-        payload: {
-          candidateId: record.id,
-          symbol: record.symbol,
-          memeSymbol: record.memeSymbol,
-          pairingScore: record.pairingScore,
-          lifecycleState: record.lifecycleState,
-        },
-        schemaVersion: 1,
-        actor: "JEVO_AGENT",
+        ...pairingEvt,
         createdAt,
       })
       .onConflictDoNothing();
+
+    await publishProtocolEvent(pairingEvt);
   }
 
   logger.info(

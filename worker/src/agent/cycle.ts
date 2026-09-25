@@ -23,6 +23,7 @@ import { createDecisionEngine, type DecisionEngine } from "../jev";
 import { logger } from "../observability/logger";
 import { runPairingCycle } from "../pairing";
 import { createProvidersRegistry, type ProvidersRegistry } from "../providers";
+import { publishProtocolEvent } from "../events";
 import {
   computeMarketMomentum,
   computeSocialVelocity,
@@ -180,7 +181,7 @@ export async function executeAgentCycle(
   }
 
   // Publish AGENT_SCAN_STARTED (Section 12 Event)
-  await db.insert(protocolEvents).values({
+  const scanStartedEvt = {
     eventId: `evt-scan-started-${cycleId}-${randomUUID().slice(0, 8)}`,
     eventType: "AGENT_SCAN_STARTED",
     cycleId,
@@ -188,9 +189,14 @@ export async function executeAgentCycle(
     subjectId: cycleId,
     payload: { cycleId, kind: cycleKind },
     schemaVersion: 1,
-    actor: "JEVO_AGENT",
-    createdAt: new Date(),
+    actor: "JEVO_AGENT" as const,
+    createdAt: new Date().toISOString(),
+  };
+  await db.insert(protocolEvents).values({
+    ...scanStartedEvt,
+    createdAt: new Date(scanStartedEvt.createdAt),
   });
+  await publishProtocolEvent(scanStartedEvt);
 
   const cycleLogger = logger.child({ cycleId, cycleKind });
 
@@ -398,7 +404,7 @@ export async function executeAgentCycle(
         });
 
         // Publish ASSET_ANALYZED (Section 12 Event)
-        await db.insert(protocolEvents).values({
+        const analyzedEvt = {
           eventId: `evt-analyzed-${cycleId}-${asset.symbol}-${randomUUID().slice(0, 8)}`,
           eventType: "ASSET_ANALYZED",
           cycleId,
@@ -410,9 +416,14 @@ export async function executeAgentCycle(
             socialVelocity,
           },
           schemaVersion: 1,
-          actor: "JEVO_AGENT",
-          createdAt: new Date(),
+          actor: "JEVO_AGENT" as const,
+          createdAt: new Date().toISOString(),
+        };
+        await db.insert(protocolEvents).values({
+          ...analyzedEvt,
+          createdAt: new Date(analyzedEvt.createdAt),
         });
+        await publishProtocolEvent(analyzedEvt);
 
         // Step 6: Detect meaningful deltas (Skip gate to control LLM cost / rate limits)
         const prior = priorScoresMap.get(asset.symbol);
@@ -453,7 +464,7 @@ export async function executeAgentCycle(
           };
 
           // Publish JEV_DECISION_COMPLETED (Section 12 Event)
-          await db.insert(protocolEvents).values({
+          const decisionEvt = {
             eventId: `evt-jev-decision-${cycleId}-${asset.symbol}-${randomUUID().slice(0, 8)}`,
             eventType: "JEV_DECISION_COMPLETED",
             cycleId,
@@ -466,13 +477,18 @@ export async function executeAgentCycle(
               signals: decisionRecord.signals,
             },
             schemaVersion: 1,
-            actor: "JEVO_AGENT",
-            createdAt: new Date(),
+            actor: "JEVO_AGENT" as const,
+            createdAt: new Date().toISOString(),
+          };
+          await db.insert(protocolEvents).values({
+            ...decisionEvt,
+            createdAt: new Date(decisionEvt.createdAt),
           });
+          await publishProtocolEvent(decisionEvt);
 
           // Publish ASSET_PROMOTED / ASSET_DEMOTED (Section 12 Event)
           if (decisionRecord.decision === "PROMOTE" || decisionRecord.decision === "DEMOTE") {
-            await db.insert(protocolEvents).values({
+            const actionEvt = {
               eventId: `evt-decision-action-${cycleId}-${asset.symbol}-${randomUUID().slice(0, 8)}`,
               eventType: decisionRecord.decision === "PROMOTE" ? "ASSET_PROMOTED" : "ASSET_DEMOTED",
               cycleId,
@@ -484,9 +500,14 @@ export async function executeAgentCycle(
                 confidence: decisionRecord.confidence,
               },
               schemaVersion: 1,
-              actor: "JEVO_AGENT",
-              createdAt: new Date(),
+              actor: "JEVO_AGENT" as const,
+              createdAt: new Date().toISOString(),
+            };
+            await db.insert(protocolEvents).values({
+              ...actionEvt,
+              createdAt: new Date(actionEvt.createdAt),
             });
+            await publishProtocolEvent(actionEvt);
           }
         } else {
           // Gate skip: carry forward prior evaluation to avoid redundant Jev LLM calls
@@ -602,41 +623,29 @@ export async function executeAgentCycle(
       });
     }
 
-    // Step 15: Publish protocol events
-    await db.insert(protocolEvents).values([
-      {
-        eventId: `evt-ranking-${cycleId}-${randomUUID().slice(0, 8)}`,
-        eventType: "RANKING_UPDATED",
+    // Step 15: Publish protocol events (RANKING_UPDATED)
+    const rankingEvt = {
+      eventId: `evt-ranking-${cycleId}-${randomUUID().slice(0, 8)}`,
+      eventType: "RANKING_UPDATED",
+      cycleId,
+      subjectType: "cycle",
+      subjectId: cycleId,
+      payload: {
         cycleId,
-        subjectType: "RANKING",
-        subjectId: cycleId,
-        payload: {
-          cycleId,
-          topSymbol: topAsset?.symbol,
-          topScore: topAsset?.opportunityScore,
-          rankedCount: rankingSummary.rankedAssets.length,
-        },
-        schemaVersion: 1,
-        actor: "JEVO_AGENT",
-        createdAt: new Date(),
+        topSymbol: topAsset?.symbol,
+        topScore: topAsset?.opportunityScore,
+        rankedCount: rankingSummary.rankedAssets.length,
       },
-      {
-        eventId: `evt-cycle-${cycleId}-${randomUUID().slice(0, 8)}`,
-        eventType: "CYCLE_COMPLETED",
-        cycleId,
-        subjectType: "CYCLE",
-        subjectId: cycleId,
-        payload: {
-          cycleId,
-          kind: cycleKind,
-          assetsScanned: activeAssets.length,
-          signalsProcessed: signalsProcessedCount,
-        },
-        schemaVersion: 1,
-        actor: "JEVO_AGENT",
-        createdAt: new Date(),
-      },
-    ]);
+      schemaVersion: 1,
+      actor: "JEVO_AGENT" as const,
+      createdAt: new Date().toISOString(),
+    };
+
+    await db.insert(protocolEvents).values({
+      ...rankingEvt,
+      createdAt: new Date(rankingEvt.createdAt),
+    });
+    await publishProtocolEvent(rankingEvt);
 
     // Step 16 (TX5): Mark cycle COMPLETED
     await db
@@ -648,6 +657,29 @@ export async function executeAgentCycle(
         signalsProcessed: signalsProcessedCount,
       })
       .where(eq(agentCycles.id, cycleId));
+
+    const completedEvt = {
+      eventId: `evt-cycle-${cycleId}-${randomUUID().slice(0, 8)}`,
+      eventType: "CYCLE_COMPLETED",
+      cycleId,
+      subjectType: "cycle",
+      subjectId: cycleId,
+      payload: {
+        cycleId,
+        kind: cycleKind,
+        assetsScanned: activeAssets.length,
+        signalsProcessed: signalsProcessedCount,
+      },
+      schemaVersion: 1,
+      actor: "JEVO_AGENT" as const,
+      createdAt: new Date().toISOString(),
+    };
+
+    await db.insert(protocolEvents).values({
+      ...completedEvt,
+      createdAt: new Date(completedEvt.createdAt),
+    });
+    await publishProtocolEvent(completedEvt);
 
     cycleLogger.info(
       {
@@ -684,7 +716,7 @@ export async function executeAgentCycle(
 
     // Section 12 Event: CYCLE_FAILED
     try {
-      await db.insert(protocolEvents).values({
+      const failedEvt = {
         eventId: `evt-cycle-failed-${cycleId}-${randomUUID().slice(0, 8)}`,
         eventType: "CYCLE_FAILED",
         cycleId,
@@ -696,9 +728,14 @@ export async function executeAgentCycle(
           error: (error as any)?.message ?? String(error),
         },
         schemaVersion: 1,
-        actor: "JEVO_AGENT",
-        createdAt: new Date(),
+        actor: "JEVO_AGENT" as const,
+        createdAt: new Date().toISOString(),
+      };
+      await db.insert(protocolEvents).values({
+        ...failedEvt,
+        createdAt: new Date(failedEvt.createdAt),
       });
+      await publishProtocolEvent(failedEvt);
     } catch (emitErr) {
       cycleLogger.error({ emitErr }, "Failed to emit CYCLE_FAILED protocol event");
     }
