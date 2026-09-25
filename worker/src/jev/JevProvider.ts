@@ -19,10 +19,19 @@ export interface ScoreResult {
   confidence: number; // 0 - 100
 }
 
+/**
+ * PLACEHOLDER / UNCONFIRMED SPEC:
+ * The exact request/response shape and purpose of `evaluateNoul` are unconfirmed
+ * in the official Jev brief (BackendHandoff.md Section 7 & Section 22).
+ * Do NOT use in production cycle logic until confirmed by official Jev documentation.
+ */
 export interface NoulInput {
   context: Record<string, unknown>;
 }
 
+/**
+ * PLACEHOLDER / UNCONFIRMED SPEC: Provisional return shape for evaluateNoul.
+ */
 export interface NoulResult {
   raw: Record<string, unknown>;
 }
@@ -31,5 +40,6 @@ export interface JevProvider {
   readonly version: string;
   evaluateChoice<T extends string = string>(input: ChoiceInput<T>): Promise<ChoiceResult<T>>;
   evaluateScore(input: ScoreInput): Promise<ScoreResult>;
+  /** PLACEHOLDER: Unconfirmed Jev method, see Section 7 & 22 */
   evaluateNoul(input: NoulInput): Promise<NoulResult>;
 }

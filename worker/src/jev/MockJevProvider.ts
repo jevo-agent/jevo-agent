@@ -159,6 +159,11 @@ export class MockJevProvider implements JevProvider {
     };
   }
 
+  /**
+   * PLACEHOLDER / UNCONFIRMED SPEC:
+   * Provisional implementation of unconfirmed evaluateNoul method per Section 7 & 22.
+   * Input/output shape is a mock placeholder until confirmed by official Jev documentation.
+   */
   async evaluateNoul(input: NoulInput): Promise<NoulResult> {
     return {
       raw: {
