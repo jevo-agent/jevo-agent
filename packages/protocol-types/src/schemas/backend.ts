@@ -217,7 +217,7 @@ export const protocolEventSchema = z.object({
   eventId: z.string().min(1),
   eventType: z.union([eventTypeSchema, z.string().min(1)]),
   cycleId: z.union([z.string().min(1), z.number().int().positive()]).nullable(),
-  subjectType: memoryEventSubjectTypeSchema.nullable().optional(),
+  subjectType: z.string().nullable().optional(),
   subjectId: z.string().nullable(),
   payload: z.record(z.string(), z.unknown()),
   schemaVersion: z.number().int().positive(),

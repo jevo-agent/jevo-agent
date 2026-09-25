@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { executeAgentCycle } from "../src/agent/cycle";
 import { db } from "../src/db/client";
 import {
@@ -10,6 +10,7 @@ import {
   protocolEvents,
   rankHistory,
 } from "../src/db/schema";
+import { DecisionEngine, MockJevProvider } from "../src/jev";
 import {
   closeCycleQueue,
   enqueueCycleJob,
@@ -21,11 +22,15 @@ describe("Agent Cycle Orchestration (BACKEND 05)", () => {
   const integrationCycleId = "cycle-integration-test-01";
   const idempotentCycleId = "cycle-idempotent-test-01";
   const crashCycleId = "cycle-crash-test-01";
+  const skipGateCycleAId = "cycle-skip-gate-test-01";
+  const skipGateCycleBId = "cycle-skip-gate-test-02";
 
   const testCycleIds = [
     integrationCycleId,
     idempotentCycleId,
     crashCycleId,
+    skipGateCycleAId,
+    skipGateCycleBId,
   ];
 
   beforeAll(async () => {
@@ -221,6 +226,93 @@ describe("Agent Cycle Orchestration (BACKEND 05)", () => {
       expect(failedCycle).toBeDefined();
       expect(failedCycle.status).toBe("FAILED");
       expect(failedCycle.completedAt).not.toBeNull();
+    });
+  });
+
+  describe("(d) Step 5-6 Skip Gate on Identical Observations", () => {
+    it("skips Jev evaluation on cycle B when observations are identical and carries forward prior judgment", async () => {
+      // Track spy calls to Jev evaluation
+      let evaluateQualitativeScoresCalls = 0;
+      let decideForAssetCalls = 0;
+
+      const mockJev = new MockJevProvider();
+      const customDecisionEngine = new DecisionEngine(mockJev);
+
+      const originalDecide = customDecisionEngine.decideForAsset.bind(customDecisionEngine);
+      const originalEvaluate = customDecisionEngine.evaluateQualitativeScores.bind(customDecisionEngine);
+
+      customDecisionEngine.decideForAsset = async (cycleId, symbol, context) => {
+        decideForAssetCalls++;
+        return originalDecide(cycleId, symbol, context);
+      };
+      customDecisionEngine.evaluateQualitativeScores = async (symbol, context) => {
+        evaluateQualitativeScoresCalls++;
+        return originalEvaluate(symbol, context);
+      };
+
+      // Run cycle A (initial cycle with no prior cycle: previousCycleId: null)
+      const resultA = await executeAgentCycle("DELTA", {
+        forcedCycleId: skipGateCycleAId,
+        previousCycleId: null,
+        decisionEngine: customDecisionEngine,
+      });
+      expect(resultA.status).toBe("COMPLETED");
+
+      // In cycle A, all 7 assets are evaluated
+      expect(decideForAssetCalls).toBe(7);
+      expect(evaluateQualitativeScoresCalls).toBe(7);
+
+      // Reset spy counters before cycle B
+      decideForAssetCalls = 0;
+      evaluateQualitativeScoresCalls = 0;
+
+      // Run cycle B with identical mock observations referencing cycle A as previous
+      const resultB = await executeAgentCycle("DELTA", {
+        forcedCycleId: skipGateCycleBId,
+        previousCycleId: skipGateCycleAId,
+        decisionEngine: customDecisionEngine,
+      });
+      expect(resultB.status).toBe("COMPLETED");
+
+      // Assert that Jev evaluation was completely SKIPPED in cycle B!
+      expect(decideForAssetCalls).toBe(0);
+      expect(evaluateQualitativeScoresCalls).toBe(0);
+
+      // Verify that jev_decisions and opportunity_scores row in cycle B have identical values to cycle A (carry-forward)
+      const [decA] = await db
+        .select()
+        .from(jevDecisions)
+        .where(and(eq(jevDecisions.cycleId, skipGateCycleAId), eq(jevDecisions.symbol, "NVDA")));
+
+      const [decB] = await db
+        .select()
+        .from(jevDecisions)
+        .where(and(eq(jevDecisions.cycleId, skipGateCycleBId), eq(jevDecisions.symbol, "NVDA")));
+
+      expect(decA).toBeDefined();
+      expect(decB).toBeDefined();
+      expect(decB.decision).toBe(decA.decision);
+      expect(decB.confidence).toBe(decA.confidence);
+      expect(decB.signals).toEqual(decA.signals);
+
+      const [scoreA] = await db
+        .select()
+        .from(opportunityScores)
+        .where(and(eq(opportunityScores.cycleId, skipGateCycleAId), eq(opportunityScores.symbol, "NVDA")));
+
+      const [scoreB] = await db
+        .select()
+        .from(opportunityScores)
+        .where(and(eq(opportunityScores.cycleId, skipGateCycleBId), eq(opportunityScores.symbol, "NVDA")));
+
+      expect(scoreA).toBeDefined();
+      expect(scoreB).toBeDefined();
+      expect(scoreB.narrativeMomentum).toBe(scoreA.narrativeMomentum);
+      expect(scoreB.culturalRelevance).toBe(scoreA.culturalRelevance);
+      expect(scoreB.memeCompatibility).toBe(scoreA.memeCompatibility);
+      expect(scoreB.cryptoAdjacency).toBe(scoreA.cryptoAdjacency);
+      expect(scoreB.pairCompatibility).toBe(scoreA.pairCompatibility);
+      expect(scoreB.score).toBe(scoreA.score);
     });
   });
 });
