@@ -1,0 +1,15 @@
+{
+  "name": "jevo",
+  "private": true,
+  "packageManager": "bun@1.3.14",
+  "workspaces": [
+    "web",
+    "worker",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "bun --filter web dev",
+    "dev:worker": "bun --filter worker dev",
+    "test:worker": "bun --filter worker test"
+  }
+}

@@ -116,7 +116,10 @@ function LandingHero({
       <div className="hero-frame">
         <HeroEdgeUtilities />
         <div className="hero-copy">
-          <p className="label hero-plane-meta"><b>JEVO / Decision plane</b><span>cycle {agent.activeCycle}</span></p>
+          <p className="label hero-plane-meta">
+            <b>JEVO / Decision plane</b>
+            <span>cycle {agent.activeCycle}</span>
+          </p>
           <p className="label">Autonomous market intelligence protocol</p>
           <h1>
             <span>The autonomous</span>
@@ -147,10 +150,7 @@ function LandingHero({
             State → Jev → Decision → Action <span>Phase 0 / simulated</span>
           </p>
         </div>
-        <DecisionPlane
-          asset={asset}
-          pairing={pairing}
-        />
+        <DecisionPlane asset={asset} pairing={pairing} />
       </div>
       <div className="hero-status">
         <div className="wrap">
@@ -232,8 +232,12 @@ function HeroEdgeUtilities() {
 
   return (
     <>
-      <div className="hero-edge-rail hero-edge-rail-left" aria-label="JEVO hero system metadata">
-        JEVO / AGENT&nbsp;&nbsp;/&nbsp;&nbsp;JEV / DECISION&nbsp;&nbsp;/&nbsp;&nbsp;SYS.9841
+      <div
+        className="hero-edge-rail hero-edge-rail-left"
+        aria-label="JEVO hero system metadata"
+      >
+        JEVO / AGENT&nbsp;&nbsp;/&nbsp;&nbsp;JEV /
+        DECISION&nbsp;&nbsp;/&nbsp;&nbsp;SYS.9841
       </div>
       <button
         className="hero-ca"
