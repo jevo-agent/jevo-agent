@@ -1,5 +1,7 @@
+import { randomBytes } from "node:crypto";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { env } from "../config/env";
+import { logger } from "../observability/logger";
 
 export class UnauthorizedError extends Error {
   statusCode = 401;
@@ -11,10 +13,19 @@ export class UnauthorizedError extends Error {
   }
 }
 
+let cachedTokens: Set<string> | null = null;
+let ephemeralDevToken: string | null = null;
+
 /**
  * Returns the set of valid admin bearer tokens from environment configuration.
+ * If ADMIN_API_TOKENS is empty in non-production, generates a one-time random token
+ * and prints it to the log. No static string is hardcoded in source code.
  */
 export function getAllowedAdminTokens(): Set<string> {
+  if (cachedTokens) {
+    return cachedTokens;
+  }
+
   const tokens = new Set<string>();
 
   if (env.ADMIN_API_TOKENS) {
@@ -24,17 +35,26 @@ export function getAllowedAdminTokens(): Set<string> {
     }
   }
 
-  if (env.ADMIN_API_KEY) {
-    const trimmed = env.ADMIN_API_KEY.trim();
-    if (trimmed) tokens.add(trimmed);
-  }
-
-  // Fallback for local development/test if neither is configured
+  // Non-production fallback: generate a random token once on boot and print to log
   if (tokens.size === 0 && env.NODE_ENV !== "production") {
-    tokens.add("local-dev-secret-key");
+    ephemeralDevToken = randomBytes(24).toString("hex");
+    tokens.add(ephemeralDevToken);
+    logger.warn(
+      { devToken: ephemeralDevToken },
+      "No ADMIN_API_TOKENS configured in non-production. Generated one-time random ephemeral admin token",
+    );
   }
 
+  cachedTokens = tokens;
   return tokens;
+}
+
+/**
+ * Resets the in-memory token cache (used for test isolation).
+ */
+export function resetAllowedAdminTokensCache(): void {
+  cachedTokens = null;
+  ephemeralDevToken = null;
 }
 
 /**

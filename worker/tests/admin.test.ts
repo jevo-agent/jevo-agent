@@ -18,11 +18,12 @@ import { seedAssets } from "../src/db/seed";
 import { executeAgentCycle } from "../src/agent/cycle";
 import { closeCycleQueue } from "../src/jobs/queues";
 import { closeEventBus } from "../src/events";
+import { getAllowedAdminTokens } from "../src/api/authz";
 
 describe("Admin API (BACKEND 10)", () => {
   let app: FastifyInstance;
-  const validToken = "local-dev-secret-key";
-  const authHeaders = { Authorization: `Bearer ${validToken}` };
+  let validToken: string;
+  let authHeaders: { Authorization: string };
 
   let testPairingIdApprove: string;
   let testPairingIdReject: string;
@@ -51,8 +52,11 @@ describe("Admin API (BACKEND 10)", () => {
       })
       .onConflictDoNothing();
 
-    // 3. Create Fastify test app
+    // 3. Create Fastify test app and derive active admin token
     app = await createServer();
+    const tokens = getAllowedAdminTokens();
+    validToken = [...tokens][0]!;
+    authHeaders = { Authorization: `Bearer ${validToken}` };
 
     // 4. Run an agent cycle to establish database context
     await executeAgentCycle("DELTA", {

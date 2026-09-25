@@ -15,7 +15,6 @@ export const envSchema = z.object({
   JEV_MODE: z.enum(["mock", "real"]).default("mock"),
   JEV_API_KEY: z.string().optional(),
   JEV_API_URL: z.string().url().default("https://api.jev.ai/v1"),
-  ADMIN_API_KEY: z.string().optional(),
   ADMIN_API_TOKENS: z.string().optional(),
   NEXT_PUBLIC_APP_URL: z.string().optional(),
 });
