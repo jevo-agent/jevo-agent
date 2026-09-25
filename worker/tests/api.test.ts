@@ -21,6 +21,7 @@ import {
   agentCycles,
   jevDecisions,
   launchCandidates,
+  launchCycles,
   memeConcepts,
   memoryEvents,
   opportunityScores,
@@ -68,6 +69,8 @@ describe("REST API - Ten Endpoints (BACKEND 07)", () => {
     await app.close();
 
     // Clean up test cycle data
+    await db.delete(launchCycles);
+    await db.delete(launchCandidates);
     await db.delete(pairingHistory);
     await db.delete(pairingDecisions);
     await db.delete(pairingCandidates);

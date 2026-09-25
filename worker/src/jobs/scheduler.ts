@@ -98,3 +98,36 @@ export async function stopCycleWorker(): Promise<void> {
   }
   await closeCycleQueue();
 }
+
+/**
+ * Pauses BullMQ queue and worker using native methods.
+ */
+export async function pauseAgentCycleQueue(): Promise<void> {
+  const queue = getCycleQueue();
+  await queue.pause();
+  if (cycleWorker) {
+    await cycleWorker.pause();
+  }
+  logger.info("Agent cycle queue & worker paused via operator request");
+}
+
+/**
+ * Resumes BullMQ queue and worker using native methods.
+ */
+export async function resumeAgentCycleQueue(): Promise<void> {
+  const queue = getCycleQueue();
+  await queue.resume();
+  if (cycleWorker) {
+    cycleWorker.resume();
+  }
+  logger.info("Agent cycle queue & worker resumed via operator request");
+}
+
+/**
+ * Reads live paused state directly from BullMQ queue.
+ */
+export async function isAgentCycleQueuePaused(): Promise<boolean> {
+  const queue = getCycleQueue();
+  return queue.isPaused();
+}
+

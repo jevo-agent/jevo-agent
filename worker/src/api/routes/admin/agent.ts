@@ -1,0 +1,43 @@
+import type { FastifyPluginAsync } from "fastify";
+import {
+  pauseAgentCycleQueue,
+  resumeAgentCycleQueue,
+} from "../../../jobs/scheduler";
+import { formatResponse } from "../../envelope";
+import { recordOperatorProtocolEvent } from "./common";
+
+export const adminAgentRoutes: FastifyPluginAsync = async (fastify) => {
+  // 2a. POST /api/v1/admin/agent/pause
+  fastify.post("/agent/pause", async (request, reply) => {
+    await pauseAgentCycleQueue();
+
+    await recordOperatorProtocolEvent("AGENT_PAUSED", {
+      payload: {
+        timestamp: new Date().toISOString(),
+      },
+    });
+
+    reply.status(200);
+    return formatResponse({
+      status: "PAUSED",
+      paused: true,
+    });
+  });
+
+  // 2b. POST /api/v1/admin/agent/resume
+  fastify.post("/agent/resume", async (request, reply) => {
+    await resumeAgentCycleQueue();
+
+    await recordOperatorProtocolEvent("AGENT_RESUMED", {
+      payload: {
+        timestamp: new Date().toISOString(),
+      },
+    });
+
+    reply.status(200);
+    return formatResponse({
+      status: "RESUMED",
+      paused: false,
+    });
+  });
+};

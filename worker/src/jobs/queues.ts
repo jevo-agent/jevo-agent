@@ -35,7 +35,7 @@ export function getDeterministicJobId(
   const interval = INTERVAL_MS[kindUpper] ?? 60 * 1000;
   const floored = Math.floor(timestampMs / interval) * interval;
   return namespace === "manual"
-    ? `manual:${kindUpper}:${floored}:cycle`
+    ? `manual-${kindUpper}:${floored}:cycle`
     : `${kindUpper}:${floored}:cycle`;
 }
 

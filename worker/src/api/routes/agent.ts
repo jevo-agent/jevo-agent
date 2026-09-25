@@ -10,6 +10,7 @@ import {
   protocolEvents,
 } from "../../db/schema";
 import { formatResponse } from "../envelope";
+import { isAgentCycleQueuePaused } from "../../jobs/scheduler";
 
 export const agentRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get("/agent/status", async (request, reply) => {
@@ -98,10 +99,16 @@ export const agentRoutes: FastifyPluginAsync = async (fastify) => {
       Math.floor((Date.now() - lastScanTime.getTime()) / 1000),
     );
 
+    const isPaused = await isAgentCycleQueuePaused();
+
     const runtimeStatus: AgentRuntime = {
-      status: "ONLINE",
-      jevStatus: "ACTIVE",
-      currentOperation: latestCycle?.status === "RUNNING" ? "ANALYZING_MARKET" : "STANDBY",
+      status: isPaused ? "PAUSED" : "ONLINE",
+      jevStatus: isPaused ? "PAUSED" : "ACTIVE",
+      currentOperation: isPaused
+        ? "PAUSED"
+        : latestCycle?.status === "RUNNING"
+          ? "ANALYZING_MARKET"
+          : "STANDBY",
       activeCycle: cycleNumber,
       scanProgress: latestCycle?.status === "RUNNING" ? 50 : 100,
       assetsScanned: latestCycle?.assetsScanned ?? activeAssets.length,

@@ -9,6 +9,7 @@ import { memoryRoutes } from "./routes/memory";
 import { opportunitiesRoutes } from "./routes/opportunities";
 import { pairingsRoutes } from "./routes/pairings";
 import { stocksRoutes } from "./routes/stocks";
+import { adminRoutes } from "./routes/admin";
 
 export async function createServer(): Promise<FastifyInstance> {
   const app = fastify({
@@ -66,6 +67,7 @@ export async function createServer(): Promise<FastifyInstance> {
       await v1.register(memoryRoutes);
       await v1.register(cyclesRoutes);
       await v1.register(eventsRoutes);
+      await v1.register(adminRoutes, { prefix: "/admin" });
     },
     { prefix: "/api/v1" },
   );
