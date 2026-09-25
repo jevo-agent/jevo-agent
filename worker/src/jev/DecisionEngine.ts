@@ -7,7 +7,7 @@ import type { JevProvider } from "./JevProvider";
 import { rawJevChoiceResultSchema, rawJevScoreResultSchema } from "./schemas";
 
 export class DecisionEngine {
-  constructor(private jev: JevProvider) {}
+  constructor(public readonly jev: JevProvider) {}
 
   /**
    * Calls Jev to evaluate an asset classification (PROMOTE, HOLD, DEMOTE).

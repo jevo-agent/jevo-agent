@@ -3,6 +3,7 @@ import type {
   AgentCycleKind,
   AgentCycleRecord,
   AgentCycleStatus,
+  JevDecisionAction,
   JevDecisionRecord,
   RankSnapshot,
 } from "@jevo/protocol-types";
@@ -20,7 +21,7 @@ import {
 } from "../db/schema";
 import { createDecisionEngine, type DecisionEngine } from "../jev";
 import { logger } from "../observability/logger";
-import { evaluatePairingStub } from "../pairing";
+import { runPairingCycle } from "../pairing";
 import { createProvidersRegistry, type ProvidersRegistry } from "../providers";
 import {
   computeMarketMomentum,
@@ -252,7 +253,25 @@ export async function executeAgentCycle(
 
     const priorScoresMap = new Map<
       string,
-      { score: number; marketMomentum: number; socialVelocity: number }
+      {
+        score: number;
+        marketMomentum: number;
+        socialVelocity: number;
+        narrativeMomentum?: number | null;
+        culturalRelevance?: number | null;
+        memeCompatibility?: number | null;
+        cryptoAdjacency?: number | null;
+        pairCompatibility?: number | null;
+      }
+    >();
+    const priorDecisionsMap = new Map<
+      string,
+      {
+        decision: JevDecisionAction;
+        confidence: number;
+        signals: string[];
+        modelVersion: string;
+      }
     >();
     if (priorCycleId) {
       const priorScores = await db
@@ -264,6 +283,24 @@ export async function executeAgentCycle(
           score: ps.score,
           marketMomentum: ps.marketMomentum,
           socialVelocity: ps.socialVelocity,
+          narrativeMomentum: ps.narrativeMomentum,
+          culturalRelevance: ps.culturalRelevance,
+          memeCompatibility: ps.memeCompatibility,
+          cryptoAdjacency: ps.cryptoAdjacency,
+          pairCompatibility: ps.pairCompatibility,
+        });
+      }
+
+      const priorDecisionsList = await db
+        .select()
+        .from(jevDecisions)
+        .where(eq(jevDecisions.cycleId, priorCycleId));
+      for (const pd of priorDecisionsList) {
+        priorDecisionsMap.set(pd.symbol, {
+          decision: pd.decision as JevDecisionAction,
+          confidence: pd.confidence,
+          signals: pd.signals,
+          modelVersion: pd.modelVersion,
         });
       }
     }
@@ -274,6 +311,8 @@ export async function executeAgentCycle(
     const sinceTimestamp = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
     const assetsToRank: AssetToRank[] = [];
+    const assetNarrativeSignalsMap = new Map<string, string[]>();
+    const decisionsMap = new Map<string, JevDecisionAction>();
 
     for (const asset of activeAssets) {
       try {
@@ -308,6 +347,10 @@ export async function executeAgentCycle(
         const narrativeSignals = await providers.narrative.getSignals(
           asset.symbol,
           sinceTimestamp,
+        );
+        assetNarrativeSignalsMap.set(
+          asset.symbol,
+          narrativeSignals.map((s) => s.label),
         );
         for (const sig of narrativeSignals) {
           await db
@@ -393,6 +436,7 @@ export async function executeAgentCycle(
             marketMomentum,
             socialVelocity,
           });
+          decisionsMap.set(asset.symbol, decisionRecord.decision);
 
           const rawQualitative =
             await decisionEngine.evaluateQualitativeScores(asset.symbol, {
@@ -451,11 +495,39 @@ export async function executeAgentCycle(
             "Step 6 Gate: No material change detected. Skipping Jev evaluation and carrying forward prior judgment.",
           );
 
-          await decisionEngine.decideForAsset(cycleId, asset.symbol, {
-            marketMomentum,
-            socialVelocity,
-            skippedReason: "NO_MATERIAL_DELTA",
-          });
+          if (prior) {
+            jevScores = {
+              narrativeMomentum: prior.narrativeMomentum ?? 75,
+              culturalRelevance: prior.culturalRelevance ?? 75,
+              memeCompatibility: prior.memeCompatibility ?? 75,
+              cryptoAdjacency: prior.cryptoAdjacency ?? 75,
+              pairCompatibility: prior.pairCompatibility ?? 75,
+            };
+          }
+
+          const priorDec = priorDecisionsMap.get(asset.symbol);
+          if (priorDec) {
+            decisionsMap.set(asset.symbol, priorDec.decision);
+            await db
+              .insert(jevDecisions)
+              .values({
+                id: `jd-${asset.symbol.toLowerCase()}-${cycleId}-${randomUUID().slice(0, 8)}`,
+                cycleId,
+                symbol: asset.symbol,
+                decision: priorDec.decision,
+                confidence: priorDec.confidence,
+                signals: priorDec.signals,
+                modelVersion: priorDec.modelVersion,
+                createdAt: new Date(),
+              })
+              .onConflictDoNothing();
+          } else {
+            const fallbackDecision = await decisionEngine.decideForAsset(cycleId, asset.symbol, {
+              marketMomentum,
+              socialVelocity,
+            });
+            decisionsMap.set(asset.symbol, fallbackDecision.decision);
+          }
         }
 
         assetsToRank.push({
@@ -492,8 +564,23 @@ export async function executeAgentCycle(
       assets: assetsToRank,
     });
 
-    // Step 11 & 12 (TX3): Pairing Candidates & Theses (Stub for BACKEND 06)
-    await evaluatePairingStub();
+    // Step 11 & 12 (TX3): Pairing Candidates & Theses (BACKEND 06)
+    const qualifiedAssets = rankingSummary.rankedAssets
+      .filter((asset) => {
+        const dec = decisionsMap.get(asset.symbol);
+        return dec === "PROMOTE" || asset.currentRank <= 3;
+      })
+      .map((asset) => ({
+        symbol: asset.symbol,
+        narrativeSignals: assetNarrativeSignalsMap.get(asset.symbol) ?? [],
+      }));
+
+    await runPairingCycle({
+      cycleId,
+      qualifiedAssets,
+      jev: decisionEngine.jev,
+      client: db,
+    });
 
     // Step 14 (TX4): Write memory events for top / promoted assets
     const topAsset = rankingSummary.rankedAssets[0];
