@@ -137,9 +137,16 @@ describe("Agent Cycle Orchestration (BACKEND 05)", () => {
 
   describe("(b) Idempotency & Queue Deduplication", () => {
     it("refuses duplicate jobs with the same deterministic job ID at the BullMQ queue level", async () => {
-      const fixedTimestamp = 1790000000000;
+      const fixedTimestamp = 1790000000000 + Math.floor(Date.now() / 100000);
       const expectedJobId = getDeterministicJobId("DELTA", fixedTimestamp);
       expect(expectedJobId).toContain("DELTA:");
+
+      // Ensure any leftover job from prior interrupted runs is cleaned
+      const queue = getCycleQueue();
+      const existing = await queue.getJob(expectedJobId);
+      if (existing) {
+        await existing.remove();
+      }
 
       // Enqueue Job 1
       const job1 = await enqueueCycleJob("DELTA", {
@@ -156,7 +163,6 @@ describe("Agent Cycle Orchestration (BACKEND 05)", () => {
       expect(job2.id).toBe(expectedJobId);
 
       // Verify that BullMQ queue holds exactly 1 job with this ID
-      const queue = getCycleQueue();
       const waitingJobs = await queue.getJobs(["waiting", "delayed", "active"]);
       const matchingJobs = waitingJobs.filter((j) => j.id === expectedJobId);
 

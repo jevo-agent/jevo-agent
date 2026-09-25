@@ -15,21 +15,38 @@ export async function createServer(): Promise<FastifyInstance> {
     logger: false,
   });
 
-  const frontendOrigin = env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  // Register CORS to allow web frontend access (e.g. Next.js at NEXT_PUBLIC_APP_URL or localhost in dev)
+  const allowedOrigins = new Set<string>();
+  if (env.NEXT_PUBLIC_APP_URL) {
+    allowedOrigins.add(env.NEXT_PUBLIC_APP_URL);
+  }
+  if (env.NODE_ENV !== "production") {
+    allowedOrigins.add("http://localhost:3000");
+    allowedOrigins.add("http://127.0.0.1:3000");
+  }
 
-  // Register CORS to allow web frontend access (e.g. Next.js at localhost:3000 or NEXT_PUBLIC_APP_URL)
   await app.register(cors, {
     origin: (origin, cb) => {
       // Allow requests with no origin (e.g. curl, server-to-server)
       if (!origin) return cb(null, true);
+
+      // Section 19 safety guard: in production, strictly allow ONLY configured NEXT_PUBLIC_APP_URL
+      if (env.NODE_ENV === "production") {
+        if (allowedOrigins.has(origin)) {
+          return cb(null, true);
+        }
+        return cb(new Error("CORS origin not allowed in production"), false);
+      }
+
+      // In development/test: allow explicit origins or local frontend hosts
       if (
-        origin === frontendOrigin ||
-        origin === "http://localhost:3000" ||
-        origin === "http://127.0.0.1:3000" ||
-        env.NODE_ENV === "development"
+        allowedOrigins.has(origin) ||
+        origin.startsWith("http://localhost:") ||
+        origin.startsWith("http://127.0.0.1:")
       ) {
         return cb(null, true);
       }
+
       return cb(new Error("CORS origin not allowed"), false);
     },
     credentials: true,

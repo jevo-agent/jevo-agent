@@ -29,11 +29,14 @@ const INTERVAL_MS: Record<string, number> = {
 export function getDeterministicJobId(
   cycleKind: AgentCycleKind,
   timestampMs: number = Date.now(),
+  namespace: "scheduled" | "manual" = "scheduled",
 ): string {
   const kindUpper = cycleKind.toUpperCase();
   const interval = INTERVAL_MS[kindUpper] ?? 60 * 1000;
   const floored = Math.floor(timestampMs / interval) * interval;
-  return `${kindUpper}:${floored}:cycle`;
+  return namespace === "manual"
+    ? `manual:${kindUpper}:${floored}:cycle`
+    : `${kindUpper}:${floored}:cycle`;
 }
 
 let redisConnection: IORedis | null = null;
@@ -82,20 +85,24 @@ export function getCycleQueue(): Queue<AgentCycleJobData, AgentCycleJobResult> {
  * Adds an agent cycle job to the BullMQ queue with a deterministic job ID.
  * If a job with this deterministic ID already exists in waiting/active state,
  * BullMQ rejects/ignores duplicate insertion without running it twice.
+ * Manual triggers use a distinct "manual" namespace but remain strictly deterministic
+ * within the interval to prevent accidental rapid double-triggers.
  */
 export async function enqueueCycleJob(
   cycleKind: AgentCycleKind,
   options?: CycleExecutionOptions & {
-    customJobId?: string;
+    isManual?: boolean;
     timestampMs?: number;
   },
 ) {
-  const jobId =
-    options?.customJobId ??
-    getDeterministicJobId(cycleKind, options?.timestampMs);
+  const namespace = options?.isManual ? "manual" : "scheduled";
+  const jobId = getDeterministicJobId(cycleKind, options?.timestampMs, namespace);
   const queue = getCycleQueue();
 
-  logger.info({ cycleKind, jobId }, "Enqueuing cycle job to BullMQ queue...");
+  logger.info(
+    { cycleKind, jobId, isManual: !!options?.isManual },
+    "Enqueuing cycle job to BullMQ queue...",
+  );
 
   const job = await queue.add(
     `cycle-${cycleKind.toLowerCase()}`,

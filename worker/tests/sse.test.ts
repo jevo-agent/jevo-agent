@@ -302,4 +302,67 @@ describe("SSE Realtime Stream & Redis Pub/Sub (BACKEND 08)", () => {
     expect(received[1].event).toBe("CYCLE_COMPLETED");
     expect(received.some((e) => e.event === "AGENT_SCAN_STARTED")).toBe(false);
   });
+
+  it("filters live events strictly by ?cycleId= query parameter", async () => {
+    const targetCycleId = `cycle-target-${Date.now()}`;
+    const otherCycleId = `cycle-other-${Date.now()}`;
+
+    // Connect to SSE stream requesting ONLY events for targetCycleId
+    const res = await fetch(`${baseUrl}/events/stream?cycleId=${targetCycleId}`);
+    expect(res.status).toBe(200);
+
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+    const received: ParsedSSE[] = [];
+    let buffer = "";
+
+    const readPromise = (async () => {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() ?? "";
+
+        for (const part of parts) {
+          const parsed = parseSSEBlock(part);
+          if (parsed) {
+            received.push(parsed);
+            if (parsed.event === "CYCLE_COMPLETED" && parsed.data?.cycleId === targetCycleId) {
+              await reader.cancel();
+              return;
+            }
+          }
+        }
+      }
+    })();
+
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    // First publish an event from the other cycle (must be ignored by the stream)
+    await publishProtocolEvent({
+      eventId: `evt-other-scan-${otherCycleId}`,
+      eventType: "AGENT_SCAN_STARTED",
+      cycleId: otherCycleId,
+      subjectType: "cycle",
+      subjectId: otherCycleId,
+      payload: { cycleId: otherCycleId },
+      schemaVersion: 1,
+      actor: "JEVO_AGENT",
+      createdAt: new Date().toISOString(),
+    });
+
+    // Then execute the target cycle
+    await executeAgentCycle("DELTA", {
+      forcedCycleId: targetCycleId,
+      previousCycleId: null,
+    });
+
+    await readPromise;
+
+    // Assert: stream received events from targetCycleId, and 0 events from otherCycleId
+    expect(received.length).toBeGreaterThanOrEqual(4);
+    expect(received.every((e) => e.data?.cycleId === targetCycleId)).toBe(true);
+    expect(received.some((e) => e.data?.cycleId === otherCycleId)).toBe(false);
+  });
 });
