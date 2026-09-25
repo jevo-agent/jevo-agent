@@ -6,13 +6,15 @@ import type {
   JevDecisionRecord,
   RankSnapshot,
 } from "@jevo/protocol-types";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, ne, sql } from "drizzle-orm";
 import { db } from "../db/client";
 import {
   agentCycles,
   assets,
+  jevDecisions,
   marketSnapshots,
   memoryEvents,
+  opportunityScores,
   protocolEvents,
   signalObservations,
 } from "../db/schema";
@@ -176,6 +178,19 @@ export async function executeAgentCycle(
     };
   }
 
+  // Publish AGENT_SCAN_STARTED (Section 12 Event)
+  await db.insert(protocolEvents).values({
+    eventId: `evt-scan-started-${cycleId}-${randomUUID().slice(0, 8)}`,
+    eventType: "AGENT_SCAN_STARTED",
+    cycleId,
+    subjectType: "cycle",
+    subjectId: cycleId,
+    payload: { cycleId, kind: cycleKind },
+    schemaVersion: 1,
+    actor: "JEVO_AGENT",
+    createdAt: new Date(),
+  });
+
   const cycleLogger = logger.child({ cycleId, cycleKind });
 
   try {
@@ -217,6 +232,41 @@ export async function executeAgentCycle(
       options.providersRegistry ?? createProvidersRegistry("mock");
     const decisionEngine =
       options.decisionEngine ?? createDecisionEngine("mock");
+
+    // Step 5: Diff against previous cycle's opportunity_scores per symbol
+    let priorCycleId = options.previousCycleId;
+    if (priorCycleId === undefined) {
+      const [latestCompleted] = await db
+        .select({ id: agentCycles.id })
+        .from(agentCycles)
+        .where(
+          and(
+            ne(agentCycles.id, cycleId),
+            eq(agentCycles.status, "COMPLETED"),
+          ),
+        )
+        .orderBy(desc(agentCycles.startedAt))
+        .limit(1);
+      priorCycleId = latestCompleted?.id ?? null;
+    }
+
+    const priorScoresMap = new Map<
+      string,
+      { score: number; marketMomentum: number; socialVelocity: number }
+    >();
+    if (priorCycleId) {
+      const priorScores = await db
+        .select()
+        .from(opportunityScores)
+        .where(eq(opportunityScores.cycleId, priorCycleId));
+      for (const ps of priorScores) {
+        priorScoresMap.set(ps.symbol, {
+          score: ps.score,
+          marketMomentum: ps.marketMomentum,
+          socialVelocity: ps.socialVelocity,
+        });
+      }
+    }
 
     // Step 3: Collect provider observations
     cycleLogger.info("Step 3: Collecting provider observations...");
@@ -296,7 +346,7 @@ export async function executeAgentCycle(
           signalsProcessedCount++;
         }
 
-        // Step 4: Normalize features
+        // Step 4: Normalize features (deterministic)
         const marketMomentum = computeMarketMomentum({
           current: marketSnapshot,
         });
@@ -304,27 +354,109 @@ export async function executeAgentCycle(
           observations: socialSignals,
         });
 
-        // Step 7: Request Jev evaluation
-        // 1. Classification (PROMOTE, HOLD, DEMOTE) - upserted to jev_decisions
-        await decisionEngine.decideForAsset(cycleId, asset.symbol, {
-          marketMomentum,
-          socialVelocity,
+        // Publish ASSET_ANALYZED (Section 12 Event)
+        await db.insert(protocolEvents).values({
+          eventId: `evt-analyzed-${cycleId}-${asset.symbol}-${randomUUID().slice(0, 8)}`,
+          eventType: "ASSET_ANALYZED",
+          cycleId,
+          subjectType: "asset",
+          subjectId: asset.symbol,
+          payload: {
+            symbol: asset.symbol,
+            marketMomentum,
+            socialVelocity,
+          },
+          schemaVersion: 1,
+          actor: "JEVO_AGENT",
+          createdAt: new Date(),
         });
 
-        // 2. Qualitative scores (5 dimensions)
-        const rawQualitative =
-          await decisionEngine.evaluateQualitativeScores(asset.symbol, {
+        // Step 6: Detect meaningful deltas (Skip gate to control LLM cost / rate limits)
+        const prior = priorScoresMap.get(asset.symbol);
+        const hasPrior = prior !== undefined;
+        // Check delta against prior cycle; threshold is strict (skip if literally identical or difference <= 0.001)
+        const deltaMarket = hasPrior ? Math.abs(marketMomentum - prior.marketMomentum) : 100;
+        const deltaSocial = hasPrior ? Math.abs(socialVelocity - prior.socialVelocity) : 100;
+        const hasMeaningfulDelta = !hasPrior || deltaMarket > 0.001 || deltaSocial > 0.001;
+
+        let jevScores = {
+          narrativeMomentum: 75,
+          culturalRelevance: 75,
+          memeCompatibility: 75,
+          cryptoAdjacency: 75,
+          pairCompatibility: 75,
+        };
+
+        if (hasMeaningfulDelta) {
+          // Step 7: Request Jev evaluation ONLY for symbols with meaningful changes
+          const decisionRecord = await decisionEngine.decideForAsset(cycleId, asset.symbol, {
             marketMomentum,
             socialVelocity,
           });
 
-        const jevScores = {
-          narrativeMomentum: rawQualitative.narrativeMomentum ?? 75,
-          culturalRelevance: rawQualitative.culturalRelevance ?? 75,
-          memeCompatibility: rawQualitative.memeCompatibility ?? 75,
-          cryptoAdjacency: rawQualitative.cryptoAdjacency ?? 75,
-          pairCompatibility: rawQualitative.pairCompatibility ?? 75,
-        };
+          const rawQualitative =
+            await decisionEngine.evaluateQualitativeScores(asset.symbol, {
+              marketMomentum,
+              socialVelocity,
+            });
+
+          jevScores = {
+            narrativeMomentum: rawQualitative.narrativeMomentum ?? 75,
+            culturalRelevance: rawQualitative.culturalRelevance ?? 75,
+            memeCompatibility: rawQualitative.memeCompatibility ?? 75,
+            cryptoAdjacency: rawQualitative.cryptoAdjacency ?? 75,
+            pairCompatibility: rawQualitative.pairCompatibility ?? 75,
+          };
+
+          // Publish JEV_DECISION_COMPLETED (Section 12 Event)
+          await db.insert(protocolEvents).values({
+            eventId: `evt-jev-decision-${cycleId}-${asset.symbol}-${randomUUID().slice(0, 8)}`,
+            eventType: "JEV_DECISION_COMPLETED",
+            cycleId,
+            subjectType: "asset",
+            subjectId: asset.symbol,
+            payload: {
+              symbol: asset.symbol,
+              decision: decisionRecord.decision,
+              confidence: decisionRecord.confidence,
+              signals: decisionRecord.signals,
+            },
+            schemaVersion: 1,
+            actor: "JEVO_AGENT",
+            createdAt: new Date(),
+          });
+
+          // Publish ASSET_PROMOTED / ASSET_DEMOTED (Section 12 Event)
+          if (decisionRecord.decision === "PROMOTE" || decisionRecord.decision === "DEMOTE") {
+            await db.insert(protocolEvents).values({
+              eventId: `evt-decision-action-${cycleId}-${asset.symbol}-${randomUUID().slice(0, 8)}`,
+              eventType: decisionRecord.decision === "PROMOTE" ? "ASSET_PROMOTED" : "ASSET_DEMOTED",
+              cycleId,
+              subjectType: "asset",
+              subjectId: asset.symbol,
+              payload: {
+                symbol: asset.symbol,
+                decision: decisionRecord.decision,
+                confidence: decisionRecord.confidence,
+              },
+              schemaVersion: 1,
+              actor: "JEVO_AGENT",
+              createdAt: new Date(),
+            });
+          }
+        } else {
+          // Gate skip: carry forward prior evaluation to avoid redundant Jev LLM calls
+          cycleLogger.info(
+            { symbol: asset.symbol },
+            "Step 6 Gate: No material change detected. Skipping Jev evaluation and carrying forward prior judgment.",
+          );
+
+          await decisionEngine.decideForAsset(cycleId, asset.symbol, {
+            marketMomentum,
+            socialVelocity,
+            skippedReason: "NO_MATERIAL_DELTA",
+          });
+        }
 
         assetsToRank.push({
           symbol: asset.symbol,
@@ -462,6 +594,27 @@ export async function executeAgentCycle(
         completedAt: new Date(),
       })
       .where(eq(agentCycles.id, cycleId));
+
+    // Section 12 Event: CYCLE_FAILED
+    try {
+      await db.insert(protocolEvents).values({
+        eventId: `evt-cycle-failed-${cycleId}-${randomUUID().slice(0, 8)}`,
+        eventType: "CYCLE_FAILED",
+        cycleId,
+        subjectType: "cycle",
+        subjectId: cycleId,
+        payload: {
+          cycleId,
+          kind: cycleKind,
+          error: (error as any)?.message ?? String(error),
+        },
+        schemaVersion: 1,
+        actor: "JEVO_AGENT",
+        createdAt: new Date(),
+      });
+    } catch (emitErr) {
+      cycleLogger.error({ emitErr }, "Failed to emit CYCLE_FAILED protocol event");
+    }
 
     throw error;
   }
