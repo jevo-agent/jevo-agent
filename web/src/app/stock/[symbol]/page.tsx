@@ -27,7 +27,7 @@ export default async function StockDetailPage({ params }: StockPageProps) {
   const primaryPairing = pairings.find((pairing) => pairing.stockSymbol === asset.symbol);
 
   return (
-    <>
+    <div className="stock-detail-root">
       <AgentStatusBar
         agentStatus={agent.status}
         jevStatus={agent.jevStatus}
@@ -54,6 +54,6 @@ export default async function StockDetailPage({ params }: StockPageProps) {
           <AgentMemory asset={asset} />
         </div>
       </main>
-    </>
+    </div>
   );
 }

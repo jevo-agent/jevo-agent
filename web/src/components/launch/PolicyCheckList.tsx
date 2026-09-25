@@ -1,0 +1,14 @@
+"use client";
+
+import { motion } from "framer-motion";
+
+import type { Launch } from "@/types/launch";
+
+interface PolicyCheckListProps { launch: Launch; }
+
+export function PolicyCheckList({ launch }: PolicyCheckListProps) {
+  const passed = launch.policyChecks.filter((check) => check.status === "PASSED").length;
+  return <section aria-labelledby="policy-checks-title" className="border-b border-[var(--jevo-line)]"><div className="flex min-h-16 flex-wrap items-center justify-between gap-4 border-b border-[var(--jevo-line)] px-5 py-4 sm:px-6"><h2 id="policy-checks-title" className="font-mono text-[0.68rem] tracking-[0.08em] uppercase">Final policy check</h2><p className="protocol-label">All checks must pass before execution</p></div><div className="grid xl:grid-cols-[minmax(0,1fr)_19rem]"><ul className="divide-y divide-[var(--jevo-line)]">{launch.policyChecks.map((check, index) => <motion.li key={check.id} initial={{ opacity: 0, x: -5 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.18, delay: index * 0.025 }} className="grid grid-cols-[1.4rem_minmax(0,1fr)_auto] gap-4 px-5 py-4 sm:px-6"><span aria-hidden="true" className={check.status === "PASSED" ? "font-mono text-[var(--jevo-accent)]" : "font-mono text-[var(--jevo-muted)]"}>{check.status === "PASSED" ? "✓" : "○"}</span><span><strong className="block text-sm font-medium text-[var(--jevo-text)]">{check.label}</strong><span className="mt-1 block text-sm leading-6 text-[var(--jevo-muted)]">{check.description}</span></span><span className="font-mono text-[0.61rem] tracking-[0.07em] text-[var(--jevo-text)] uppercase">{check.status}</span></motion.li>)}</ul><aside className="border-t border-[var(--jevo-line)] p-6 xl:border-t-0 xl:border-l"><p className="protocol-label">Launch readiness</p><p className="mt-5 font-mono text-5xl tracking-[-0.1em] text-[var(--jevo-accent)]">{passed}/{launch.policyChecks.length}</p><h3 className="mt-5 text-xl font-medium tracking-[-0.06em]">Policy checks are currently passing.</h3><p className="mt-4 text-sm leading-6 text-[var(--jevo-muted)]">Passing policy checks ≠ transaction executed. Human guardian approval remains required before mainnet execution.</p><dl className="mt-6 divide-y divide-[var(--jevo-line)] border-y border-[var(--jevo-line)] font-mono text-[0.6rem] tracking-[0.07em] uppercase"><PolicyFact label="Simulation" value="Passed" /><PolicyFact label="Emergency pause" value={launch.wallet.emergencyPause} /><PolicyFact label="Guardian" value={launch.guardianRequirement.status} /><PolicyFact label="Executor" value="Restricted" /></dl></aside></div></section>;
+}
+
+function PolicyFact({ label, value }: { label: string; value: string }) { return <div className="flex justify-between gap-4 py-3"><dt className="text-[var(--jevo-muted)]">{label}</dt><dd className="text-right text-[var(--jevo-text)]">{value}</dd></div>; }

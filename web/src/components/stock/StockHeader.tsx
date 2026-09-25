@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 import { formatClock } from "@/lib/format";
 import type { AgentRuntime } from "@/types/agent";
@@ -15,20 +16,20 @@ export function StockHeader({ asset, agent }: StockHeaderProps) {
 
   return (
     <>
-      <header className="border-b border-[var(--jevo-line)] bg-[rgb(11_13_11_/_78%)]">
+      <header className="stock-deep-header border-b border-[var(--jevo-line)]">
         <div className="protocol-shell flex min-h-20 items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-3" aria-label="Back to JEVO Home">
-            <span className="grid size-6 place-items-center border border-[var(--jevo-line-strong)]" aria-hidden="true"><span className="size-1.5 bg-[var(--jevo-accent)]" /></span>
+            <span className="stock-brand-mark" aria-hidden="true"><Image src="/logo.png" alt="" width={18} height={18} /></span>
             <span className="font-mono text-sm font-medium tracking-[0.16em] text-[var(--jevo-text)]">JEVO</span>
           </Link>
           <nav className="hidden items-center gap-2 font-mono text-[0.65rem] tracking-[0.08em] text-[var(--jevo-muted)] uppercase sm:flex" aria-label="Breadcrumb">
             <Link href="/" className="transition-colors hover:text-[var(--jevo-text)]">Agent</Link><span>/</span><span>Stock intelligence</span><span>/</span><strong className="font-medium text-[var(--jevo-text)]">{asset.symbol}</strong>
           </nav>
-          <p className="font-mono text-[0.625rem] tracking-[0.08em] text-[var(--jevo-muted)] uppercase"><span className="mr-2 inline-block size-1.5 rounded-full bg-[var(--jevo-accent)]" aria-hidden="true" />JEV <span className="text-[var(--jevo-accent)]">{agent.jevStatus}</span></p>
+          <div className="flex items-center gap-4"><Link href="/memory" className="hidden font-mono text-[0.625rem] tracking-[0.08em] text-[var(--jevo-muted)] uppercase transition-colors hover:text-[var(--jevo-accent)] sm:inline">Memory ↗</Link><p className="font-mono text-[0.625rem] tracking-[0.08em] text-[var(--jevo-muted)] uppercase"><span className="mr-2 inline-block size-1.5 rounded-full bg-[var(--jevo-accent)]" aria-hidden="true" />JEV <span className="text-[var(--jevo-accent)]">{agent.jevStatus}</span></p></div>
         </div>
       </header>
 
-      <section className="border-b border-[var(--jevo-line)] bg-[rgb(11_13_11_/_72%)]" aria-labelledby="stock-title">
+      <section className="stock-summary border-b border-[var(--jevo-line)]" aria-labelledby="stock-title">
         <div className="protocol-shell grid lg:grid-cols-[1.3fr_repeat(6,minmax(0,0.7fr))]">
           <div className="border-b border-[var(--jevo-line)] py-7 lg:border-r lg:border-b-0 lg:pr-8">
             <h1 id="stock-title" className="text-6xl font-medium tracking-[-0.1em] text-[var(--jevo-text)] sm:text-7xl">{asset.symbol}</h1>

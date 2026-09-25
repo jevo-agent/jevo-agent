@@ -1,20 +1,12 @@
-import { AgentStatusBar } from "@/components/agent/AgentStatusBar";
-import { PairingContext } from "@/components/pairing/PairingContext";
-import { PairingMarketplace } from "@/components/pairing/PairingMarketplace";
-import { PairingMarketplaceHeader } from "@/components/pairing/PairingMarketplaceHeader";
+import { AppShell } from "@/components/app/AppShell";
+import { PairingsView } from "@/components/app/views/PairingsView";
 import { mockAgentState } from "@/data/mock-agent-state";
 
 export default function PairingMarketplacePage() {
-  const { agent, pairings, assets } = mockAgentState;
+  const { agent, assets, ranking, pairings, launch, memory } = mockAgentState;
+  const featuredAsset = assets.find((asset) => asset.symbol === "NVDA");
+  const featuredPairing = pairings.find((pairing) => pairing.slug === launch.selectedPairingSlug);
+  if (!featuredAsset || !featuredPairing) throw new Error("The Pairings view requires the shared NVDA opportunity and launch pairing.");
 
-  return (
-    <>
-      <AgentStatusBar agentStatus={agent.status} jevStatus={agent.jevStatus} currentOperation={agent.currentOperation} lastDecisionAgeSeconds={agent.lastDecisionAgeSeconds} nextCycleInSeconds={agent.nextCycleInSeconds} networkLabel={agent.networkLabel} />
-      <PairingMarketplaceHeader agent={agent} pairings={pairings} />
-      <main>
-        <PairingMarketplace agent={agent} pairings={pairings} assets={assets} />
-        <PairingContext pairings={pairings} agent={agent} />
-      </main>
-    </>
-  );
+  return <AppShell agent={agent} assets={assets} ranking={ranking} pairings={pairings} launch={launch} memory={memory} featuredAsset={featuredAsset} featuredPairing={featuredPairing}><PairingsView pairings={pairings} /></AppShell>;
 }

@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0b0d0b" />
+<title>JEVO — Autonomous Market Agent for Stock × Meme Markets</title>
+<meta name="description" content="JEVO is an autonomous market agent powered by Jev. It evaluates Stock Tokens, ranks opportunities, proposes stock-to-meme pairings and moves them toward controlled launch on Robinhood Chain." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<!--
+  JEVO LANDING — REFERENCE v7 (for Codex)
+  Layout benchmark: quantapools.tech (composition, density, header, numbered sections)
+  Identity: JEVO tokens (same palette as /app references)
+  Core idea: the hero visual IS the product flow, read left → right:
+     OBSERVE (Stock Tokens) → DECIDE (Jev gate) → RANK → PAIR → LAUNCH
+  All numbers are Phase 0 demo fixtures and are labelled as simulated.
+-->
+<style>
+:root{
+  --bg:#0b0d0b;
+  --bg-raise:#101310;
+  --text:#f0f2e9;
+  --text-2:#c4cabd;
+  --muted:#8c9386;
+  --dim:#5a6156;
+  --line:rgba(220,235,215,.12);
+  --line-strong:rgba(220,235,215,.22);
+  --line-faint:rgba(220,235,215,.045);
+  --accent:#02c6a5;
+  --accent-soft:rgba(2,198,165,.12);
+  --down:#ff7a5c;
+
+  --sans:"Archivo",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+
+  --max:1480px;
+  --gutter:clamp(20px,4vw,64px);
+  --header-h:60px;
+  --section-y:clamp(88px,10vw,144px);
+  --gap:clamp(24px,3vw,48px);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{background:var(--bg);scroll-padding-top:calc(var(--header-h) + env(safe-area-inset-top,0px))}
+body{margin:0;color:var(--text);background:var(--bg);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+:focus-visible{outline:1.5px solid var(--accent);outline-offset:3px}
+svg text{font-family:var(--mono)}
+
+/* ---------- one container, one grid ---------- */
+.wrap{width:100%;max-width:var(--max);margin:0 auto;padding-inline:var(--gutter)}
+.gridlines{position:fixed;inset:0;pointer-events:none;z-index:0}
+.gridlines .wrap{height:100%}
+.gridlines .cols{height:100%;border-inline:1px solid var(--line-faint);
+  background:repeating-linear-gradient(90deg,transparent 0 calc(100%/6 - 1px),var(--line-faint) calc(100%/6 - 1px) calc(100%/6))}
+main,header,footer{position:relative;z-index:1}
+
+/* ---------- type primitives ---------- */
+.label{font-family:var(--mono);font-size:11px;line-height:1.3;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.label b{color:var(--text);font-weight:500}
+.label .on{color:var(--accent)}
+.h2{font-weight:800;font-stretch:88%;text-transform:uppercase;font-size:clamp(34px,4vw,60px);line-height:.96;letter-spacing:-.015em;margin:0}
+.body{color:var(--text-2);max-width:56ch;margin:0}
+
+/* ---------- buttons ---------- */
+.btn{display:inline-flex;align-items:center;gap:10px;height:44px;padding:0 18px;font-family:var(--mono);font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--line-strong);border-radius:2px;transition:background .15s,border-color .15s,color .15s}
+.btn:hover{border-color:var(--text)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#0b0d0b}
+.btn-primary:hover{background:#e6ff7a;border-color:#e6ff7a}
+.btn-sm{height:34px;padding:0 14px;font-size:11px}
+
+/* ---------- header ---------- */
+.site-header{position:sticky;top:0;z-index:40;padding-top:env(safe-area-inset-top,0px);background:rgba(11,13,11,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.site-header .wrap{height:var(--header-h);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:24px}
+.brand{display:inline-flex;align-items:center;gap:12px;width:max-content}
+.brand-mark{width:22px;height:22px;flex:none}
+.brand-name{font-weight:800;font-stretch:112%;font-size:17px;letter-spacing:.02em}
+.brand-sub{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+.nav{display:flex;gap:clamp(18px,2.4vw,34px)}
+.nav a{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;padding:6px 0}
+.nav a:hover{color:var(--text)}
+.header-actions{justify-self:end;display:flex;align-items:center;gap:18px}
+.header-actions .label{white-space:nowrap}
+
+/* ---------- hero ---------- */
+.hero{border-bottom:1px solid var(--line)}
+.hero-grid{display:grid;grid-template-columns:minmax(0,42fr) minmax(0,58fr);gap:var(--gap);min-height:min(calc(100svh - var(--header-h) - 64px),780px);align-items:center;padding-block:clamp(28px,4vh,48px)}
+.hero-copy{display:flex;flex-direction:column;gap:22px;max-width:620px}
+.hero h1{margin:0;font-weight:850;font-stretch:84%;text-transform:uppercase;font-size:clamp(40px,4.7vw,74px);line-height:.93;letter-spacing:-.012em}
+.hero h1 .hl{color:var(--accent)}
+.powered{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+.powered .dot{width:7px;height:7px;background:var(--accent);border-radius:50%}
+.powered b{font-weight:500;color:var(--accent)}
+.hero .body{font-size:16.5px}
+.cta-row{display:flex;flex-wrap:wrap;gap:12px;margin-top:4px}
+.flow-key{display:flex;flex-wrap:wrap;gap:0;margin-top:10px;border-top:1px solid var(--line);padding-top:16px}
+.flow-key span{font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--dim);text-transform:uppercase;padding-right:12px;margin-right:12px;border-right:1px solid var(--line);transition:color .2s}
+.flow-key span:last-child{border-right:0}
+.flow-key span.is-active{color:var(--accent)}
+
+.plane{position:relative;display:flex;flex-direction:column;gap:12px;min-width:0}
+.plane-meta{display:flex;justify-content:space-between;gap:16px}
+.plane svg{width:100%;height:auto;display:block;overflow:visible}
+
+/* SVG system field */
+.col-head{font-size:10px;letter-spacing:.1em;fill:var(--dim);transition:fill .25s}
+.col-head.is-active{fill:var(--accent)}
+.guide{stroke:var(--line);stroke-dasharray:2 5}
+.uni{fill:none;stroke:rgba(220,235,215,.09);stroke-width:1}
+.route{fill:none;stroke:rgba(220,235,215,.34);stroke-width:1.2;transition:opacity .2s,stroke .2s}
+.route.sel{stroke:var(--accent);stroke-width:1.8}
+.route.held{stroke:rgba(220,235,215,.22);stroke-dasharray:3 4}
+.tick{font-size:10.5px;fill:var(--muted);letter-spacing:.04em}
+.tick.strong{fill:var(--text);font-weight:500}
+.tick.accent{fill:var(--accent)}
+.tick.small{font-size:9.5px;fill:var(--dim);letter-spacing:.08em}
+.gate{fill:rgba(2,198,165,.035);stroke:rgba(2,198,165,.45)}
+.node{fill:var(--bg);stroke:var(--accent);stroke-width:1.5}
+.node-muted{fill:var(--bg);stroke:rgba(220,235,215,.4)}
+.chain{stroke:var(--line-strong)}
+svg.field.has-hot .route:not(.hot),svg.field.has-hot .hover-t:not(.hot){opacity:.18}
+svg.field .route.hot{stroke-width:2}
+.hover-t{transition:opacity .2s;cursor:default}
+.pulse{fill:var(--accent)}
+.pulse-halo{fill:none;stroke:var(--accent);opacity:.35}
+
+.hero-status{border-top:1px solid var(--line)}
+.hero-status .wrap{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto;min-height:64px;align-items:center}
+.hero-status .cell{padding:12px 0;border-right:1px solid var(--line);padding-right:16px;margin-right:16px}
+.hero-status .cell:nth-child(4){border-right:0}
+.scroll-hint{justify-self:end}
+
+/* ---------- section frame (Quanta-like numbered progression) ---------- */
+.section{padding-block:var(--section-y);border-bottom:1px solid var(--line)}
+.sec-head{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:var(--gap);align-items:end;margin-bottom:clamp(40px,5vw,72px)}
+.sec-head .left{display:flex;flex-direction:column;gap:18px}
+.sec-index{display:flex;gap:14px;align-items:center}
+.sec-index::after{content:"";height:1px;width:48px;background:var(--line-strong)}
+
+/* 01 — why Jev / the agent */
+.agent-grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:var(--gap)}
+.contrast{border-top:1px solid var(--line)}
+.contrast-row{display:grid;grid-template-columns:140px 1fr;gap:16px;padding:18px 0;border-bottom:1px solid var(--line);align-items:center}
+.contrast-row .chainline{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;color:var(--muted)}
+.contrast-row.jevo .chainline{color:var(--text)}
+.contrast-row.jevo .chainline em{font-style:normal;color:var(--accent)}
+.caps{border-top:1px solid var(--line-strong)}
+.cap{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:18px;padding:22px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.cap h3{margin:0 0 6px;font-weight:750;font-stretch:92%;font-size:19px;text-transform:uppercase;letter-spacing:.005em}
+.cap p{margin:0;color:var(--muted);font-size:14.5px;max-width:52ch}
+.cap .n{font-family:var(--mono);font-size:12px;color:var(--dim)}
+.cap .st{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;white-space:nowrap}
+
+/* 02 — ranking */
+.rank-tools{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:14px;flex-wrap:wrap}
+.seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:2px}
+.seg button{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:9px 14px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--text);color:var(--bg)}
+.rank{border-top:1px solid var(--line-strong)}
+.rank-head,.rank-row{display:grid;grid-template-columns:64px minmax(140px,1.3fr) minmax(160px,2fr) 90px 140px 110px 28px;gap:16px;align-items:center}
+.rank-head{padding:12px 0;border-bottom:1px solid var(--line)}
+.rank-list{list-style:none;margin:0;padding:0;position:relative}
+.rank-row{padding:16px 0;border-bottom:1px solid var(--line);transition:background .15s}
+.rank-row:hover{background:rgba(220,235,215,.03)}
+.rank-row .pos{font-family:var(--mono);font-size:15px;color:var(--muted)}
+.rank-row .asset b{display:block;font-weight:750;font-stretch:96%;font-size:18px;letter-spacing:.01em}
+.rank-row .asset span{font-size:13px;color:var(--muted)}
+.bar{display:flex;align-items:center;gap:12px;font-family:var(--mono);font-size:14px}
+.bar i{flex:1;height:2px;background:var(--line);position:relative}
+.bar i::after{content:"";position:absolute;inset:0 auto 0 0;width:var(--w);background:var(--text-2);transition:width .5s}
+.rank-row.top .bar i::after{background:var(--accent)}
+.rank-row.top .pos{color:var(--accent)}
+.delta{font-family:var(--mono);font-size:13px}
+.delta.up{color:var(--text)}
+.delta.dn{color:var(--down)}
+.delta.flat{color:var(--dim)}
+.dec{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.dec.promote{color:var(--accent)}
+.dec.demote{color:var(--down)}
+.age{font-family:var(--mono);font-size:11.5px;color:var(--dim)}
+.go{color:var(--dim);font-family:var(--mono)}
+.rank-row:hover .go{color:var(--text)}
+.rank-foot{display:flex;justify-content:space-between;gap:16px;margin-top:18px;flex-wrap:wrap}
+
+/* 03 — pairing */
+.pair-grid{display:grid;grid-template-columns:minmax(0,6fr) minmax(0,6fr);gap:var(--gap);align-items:start}
+.pair-map{display:grid;grid-template-columns:minmax(120px,1fr) minmax(80px,1.1fr) minmax(170px,1.3fr);border-top:1px solid var(--line-strong);border-bottom:1px solid var(--line)}
+.pair-src{display:flex;flex-direction:column;justify-content:center;gap:6px;padding:24px 0}
+.pair-src > b{font-weight:850;font-stretch:90%;font-size:40px;line-height:1}
+.pair-links{height:100%;min-height:330px}
+.pair-links svg{width:100%;height:100%;display:block}
+.pair-links path{fill:none;stroke:rgba(220,235,215,.28);stroke-width:1.2;vector-effect:non-scaling-stroke;transition:stroke .2s}
+.pair-links path.on{stroke:var(--accent);stroke-width:1.8}
+.cands{display:grid;grid-template-rows:repeat(3,1fr)}
+.cand{text-align:left;display:flex;flex-direction:column;justify-content:center;gap:4px;padding:0 0 0 18px;border-left:1px solid var(--line);border-bottom:1px solid var(--line);position:relative}
+.cand:last-child{border-bottom:0}
+.cand b{font-weight:800;font-stretch:92%;font-size:24px;letter-spacing:.01em;color:var(--muted);transition:color .2s}
+.cand .label{transition:color .2s}
+.cand[aria-pressed="true"] b{color:var(--text)}
+.cand[aria-pressed="true"]::before{content:"";position:absolute;left:-1px;top:0;bottom:0;width:2px;background:var(--accent)}
+.cand:hover b{color:var(--text)}
+.thesis{border-top:1px solid var(--line-strong)}
+.thesis-top{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:20px 0;border-bottom:1px solid var(--line)}
+.thesis-top h3{margin:0;font-weight:800;font-stretch:90%;font-size:28px;text-transform:uppercase;letter-spacing:.005em}
+.qa{display:grid;grid-template-columns:130px 1fr;gap:16px;padding:14px 0;border-bottom:1px solid var(--line)}
+.qa p{margin:0;color:var(--text-2);font-size:14.5px}
+.comps{display:grid;grid-template-columns:repeat(3,1fr);gap:0 24px;padding:18px 0}
+.comp{display:flex;flex-direction:column;gap:6px;padding:8px 0}
+.comp .row{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px}
+.comp .row span{color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-size:10.5px}
+.comp i{height:2px;background:var(--line);position:relative;display:block}
+.comp i::after{content:"";position:absolute;inset:0 auto 0 0;width:var(--w);background:var(--text-2);transition:width .4s}
+
+/* 04 — pipeline */
+.stages{list-style:none;margin:0 0 clamp(40px,5vw,64px);padding:0;display:grid;grid-template-columns:repeat(6,1fr);border-top:1px solid var(--line-strong)}
+.stage{padding:18px 16px 18px 0;border-right:1px solid var(--line);position:relative}
+.stage:last-child{border-right:0}
+.stage + .stage{padding-left:16px}
+.stage::before{content:"";position:absolute;top:-1px;left:0;right:0;height:2px;background:transparent}
+.stage.done::before{background:var(--text-2)}
+.stage.now::before{background:var(--accent)}
+.stage h3{margin:10px 0 6px;font-weight:800;font-stretch:90%;font-size:20px;text-transform:uppercase}
+.stage p{margin:0;font-size:13.5px;color:var(--muted)}
+.stage .state{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.stage.done .state{color:var(--text-2)}
+.stage.now .state{color:var(--accent)}
+.pipe-grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:var(--gap)}
+.clock{font-family:var(--mono);font-weight:500;font-size:clamp(40px,5vw,72px);letter-spacing:-.02em;line-height:1;margin:14px 0 6px;font-variant-numeric:tabular-nums}
+.cycle{list-style:none;margin:24px 0 0;padding:0;border-top:1px solid var(--line)}
+.cycle li{display:grid;grid-template-columns:70px 1fr 90px;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+.cycle li .t{color:var(--dim)}
+.cycle li.done{color:var(--text-2)}
+.cycle li.now{color:var(--text)}
+.cycle li .s{text-align:right;text-transform:uppercase;font-size:10.5px;letter-spacing:.08em}
+.cycle li.now .s{color:var(--accent)}
+.facts{border-top:1px solid var(--line-strong)}
+.fact{display:grid;grid-template-columns:200px 1fr;gap:16px;padding:14px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.fact .v{font-family:var(--mono);font-size:13px}
+.fact .v.accent{color:var(--accent)}
+.perm{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap);margin-top:28px}
+.perm ul{list-style:none;margin:10px 0 0;padding:0}
+.perm li{font-size:14px;color:var(--text-2);padding:8px 0;border-bottom:1px solid var(--line)}
+.perm .no li{color:var(--muted);text-decoration:line-through;text-decoration-color:rgba(255,122,92,.5)}
+
+/* 05 — memory */
+.mem-grid{display:grid;grid-template-columns:minmax(0,8fr) minmax(0,4fr);gap:var(--gap)}
+.mem-chart{border-top:1px solid var(--line-strong);border-bottom:1px solid var(--line);padding:18px 0}
+.mem-chart svg{width:100%;height:auto;display:block}
+.mem-axis{stroke:var(--line)}
+.mem-rank{fill:none;stroke:var(--accent);stroke-width:1.8}
+.mem-score{fill:none;stroke:rgba(220,235,215,.4);stroke-width:1.2;stroke-dasharray:3 4}
+.mem-pt{fill:var(--bg);stroke:var(--accent);stroke-width:1.5}
+.snap{display:grid;grid-template-columns:repeat(5,1fr);margin-top:0}
+.snap div{padding:14px 0;border-right:1px solid var(--line);padding-right:12px;margin-right:12px}
+.snap div:last-child{border-right:0}
+.snap b{display:block;font-family:var(--mono);font-weight:500;font-size:20px}
+.snap div:last-child b{color:var(--accent)}
+.transition{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line-strong);margin-top:clamp(32px,4vw,56px)}
+.transition div{padding:20px 20px 20px 0;border-right:1px solid var(--line)}
+.transition div + div{padding-left:20px}
+.transition div:last-child{border-right:0}
+.transition p{margin:10px 0 0;font-size:14.5px;color:var(--text-2)}
+.transition .big{font-family:var(--mono);font-size:22px;color:var(--text);margin-top:10px;display:block}
+.transition .big.accent{color:var(--accent)}
+.log{list-style:none;margin:0;padding:0;border-top:1px solid var(--line-strong)}
+.log li{display:grid;grid-template-columns:72px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:12px;color:var(--text-2)}
+.log li .t{color:var(--dim)}
+.log li.k{color:var(--accent)}
+
+/* 06 — cta */
+.cta{padding-block:clamp(110px,13vw,190px);border-bottom:1px solid var(--line)}
+.cta .wrap{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:var(--gap);align-items:end}
+.cta h2{font-weight:850;font-stretch:84%;text-transform:uppercase;font-size:clamp(44px,6.4vw,104px);line-height:.9;letter-spacing:-.015em;margin:18px 0 0}
+.cta .right{display:flex;flex-direction:column;gap:22px}
+
+/* footer */
+.site-footer{padding-block:40px calc(40px + env(safe-area-inset-bottom,0px))}
+.site-footer .wrap{display:grid;grid-template-columns:1fr auto;gap:24px 48px;align-items:start}
+.foot-links{display:flex;gap:24px;flex-wrap:wrap}
+.foot-links a{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.foot-links a:hover{color:var(--text)}
+.foot-note{grid-column:1/-1;border-top:1px solid var(--line);padding-top:20px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+
+/* ---------- responsive ---------- */
+@media (max-width:1100px){
+  .site-header .wrap{grid-template-columns:auto 1fr}
+  .nav{display:none}
+  .hero-grid{grid-template-columns:1fr;min-height:0}
+  .hero-copy{max-width:720px}
+  .sec-head,.agent-grid,.pair-grid,.pipe-grid,.mem-grid,.cta .wrap{grid-template-columns:1fr}
+  .stages{grid-template-columns:repeat(3,1fr)}
+  .stage:nth-child(3){border-right:0}
+  .stage:nth-child(n+4){border-top:1px solid var(--line)}
+  .stage:nth-child(4){padding-left:0}
+  .rank-head,.rank-row{grid-template-columns:48px minmax(110px,1fr) minmax(120px,1.4fr) 64px 110px 24px}
+  .rank-head .c-age,.rank-row .age{display:none}
+}
+@media (max-width:680px){
+  .brand-sub,.header-actions .label{display:none}
+  .hero-status .wrap{grid-template-columns:1fr 1fr}
+  .hero-status .cell:nth-child(2){border-right:0}
+  .scroll-hint{display:none}
+  .rank-head{display:none}
+  .rank-row{grid-template-columns:36px 1fr 70px;row-gap:8px}
+  .rank-row .bar{grid-column:2/4}
+  .rank-row .dec,.rank-row .go{display:none}
+  .pair-map{grid-template-columns:90px 60px 1fr}
+  .pair-src > b{font-size:28px}
+  .comps{grid-template-columns:1fr 1fr}
+  .qa,.fact{grid-template-columns:1fr;gap:4px}
+  .stages{grid-template-columns:1fr 1fr}
+  .stage{border-right:0!important;padding-left:0!important;border-top:1px solid var(--line)}
+  .perm,.transition{grid-template-columns:1fr}
+  .transition div{border-right:0;padding-left:0!important;border-bottom:1px solid var(--line)}
+  .snap{grid-template-columns:repeat(3,1fr)}
+  .snap div:nth-child(-n+2){display:none}
+  .contrast-row{grid-template-columns:1fr;gap:6px}
+  .site-footer .wrap{grid-template-columns:1fr}
+  .plane{overflow-x:auto;margin-inline:calc(var(--gutter) * -1);padding-inline:var(--gutter)}
+  .plane svg{min-width:700px}
+  .cap{grid-template-columns:36px 1fr}
+  .cap .st{grid-column:2}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important}
+}
+</style>
+</head>
+<body>
+
+<div class="gridlines" aria-hidden="true"><div class="wrap"><div class="cols"></div></div></div>
+
+<!-- ============ HEADER (one compact band) ============ -->
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="JEVO home">
+      <svg class="brand-mark" viewBox="0 0 22 22" aria-hidden="true">
+        <rect x=".5" y=".5" width="21" height="21" fill="none" stroke="rgba(220,235,215,.35)"/>
+        <path d="M4 7h7M4 11h7M4 15h7" stroke="rgba(220,235,215,.55)" stroke-width="1.2"/>
+        <rect x="11" y="4" width="2" height="14" fill="#02c6a5"/>
+        <path d="M13 11h5" stroke="#02c6a5" stroke-width="1.6"/>
+      </svg>
+      <span class="brand-name">JEVO</span>
+      <span class="brand-sub">/ Autonomous market system</span>
+    </a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#agent">Agent</a>
+      <a href="#market">Market</a>
+      <a href="#pairings">Pairings</a>
+      <a href="#pipeline">Architecture</a>
+      <a href="#memory">Memory</a>
+    </nav>
+    <div class="header-actions">
+      <span class="label"><span class="on">●</span> Jev <b>active</b></span>
+      <a class="btn btn-primary btn-sm" href="/app">Open app</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- ============ HERO ============ -->
+<section class="hero" id="top">
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <p class="label">Autonomous market intelligence protocol</p>
+      <h1>The autonomous<br>market agent<br>for <span class="hl">stock × meme</span><br>markets.</h1>
+      <p class="powered"><span class="dot" aria-hidden="true"></span>Powered by <b>Jev</b></p>
+      <p class="body">JEVO continuously evaluates Stock Tokens, market signals, narratives and cultural momentum to discover which stock-native meme markets should exist next.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="/app">Open app →</a>
+        <a class="btn" href="/stock/NVDA">View current opportunity ↗</a>
+      </div>
+      <div class="flow-key" aria-label="How JEVO works">
+        <span data-stage="0">Observe</span><span data-stage="1">Decide</span><span data-stage="2">Rank</span><span data-stage="3">Pair</span><span data-stage="4">Launch</span>
+      </div>
+    </div>
+
+    <div class="plane">
+      <div class="plane-meta">
+        <span class="label"><b>JEVO / Decision plane</b> &nbsp;cycle <b id="cycleA">9841</b></span>
+        <span class="label">Phase 0 / simulated state</span>
+      </div>
+
+      <svg class="field" id="field" viewBox="0 0 880 600" role="img" aria-labelledby="fieldTitle fieldDesc">
+        <title id="fieldTitle">JEVO decision flow</title>
+        <desc id="fieldDesc">Stock Tokens enter from the left, pass through the Jev decision gate, are ranked, the top asset NVDA is paired with meme candidates, and NVDA × $GPU becomes a launch candidate that is not yet submitted onchain.</desc>
+
+        <!-- column heads = the product flow, readable in 5 seconds -->
+        <g id="heads">
+          <text class="col-head" x="0"   y="14">01 OBSERVE</text>
+          <text class="col-head" x="276" y="14">02 DECIDE</text>
+          <text class="col-head" x="414" y="14">03 RANK</text>
+          <text class="col-head" x="574" y="14">04 PAIR</text>
+          <text class="col-head" x="734" y="14">05 LAUNCH</text>
+        </g>
+        <line class="guide" x1="262" y1="28" x2="262" y2="590"/>
+        <line class="guide" x1="400" y1="28" x2="400" y2="590"/>
+        <line class="guide" x1="560" y1="28" x2="560" y2="590"/>
+        <line class="guide" x1="720" y1="28" x2="720" y2="590"/>
+
+        <g id="universe"></g>
+        <g id="routes"></g>
+
+        <!-- Jev gate -->
+        <rect class="gate" x="318" y="172" width="24" height="306"/>
+        <text class="tick accent" x="318" y="160" font-weight="500">JEV</text>
+        <text class="tick small" x="296" y="498">DECISION GATE</text>
+
+        <g id="labels"></g>
+
+        <!-- launch -->
+        <line class="chain" x1="720" y1="560" x2="880" y2="560"/>
+        <text class="tick small" x="726" y="580">ROBINHOOD CHAIN / VIA PONS</text>
+        <line x1="800" y1="372" x2="800" y2="556" stroke="rgba(2,198,165,.4)" stroke-dasharray="2 5"/>
+        <circle class="node" cx="800" cy="360" r="7"/>
+        <g class="hover-t" data-asset="NVDA">
+          <text class="tick strong" x="816" y="350">LAUNCH</text>
+          <text class="tick strong" x="816" y="364">CANDIDATE</text>
+          <text class="tick accent" x="816" y="384">NVDA × $GPU</text>
+          <text class="tick" x="816" y="400">T-06 / PREP</text>
+          <text class="tick" x="816" y="416">TX / NOT SENT</text>
+        </g>
+
+        <!-- pulse (one orchestrated motion: a decision cycle) -->
+        <path id="pulsePath" d="" fill="none" stroke="none"/>
+        <circle id="pulseHalo" class="pulse-halo" r="9" cx="-20" cy="-20"/>
+        <circle id="pulse" class="pulse" r="3.5" cx="-20" cy="-20"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="hero-status">
+    <div class="wrap">
+      <div class="cell"><div class="label">Jev</div><div class="label"><b class="on">Active</b></div></div>
+      <div class="cell"><div class="label">Cycle</div><div class="label"><b id="cycleB">9841</b> / last decision <b id="lastDec">12s</b> ago</div></div>
+      <div class="cell"><div class="label">Network</div><div class="label"><b>Robinhood Chain</b></div></div>
+      <div class="cell"><div class="label">State</div><div class="label"><b id="stateLbl">Observing</b></div></div>
+      <a class="label scroll-hint" href="#agent">Scroll to inspect ↓</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 01 WHY JEV / THE AGENT ============ -->
+<section class="section" id="agent">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="left">
+        <p class="label sec-index">01 / The agent</p>
+        <h2 class="h2">Most AI is built to talk.<br>JEVO is built to decide.</h2>
+      </div>
+      <p class="body">Jev is the decision layer. Instead of generating text, it returns structured choices, scores and classifications. JEVO runs those decisions in a continuous loop over the market, and records every one.</p>
+    </div>
+
+    <div class="agent-grid">
+      <div class="contrast" aria-label="Traditional LLM versus JEVO">
+        <div class="contrast-row">
+          <span class="label">Typical LLM</span>
+          <span class="chainline">INPUT → REASON → GENERATE TEXT</span>
+        </div>
+        <div class="contrast-row jevo">
+          <span class="label"><span class="on">JEVO</span></span>
+          <span class="chainline">STATE → <em>JEV</em> → DECISION → ACTION</span>
+        </div>
+        <div class="contrast-row">
+          <span class="label">Output</span>
+          <span class="chainline" style="color:var(--text-2)">PROMOTE NVDA / #04 → #01 / CONF 0.94</span>
+        </div>
+      </div>
+
+      <div class="caps">
+        <div class="cap">
+          <span class="n">[01]</span>
+          <div><h3>Observe market signals</h3><p>Stock Token prices, volume, news, social velocity and narrative clusters are ingested on scheduled and event-driven scans.</p></div>
+          <span class="st">Delta scan / 60s</span>
+        </div>
+        <div class="cap">
+          <span class="n">[02]</span>
+          <div><h3>Jev evaluates state</h3><p>Bounded decisions per asset: promote, hold or demote, with a confidence and the signals that moved it.</p></div>
+          <span class="st">6,921 decisions</span>
+        </div>
+        <div class="cap">
+          <span class="n">[03]</span>
+          <div><h3>Rank opportunities</h3><p>Eleven signals combine into an opportunity score. It measures pairability, not expected returns.</p></div>
+          <span class="st">Ranking / 5 min</span>
+        </div>
+        <div class="cap">
+          <span class="n">[04]</span>
+          <div><h3>Advance qualified pairs</h3><p>Top assets get stock × meme pairing theses. Qualified pairs move into a policy-checked launch cycle.</p></div>
+          <span class="st">1 launch candidate</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 02 OPPORTUNITY ENGINE ============ -->
+<section class="section" id="market">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="left">
+        <p class="label sec-index">02 / Opportunity engine</p>
+        <h2 class="h2">Built to find what<br>should exist next.</h2>
+      </div>
+      <p class="body">Every asset the agent evaluates is ranked by pairability. Compare the previous cycle with the current one to see what Jev moved, and open any row to inspect why.</p>
+    </div>
+
+    <div class="rank-tools">
+      <div class="seg" role="group" aria-label="Ranking cycle">
+        <button type="button" data-view="prev" aria-pressed="false">Previous / 9840</button>
+        <button type="button" data-view="curr" aria-pressed="true">Current / 9841</button>
+      </div>
+      <span class="label">Last ranking <b>14s</b> ago / next <b>04:46</b> / demo fixture</span>
+    </div>
+
+    <div class="rank" role="table" aria-label="JEVO opportunity rank">
+      <div class="rank-head label" role="row">
+        <span role="columnheader">Rank</span><span role="columnheader">Asset</span><span role="columnheader">Opportunity score</span><span role="columnheader">Delta</span><span role="columnheader">Jev decision</span><span class="c-age" role="columnheader">Evaluated</span><span></span>
+      </div>
+      <ol class="rank-list" id="rankList"></ol>
+    </div>
+
+    <div class="rank-foot">
+      <span class="label">Opportunity score is an internal pairability measure, not an investment-return prediction.</span>
+      <a class="btn btn-sm" href="/app">Full ranking in app →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 03 STOCK × MEME PAIRING ============ -->
+<section class="section" id="pairings">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="left">
+        <p class="label sec-index">03 / Stock × meme pairing</p>
+        <h2 class="h2">One stock.<br>Multiple cultural expressions.</h2>
+      </div>
+      <p class="body">Rank alone never picks the meme. Each candidate gets its own thesis: why this stock, why this meme, why together, why now. Select a candidate to compare.</p>
+    </div>
+
+    <div class="pair-grid">
+      <div class="pair-map">
+        <div class="pair-src">
+          <span class="label">Stock Token</span>
+          <b>NVDA</b>
+          <span class="label">Rank <b>#01</b> / 96.8</span>
+        </div>
+        <div class="pair-links" aria-hidden="true">
+          <svg viewBox="0 0 100 300" preserveAspectRatio="none">
+            <path data-i="0" d="M0,150 C50,150 50,50 100,50"/>
+            <path data-i="1" d="M0,150 C50,150 50,150 100,150"/>
+            <path data-i="2" d="M0,150 C50,150 50,250 100,250"/>
+          </svg>
+        </div>
+        <div class="cands" role="group" aria-label="Meme candidates for NVDA">
+          <button class="cand" type="button" data-i="0" aria-pressed="true"><b>$GPU</b><span class="label">95.4 / strong pair</span></button>
+          <button class="cand" type="button" data-i="1" aria-pressed="false"><b>$CUDA</b><span class="label">88.2 / alternative</span></button>
+          <button class="cand" type="button" data-i="2" aria-pressed="false"><b>$COMPUTE</b><span class="label">86.7 / alternative</span></button>
+        </div>
+      </div>
+
+      <div class="thesis" aria-live="polite">
+        <div class="thesis-top">
+          <h3 id="tName">NVDA × $GPU</h3>
+          <span class="label">Jev pairing <b id="tDec" class="on">Strong pair</b> / conf <b id="tConf">93%</b></span>
+        </div>
+        <div class="qa"><span class="label">Why NVDA</span><p id="tStock">Strongly associated with AI infrastructure, GPU compute and the current AI expansion narrative.</p></div>
+        <div class="qa"><span class="label">Why this meme</span><p id="tMeme">GPU is a simple, crypto-native name for the compute layer behind that narrative.</p></div>
+        <div class="qa"><span class="label">Why this pair</span><p id="tPair">It links a recognisable public-market asset to a meme the crypto crowd already uses for the same idea.</p></div>
+        <div class="qa"><span class="label">Why now</span><p id="tNow">AI infrastructure discussion accelerated this cycle while retail attention on NVDA rose.</p></div>
+        <div class="comps" id="comps"></div>
+        <div class="cta-row"><a class="btn btn-sm" id="tLink" href="/pairing/nvda-gpu">Open pairing thesis ↗</a></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 04 AUTONOMOUS PIPELINE ============ -->
+<section class="section" id="pipeline">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="left">
+        <p class="label sec-index">04 / Autonomous pipeline</p>
+        <h2 class="h2">From signal<br>to controlled launch.</h2>
+      </div>
+      <p class="body">Autonomous does not mean unrestricted. The agent can only call pre-approved actions through a policy contract, and mainnet launches keep a human guardian until the system has earned more autonomy.</p>
+    </div>
+
+    <ol class="stages">
+      <li class="stage done"><span class="state">Done</span><h3>Observe</h3><p>Signals ingested</p></li>
+      <li class="stage done"><span class="state">Done</span><h3>Evaluate</h3><p>Jev decisions stored</p></li>
+      <li class="stage done"><span class="state">Done</span><h3>Rank</h3><p>NVDA at #01</p></li>
+      <li class="stage done"><span class="state">Done</span><h3>Pair</h3><p>$GPU selected</p></li>
+      <li class="stage now"><span class="state">● Current</span><h3>Validate</h3><p>Contract preparation</p></li>
+      <li class="stage"><span class="state">Pending</span><h3>Launch</h3><p>Not submitted</p></li>
+    </ol>
+
+    <div class="pipe-grid">
+      <div>
+        <p class="label">Next agent launch / <b>NVDA × $GPU</b></p>
+        <div class="clock" id="clock" aria-label="Time to launch">T-05:41:08</div>
+        <p class="label">Simulated 24h cycle / phase 0</p>
+        <ol class="cycle">
+          <li class="done"><span class="t">T-24H</span><span>Candidate selected</span><span class="s">✓</span></li>
+          <li class="done"><span class="t">T-18H</span><span>Narrative validation</span><span class="s">✓</span></li>
+          <li class="done"><span class="t">T-12H</span><span>Pairing validation</span><span class="s">✓</span></li>
+          <li class="now"><span class="t">T-06H</span><span>Contract preparation</span><span class="s">● Now</span></li>
+          <li><span class="t">T-01H</span><span>Final policy check</span><span class="s">Pending</span></li>
+          <li><span class="t">T-00</span><span>Launch via Pons</span><span class="s">Pending</span></li>
+        </ol>
+      </div>
+      <div>
+        <div class="facts">
+          <div class="fact"><span class="label">Opportunity / pairing</span><span class="v">96.8 / 95.4</span></div>
+          <div class="fact"><span class="label">Pre-launch checks</span><span class="v">6 / 8 passed — final 2 run at T-01H</span></div>
+          <div class="fact"><span class="label">Pairing asset</span><span class="v">NVDA Stock Token / canonical address required</span></div>
+          <div class="fact"><span class="label">Agent wallet</span><span class="v">Launch executor / scoped permissions</span></div>
+          <div class="fact"><span class="label">Guardian approval</span><span class="v">Required before mainnet</span></div>
+          <div class="fact"><span class="label">Transaction</span><span class="v accent">Not submitted</span></div>
+        </div>
+        <div class="perm">
+          <div><p class="label">Agent can</p><ul><li>Deploy the approved token template</li><li>Initialise an approved pool</li><li>Call the approved launch function</li></ul></div>
+          <div class="no"><p class="label">Agent cannot</p><ul><li>Make arbitrary transfers</li><li>Withdraw treasury</li><li>Change launch parameters</li></ul></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 05 AGENT MEMORY ============ -->
+<section class="section" id="memory">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="left">
+        <p class="label sec-index">05 / Agent memory</p>
+        <h2 class="h2">The agent<br>remembers state.</h2>
+      </div>
+      <p class="body">Every cycle is stored: rank, score, the signals that changed and the decision Jev made. That history is what lets you audit why an asset rose, instead of trusting a single number.</p>
+    </div>
+
+    <div class="mem-grid">
+      <div>
+        <div class="mem-chart">
+          <div class="plane-meta" style="margin-bottom:10px"><span class="label"><b>NVDA</b> / rank <span class="on">—</span> &nbsp;score <span style="color:var(--text-2)">- - -</span></span><span class="label">Today / UTC</span></div>
+          <svg viewBox="0 0 800 220" role="img" aria-label="NVDA rank rose from 9 to 1 and score from 84.2 to 96.8 between 08:00 and 16:00">
+            <line class="mem-axis" x1="0" y1="200" x2="800" y2="200"/>
+            <line class="mem-axis" x1="0" y1="20" x2="800" y2="20" stroke-dasharray="2 5"/>
+            <text class="tick small" x="0" y="14">#01</text>
+            <polyline class="mem-score" points="40,168 220,146 400,121 580,96 760,72"/>
+            <polyline class="mem-rank" points="40,180 220,140 400,100 580,80 760,20"/>
+            <circle class="mem-pt" cx="40" cy="180" r="5"/><circle class="mem-pt" cx="220" cy="140" r="5"/><circle class="mem-pt" cx="400" cy="100" r="5"/><circle class="mem-pt" cx="580" cy="80" r="5"/><circle cx="760" cy="20" r="6" fill="#02c6a5"/>
+          </svg>
+        </div>
+        <div class="snap">
+          <div><span class="label">08:00</span><b>#09</b><span class="label">84.2</span></div>
+          <div><span class="label">10:00</span><b>#07</b><span class="label">87.1</span></div>
+          <div><span class="label">12:00</span><b>#05</b><span class="label">90.4</span></div>
+          <div><span class="label">14:00</span><b>#04</b><span class="label">93.7</span></div>
+          <div><span class="label">16:00</span><b>#01</b><span class="label">96.8</span></div>
+        </div>
+      </div>
+      <ol class="log" aria-label="Decision trace">
+        <li><span class="t">15:59:04</span><span>Market data updated</span></li>
+        <li><span class="t">15:59:07</span><span>Narrative signal detected</span></li>
+        <li><span class="t">15:59:10</span><span>Social velocity recalculated</span></li>
+        <li><span class="t">15:59:12</span><span>Jev decision completed</span></li>
+        <li><span class="t">15:59:15</span><span>Pair compatibility updated</span></li>
+        <li><span class="t">15:59:18</span><span>Opportunity score updated</span></li>
+        <li class="k"><span class="t">16:00:00</span><span>NVDA promoted #04 → #01</span></li>
+      </ol>
+    </div>
+
+    <div class="transition">
+      <div><span class="label">Previous state</span><span class="big">#04 / 93.7</span><p>Cycle 9840, ranked behind AMD, PLTR and TSLA.</p></div>
+      <div><span class="label">Observed change</span><span class="big">+3 signals</span><p>AI infrastructure narrative accelerated, social velocity rose, agent-narrative overlap detected.</p></div>
+      <div><span class="label">Jev decision</span><span class="big accent">Promote</span><p>Confidence 0.94. Stored with inputs and model version.</p></div>
+      <div><span class="label">Current state</span><span class="big accent">#01 / 96.8</span><p>Cycle 9841. Pairing review opened for $GPU.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 06 CTA ============ -->
+<section class="cta">
+  <div class="wrap">
+    <div>
+      <p class="label sec-index">06 / JEVO next</p>
+      <h2>Enter the<br>JEVO operating<br>system.</h2>
+    </div>
+    <div class="right">
+      <p class="body">Inspect current opportunities, Jev decisions, pairing theses, launch readiness and agent memory in one workspace.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="/app">Open app →</a>
+        <a class="btn" href="/stock/NVDA">View current opportunity ↗</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div>
+      <a class="brand" href="/"><span class="brand-name">JEVO</span><span class="brand-sub">/ Powered by Jev</span></a>
+      <p class="label" style="margin-top:12px">Robinhood Chain / phase 0 / simulated state</p>
+    </div>
+    <nav class="foot-links" aria-label="Footer">
+      <a href="/app">App</a><a href="/pairing">Pairings</a><a href="/memory">Memory</a><a href="#pipeline">Architecture</a>
+    </nav>
+    <div class="foot-note">
+      <span class="label">JEVO is an independent protocol and is not affiliated with, sponsored by, or endorsed by Robinhood.</span>
+      <span class="label">Not financial advice</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var NS="http://www.w3.org/2000/svg";
+  var reduce=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function el(tag,attrs,parent){var n=document.createElementNS(NS,tag);for(var k in attrs)n.setAttribute(k,attrs[k]);if(parent)parent.appendChild(n);return n;}
+
+  /* ---------- HERO FIELD (deterministic, no randomness) ---------- */
+  var field=document.getElementById("field");
+  var uni=document.getElementById("universe"),routes=document.getElementById("routes"),labels=document.getElementById("labels");
+  var GX=318,GX2=342;
+  function g(y){return 325+(y-325)*0.5;}   // compress into the Jev gate window
+
+  // Universe: many faint Stock Token signals, most stop at the gate
+  for(var i=0;i<26;i++){
+    var y=46+i*21;
+    el("path",{class:"uni",d:"M48,"+y+" C180,"+y+" 230,"+g(y)+" "+GX+","+g(y)},uni);
+  }
+
+  // Named assets: left order is universe order; right order is Jev's ranking
+  var assets=[
+    {t:"AAPL",y:90, rank:4, s:"89.4", d:"+1"},
+    {t:"AMD", y:160,rank:null},
+    {t:"COIN",y:230,rank:null},
+    {t:"GME", y:300,rank:5, s:"87.9", d:"+4"},
+    {t:"NVDA",y:370,rank:1, s:"96.8", d:"+3"},
+    {t:"PLTR",y:440,rank:3, s:"91.7", d:"−1"},
+    {t:"TSLA",y:510,rank:2, s:"94.2", d:"+1"}
+  ];
+  var laneY={1:170,2:250,3:320,4:390,5:460};
+  var nvdaPath="";
+  assets.forEach(function(a){
+    var gy=g(a.y);
+    var lt=el("g",{class:"hover-t","data-asset":a.t},labels);
+    el("text",{class:"tick"+(a.t==="NVDA"?" strong":""),x:0,y:a.y+4},lt).textContent=a.t;
+    if(!a.rank){
+      el("path",{class:"route held","data-asset":a.t,d:"M48,"+a.y+" C180,"+a.y+" 230,"+gy+" "+GX+","+gy},routes);
+      return;
+    }
+    var ly=laneY[a.rank];
+    var endX=a.t==="NVDA"?580:600;
+    var d="M48,"+a.y+" C180,"+a.y+" 230,"+gy+" "+GX+","+gy+" L"+GX2+","+gy+" C380,"+gy+" 392,"+ly+" 440,"+ly+" L"+endX+","+ly;
+    el("path",{class:"route"+(a.t==="NVDA"?" sel":""),"data-asset":a.t,d:d},routes);
+    if(a.t!=="NVDA") el("line",{x1:600,y1:ly-4,x2:600,y2:ly+4,stroke:"rgba(220,235,215,.4)"},routes);
+    var t=el("text",{class:"tick"+(a.rank===1?" strong":""),x:448,y:ly-8},lt);
+    t.textContent="0"+a.rank+"  "+a.t+"  "+a.s;
+    var dl=el("text",{class:"tick small",x:448,y:ly+16},lt);
+    dl.textContent=a.rank===1?"":("Δ "+a.d);
+    if(a.rank===1){
+      el("text",{class:"tick accent",x:448,y:ly+18},lt).textContent="JEV / PROMOTE #04 → #01";
+      nvdaPath=d;
+    }
+  });
+  var q=el("text",{class:"tick small",x:606,y:laneY[3]+4},labels);q.textContent="PAIR QUEUE";
+
+  // NVDA → meme candidates
+  var cands=[{n:"$GPU",y:100,s:"95.4",sel:true},{n:"$CUDA",y:160,s:"88.2"},{n:"$COMPUTE",y:220,s:"86.7"}];
+  cands.forEach(function(c){
+    var d="M580,170 C620,170 622,"+c.y+" 660,"+c.y;
+    el("path",{class:"route"+(c.sel?" sel":""),"data-asset":"NVDA",d:d},routes);
+    el("circle",{class:c.sel?"node":"node-muted",cx:664,cy:c.y,r:4},routes);
+    var lt=el("g",{class:"hover-t","data-asset":"NVDA"},labels);
+    el("text",{class:"tick"+(c.sel?" accent":""),x:674,y:c.y-7},lt).textContent=c.n+"  "+c.s;
+    if(c.sel) el("text",{class:"tick small",x:674,y:c.y+15},lt).textContent="STRONG PAIR";
+  });
+  // $GPU → launch candidate
+  var gpu="M668,100 L740,100 C792,100 800,150 800,230 L800,352";
+  el("path",{class:"route sel","data-asset":"NVDA",d:gpu},routes);
+
+  // Hover: emphasise one asset's trajectory
+  function setHot(asset){
+    field.classList.toggle("has-hot",!!asset);
+    field.querySelectorAll("[data-asset]").forEach(function(n){n.classList.toggle("hot",n.getAttribute("data-asset")===asset);});
+  }
+  field.querySelectorAll("[data-asset]").forEach(function(n){
+    n.addEventListener("mouseenter",function(){setHot(n.getAttribute("data-asset"));});
+    n.addEventListener("mouseleave",function(){setHot(null);});
+  });
+
+  /* ---------- decision-cycle pulse (single orchestrated motion) ---------- */
+  var pp=document.getElementById("pulsePath");
+  pp.setAttribute("d",nvdaPath+" C620,170 622,100 660,100 L740,100 C792,100 800,150 800,230 L800,352");
+  var dot=document.getElementById("pulse"),halo=document.getElementById("pulseHalo");
+  var heads=document.querySelectorAll("#heads .col-head"),keys=document.querySelectorAll(".flow-key span");
+  var stateLbl=document.getElementById("stateLbl");
+  var STATES=["Observing","Jev deciding","Ranking","Pairing","Launch candidate"];
+  var cycle=9841,last=12,stageNow=-1;
+  function stageFor(x){return x<262?0:x<400?1:x<560?2:x<720?3:4;}
+  function setStage(s){
+    if(s===stageNow)return;stageNow=s;
+    heads.forEach(function(h,i){h.classList.toggle("is-active",i===s);});
+    keys.forEach(function(k,i){k.classList.toggle("is-active",i===s);});
+    stateLbl.textContent=STATES[s];
+    if(s===1){last=0;}
+  }
+  var len=pp.getTotalLength();
+  function place(f){var p=pp.getPointAtLength(f*len);dot.setAttribute("cx",p.x);dot.setAttribute("cy",p.y);halo.setAttribute("cx",p.x);halo.setAttribute("cy",p.y);setStage(stageFor(p.x));}
+  if(reduce){place(1);}
+  else{
+    var DUR=9000,HOLD=1800,t0=null;
+    (function loop(ts){
+      if(t0===null)t0=ts;
+      var e=ts-t0;
+      if(e>DUR+HOLD){t0=ts;e=0;cycle++;document.getElementById("cycleA").textContent=cycle;document.getElementById("cycleB").textContent=cycle;}
+      place(Math.min(e/DUR,1));
+      requestAnimationFrame(loop);
+    })(performance.now());
+    setInterval(function(){last++;document.getElementById("lastDec").textContent=last+"s";},1000);
+  }
+
+  /* ---------- 02 ranking: previous vs current cycle ---------- */
+  var ROWS=[
+    {a:"NVDA",n:"NVIDIA",   cur:1,prev:4,s:96.8,ps:93.7,dec:"Promote",age:"14s"},
+    {a:"TSLA",n:"Tesla",    cur:2,prev:3,s:94.2,ps:92.9,dec:"Promote",age:"41s"},
+    {a:"PLTR",n:"Palantir", cur:3,prev:2,s:91.7,ps:93.8,dec:"Hold",   age:"1m"},
+    {a:"AAPL",n:"Apple",    cur:4,prev:5,s:89.4,ps:88.6,dec:"Hold",   age:"2m"},
+    {a:"GME", n:"GameStop", cur:5,prev:9,s:87.9,ps:82.1,dec:"Promote",age:"2m"},
+    {a:"AMD", n:"AMD",      cur:6,prev:1,s:85.1,ps:94.6,dec:"Demote", age:"3m"},
+    {a:"COIN",n:"Coinbase", cur:7,prev:6,s:83.6,ps:86.0,dec:"Hold",   age:"3m"}
+  ];
+  var list=document.getElementById("rankList");
+  function pad(n){return (n<10?"0":"")+n;}
+  function w(s){return Math.max(0,Math.min(100,(s-80)*5))+"%";}
+  ROWS.forEach(function(r){
+    var li=document.createElement("li");
+    li.innerHTML='<a class="rank-row" role="row" href="/stock/'+r.a+'" data-a="'+r.a+'">'+
+      '<span class="pos" role="cell"></span>'+
+      '<span class="asset" role="cell"><b>'+r.a+'</b><span>'+r.n+'</span></span>'+
+      '<span class="bar" role="cell"><span class="sc"></span><i></i></span>'+
+      '<span class="delta" role="cell"></span>'+
+      '<span class="dec" role="cell"></span>'+
+      '<span class="age" role="cell"></span>'+
+      '<span class="go" aria-hidden="true">↗</span></a>';
+    li.dataset.a=r.a;list.appendChild(li);
+  });
+  function render(view){
+    var order=ROWS.slice().sort(function(x,y){return view==="curr"?x.cur-y.cur:x.prev-y.prev;});
+    var first={};
+    list.querySelectorAll("li").forEach(function(li){first[li.dataset.a]=li.getBoundingClientRect().top;});
+    order.forEach(function(r,idx){
+      var li=list.querySelector('li[data-a="'+r.a+'"]'),row=li.firstChild;
+      list.appendChild(li);
+      var isCur=view==="curr",rank=isCur?r.cur:r.prev,score=isCur?r.s:r.ps,delta=r.prev-r.cur;
+      row.classList.toggle("top",idx===0);
+      row.querySelector(".pos").textContent=pad(rank);
+      row.querySelector(".sc").textContent=score.toFixed(1);
+      row.querySelector("i").style.setProperty("--w",w(score));
+      var dEl=row.querySelector(".delta");
+      if(isCur){dEl.textContent=delta>0?"▲ +"+delta:delta<0?"▼ "+delta:"—";dEl.className="delta "+(delta>0?"up":delta<0?"dn":"flat");}
+      else{dEl.textContent="—";dEl.className="delta flat";}
+      var dc=row.querySelector(".dec");dc.textContent=isCur?"Jev / "+r.dec:"Cycle 9840";dc.className="dec"+(isCur&&r.dec==="Promote"?" promote":isCur&&r.dec==="Demote"?" demote":"");
+      row.querySelector(".age").textContent=isCur?r.age+" ago":"previous";
+    });
+    if(reduce)return;
+    list.querySelectorAll("li").forEach(function(li){
+      var f=first[li.dataset.a];if(f===undefined)return;
+      var dy=f-li.getBoundingClientRect().top;if(!dy)return;
+      li.animate([{transform:"translateY("+dy+"px)"},{transform:"translateY(0)"}],{duration:520,easing:"cubic-bezier(.2,.7,.2,1)"});
+    });
+  }
+  render("curr");
+  document.querySelectorAll(".seg button").forEach(function(b){
+    b.addEventListener("click",function(){
+      document.querySelectorAll(".seg button").forEach(function(x){x.setAttribute("aria-pressed",x===b?"true":"false");});
+      render(b.dataset.view);
+    });
+  });
+
+  /* ---------- 03 pairing candidates ---------- */
+  var PAIRS=[
+    {name:"NVDA × $GPU",dec:"Strong pair",conf:"93%",link:"/pairing/nvda-gpu",
+     stock:"Strongly associated with AI infrastructure, GPU compute and the current AI expansion narrative.",
+     meme:"GPU is a simple, crypto-native name for the compute layer behind that narrative.",
+     pair:"It links a recognisable public-market asset to a meme the crypto crowd already uses for the same idea.",
+     now:"AI infrastructure discussion accelerated this cycle while retail attention on NVDA rose.",
+     c:[["Narrative",98],["Cultural",96],["Meme",94],["Crypto",91],["Timing",95],["Stock relevance",97]]},
+    {name:"NVDA × $CUDA",dec:"Alternative",conf:"81%",link:"/pairing/nvda-cuda",
+     stock:"Same NVDA thesis: AI infrastructure and compute leadership.",
+     meme:"CUDA is instantly recognised by developers but reads as jargon to a wider audience.",
+     pair:"Deep product link to NVDA, weaker mainstream meme legibility than $GPU.",
+     now:"Developer-side chatter is up, but it lags the broader GPU narrative.",
+     c:[["Narrative",93],["Cultural",78],["Meme",82],["Crypto",86],["Timing",90],["Stock relevance",96]]},
+    {name:"NVDA × $COMPUTE",dec:"Alternative",conf:"77%",link:"/pairing/nvda-compute",
+     stock:"Same NVDA thesis: AI infrastructure and compute leadership.",
+     meme:"COMPUTE fits the narrative but is descriptive, not distinctive.",
+     pair:"High crypto adjacency, low cultural ownership. Many assets could claim the same word.",
+     now:"The compute narrative is strong, but the name is already crowded across AI tokens.",
+     c:[["Narrative",94],["Cultural",74],["Meme",76],["Crypto",90],["Timing",90],["Stock relevance",88]]}
+  ];
+  var comps=document.getElementById("comps"),links=document.querySelectorAll(".pair-links path");
+  function pick(i){
+    var p=PAIRS[i];
+    document.querySelectorAll(".cand").forEach(function(c){c.setAttribute("aria-pressed",c.dataset.i==i?"true":"false");});
+    links.forEach(function(l){l.classList.toggle("on",l.dataset.i==i);});
+    document.getElementById("tName").textContent=p.name;
+    var dec=document.getElementById("tDec");dec.textContent=p.dec;dec.className=i===0?"on":"";
+    document.getElementById("tConf").textContent=p.conf;
+    document.getElementById("tStock").textContent=p.stock;
+    document.getElementById("tMeme").textContent=p.meme;
+    document.getElementById("tPair").textContent=p.pair;
+    document.getElementById("tNow").textContent=p.now;
+    document.getElementById("tLink").setAttribute("href",p.link);
+    comps.innerHTML=p.c.map(function(c){return '<div class="comp"><div class="row"><span>'+c[0]+'</span><b>'+c[1]+'</b></div><i style="--w:'+c[1]+'%"></i></div>';}).join("");
+  }
+  pick(0);
+  document.querySelectorAll(".cand").forEach(function(c){c.addEventListener("click",function(){pick(+c.dataset.i);});});
+
+  /* ---------- 04 launch clock (simulated) ---------- */
+  var remain=5*3600+41*60+8,clock=document.getElementById("clock");
+  function fmt(s){var h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return "T-"+pad(h)+":"+pad(m)+":"+pad(x);}
+  if(!reduce) setInterval(function(){remain=remain>0?remain-1:0;clock.textContent=fmt(remain);},1000);
+})();
+</script>
+</body>
+</html>

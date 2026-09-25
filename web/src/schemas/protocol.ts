@@ -156,11 +156,25 @@ export const launchStageSchema = z.enum([
   "FINAL_POLICY_CHECK",
   "CONTROLLED_EXECUTION",
 ]);
+export const launchStageStatusSchema = z.enum(["COMPLETE", "ACTIVE", "PENDING"]);
+export const launchCycleStageSchema = z.object({
+  id: launchStageSchema,
+  scheduledPoint: z.string().min(1),
+  status: launchStageStatusSchema,
+  description: z.string().min(1),
+  requirement: z.string().min(1),
+});
 export const policyCheckSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1),
   description: z.string().min(1),
   status: z.enum(["PASSED", "PENDING", "BLOCKED"]),
+});
+export const launchActivitySchema = z.object({
+  id: z.string().min(1),
+  timestamp: timestampSchema,
+  type: z.string().min(1),
+  summary: z.string().min(1),
 });
 export const launchSchema = z.object({
   cycleId: z.string().min(1),
@@ -168,10 +182,13 @@ export const launchSchema = z.object({
   stage: launchStageSchema,
   countdownSeconds: z.number().int().nonnegative(),
   readiness: z.enum(["READY", "PENDING", "BLOCKED"]),
+  stages: z.array(launchCycleStageSchema).min(1),
   policyChecks: z.array(policyCheckSchema).min(1),
   guardianRequirement: z.object({ required: z.boolean(), status: z.enum(["REQUIRED", "AWAITING", "APPROVED"]) }),
-  wallet: z.object({ displayAddress: z.string().min(1), permission: z.string().min(1), status: z.string().min(1) }),
-  contracts: z.array(z.object({ label: z.string().min(1), displayAddress: z.string().min(1) })).min(1),
+  wallet: z.object({ label: z.string().min(1), displayAddress: z.string().min(1), network: z.string().min(1), permission: z.string().min(1), status: z.string().min(1), emergencyPause: z.enum(["AVAILABLE", "UNAVAILABLE"]) }),
+  contracts: z.array(z.object({ label: z.string().min(1), displayAddress: z.string().min(1), referenceState: z.string().min(1) })).min(1),
+  token: z.object({ name: z.string().min(1), symbol: z.string().min(1), pairingAsset: z.string().min(1), network: z.string().min(1), launchMechanism: z.string().min(1), contractState: z.string().min(1) }),
+  activity: z.array(launchActivitySchema).min(1),
   transactionState: z.enum(["NOT_SUBMITTED", "PREPARING", "SUBMITTED", "CONFIRMED"]),
 });
 
@@ -188,6 +205,37 @@ export const memoryRecordSchema = z.object({
   actor: actorSchema,
   summary: z.string().min(1),
 });
+export const agentCycleSchema = z.object({
+  id: z.number().int().positive(),
+  timestamp: timestampSchema,
+  assetsEvaluated: z.number().int().nonnegative(),
+  decisions: z.number().int().nonnegative(),
+  rankChanges: z.number().int().nonnegative(),
+  pairingChanges: z.number().int().nonnegative(),
+  launchChanges: z.number().int().nonnegative(),
+  qualifiedCandidates: z.number().int().nonnegative(),
+  summary: z.string().min(1),
+  status: z.enum(["COMPLETE", "ACTIVE"]),
+});
+export const memoryOverviewSchema = z.object({
+  decisionsRetained: z.number().int().nonnegative(),
+  cyclesIndexed: z.number().int().positive(),
+  rankChanges: z.number().int().nonnegative(),
+  pairingProposals: z.number().int().nonnegative(),
+  launchStates: z.number().int().nonnegative(),
+});
+export const memoryComparisonSchema = z.object({
+  previousCycle: z.number().int().positive(),
+  currentCycle: z.number().int().positive(),
+  entries: z.array(z.object({ label: z.string().min(1), previous: z.string().min(1), current: z.string().min(1), delta: z.string().min(1) })).min(1),
+});
+export const providerReferenceSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  category: z.string().min(1),
+  description: z.string().min(1),
+  phase0State: z.enum(["NOT_CONNECTED", "REFERENCE_ONLY", "FUTURE_INTEGRATION"]),
+});
 
 export const protocolStateSchema = z.object({
   agent: agentRuntimeSchema,
@@ -196,6 +244,10 @@ export const protocolStateSchema = z.object({
   pairings: z.array(pairingSchema).min(1),
   launch: launchSchema,
   memory: z.array(memoryRecordSchema).min(1),
+  agentCycles: z.array(agentCycleSchema).min(1),
+  memoryOverview: memoryOverviewSchema,
+  memoryComparison: memoryComparisonSchema,
+  providers: z.array(providerReferenceSchema).min(1),
 }).superRefine((state, context) => {
   const assetSymbols = new Set(state.assets.map((asset) => asset.symbol));
   const pairingSlugs = new Set(state.pairings.map((pairing) => pairing.slug));
