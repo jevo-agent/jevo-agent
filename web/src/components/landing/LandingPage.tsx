@@ -60,8 +60,8 @@ export function LandingPage(data: LandingPageProps) {
           ranking={data.ranking}
           cycle={data.agent.activeCycle}
         />
-        {data.featuredPairing ? <PairingSection pairing={data.featuredPairing} asset={data.assets.find((asset) => asset.symbol === data.featuredPairing?.stockSymbol) ?? data.featuredAsset} /> : <LandingUnavailableSection id="pairings" index="03" title="No qualified pairing this cycle" copy="JEV completed the opportunity evaluation without publishing a qualified pairing candidate." />}
-        {data.launch && data.featuredPairing ? <PipelineSection launch={data.launch} pairing={data.featuredPairing} asset={data.assets.find((asset) => asset.symbol === data.featuredPairing?.stockSymbol) ?? data.featuredAsset} /> : <LandingUnavailableSection id="pipeline" index="04" title="No launch candidate this cycle" copy="Launch readiness remains unavailable until a pairing candidate is approved and scheduled." />}
+        {data.featuredPairing ? <PairingSection pairing={data.featuredPairing} asset={data.assets.find((asset) => asset.symbol === data.featuredPairing?.stockSymbol) ?? data.featuredAsset} /> : <LandingUnavailableSection id="pairings" index="03" title="No qualified pairing this cycle" highlight="pairing" copy="JEV completed the opportunity evaluation without publishing a qualified pairing candidate." />}
+        {data.launch && data.featuredPairing ? <PipelineSection launch={data.launch} pairing={data.featuredPairing} asset={data.assets.find((asset) => asset.symbol === data.featuredPairing?.stockSymbol) ?? data.featuredAsset} /> : <LandingUnavailableSection id="pipeline" index="04" title="No launch candidate this cycle" highlight="launch" copy="Launch readiness remains unavailable until a pairing candidate is approved and scheduled." />}
         <MemorySection
           asset={data.featuredAsset}
           memory={data.memory}
@@ -110,14 +110,18 @@ function LandingHeader() {
   );
 }
 
-function LandingUnavailableSection({ id, index, title, copy }: { id: string; index: string; title: string; copy: string }) {
+function LandingUnavailableSection({ id, index, title, highlight, copy }: { id: string; index: string; title: string; highlight?: string; copy: string }) {
+  const highlightIndex = highlight ? title.toLowerCase().indexOf(highlight.toLowerCase()) : -1;
+  const highlightedTitle = highlightIndex >= 0 && highlight
+    ? <>{title.slice(0, highlightIndex)}<em>{title.slice(highlightIndex, highlightIndex + highlight.length)}</em>{title.slice(highlightIndex + highlight.length)}</>
+    : title;
   return (
     <section className="section" id={id}>
       <div className="wrap">
         <div className="sec-head">
           <div className="left">
             <p className="label sec-index">{index} / Protocol state</p>
-            <h2 className="h2">{title}</h2>
+            <h2 className="h2">{highlightedTitle}</h2>
           </div>
           <p className="body">{copy}</p>
         </div>
@@ -383,7 +387,7 @@ function AgentSection({
               <h2 className="h2">
                 Most AI is built to talk.
                 <br />
-                JEVO is built to decide.
+                JEVO is built to <em>decide.</em>
               </h2>
               <div
                 className="contrast"
@@ -691,8 +695,8 @@ function OpportunitySection({
         <div className="sec-head">
           <div className="left">
             <p className="label sec-index">02 / Opportunity engine</p>
-            <h2 className="h2">
-              Built to find what
+          <h2 className="h2">
+              Built to <em>find</em> what
               <br />
               should exist next.
             </h2>
@@ -923,7 +927,7 @@ function PairingSection({ pairing, asset }: { pairing: Pairing; asset: Stock }) 
           <div className="left">
             <p className="label sec-index">03 / Stock × meme pairing</p>
             <h2 className="h2 text-4xl!">
-              One stock. <br /> Multiple cultural expressions.
+              One stock. <br /> Multiple <em>cultural expressions.</em>
             </h2>
           </div>
           <p className="body">
@@ -1088,7 +1092,7 @@ function PipelineSection({
             <h2 className="h2">
               From signal
               <br />
-              to controlled launch.
+              to <em>controlled launch.</em>
             </h2>
           </div>
           <p className="body">
@@ -1277,7 +1281,7 @@ function MemorySection({
             <h2 className="h2">
               The agent
               <br />
-              remembers state.
+              <em>remembers state.</em>
             </h2>
           </div>
           <p className="body">
@@ -1826,7 +1830,7 @@ function FinalSection() {
           <h2>
             Enter the JEVO
             <br />
-            operating system.
+            <em>operating system.</em>
           </h2>
           <p className="body">
             Inspect current opportunities, JEV decisions, pairing theses, launch

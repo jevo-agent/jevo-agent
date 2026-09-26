@@ -38,12 +38,13 @@ export function DecisionPlane({ asset, pairing = null, launch = null }: Decision
   const [hoverStage, setHoverStage] = useState<number | null>(null);
   const [lock, setLock] = useState<Lock>(null);
   const resumeTimer = useRef<number | null>(null);
+  const lastAvailableStage = launch && pairing ? 4 : pairing ? 3 : 2;
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const timer = window.setInterval(() => setAutoStage((stage) => (stage + 1) % STAGES.length), LOOP_MS / STAGES.length);
+    const timer = window.setInterval(() => setAutoStage((stage) => stage >= lastAvailableStage ? 0 : stage + 1), LOOP_MS / STAGES.length);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [lastAvailableStage]);
 
   useEffect(() => {
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
@@ -60,7 +61,7 @@ export function DecisionPlane({ asset, pairing = null, launch = null }: Decision
     if (resumeTimer.current) window.clearTimeout(resumeTimer.current);
   }, []);
 
-  const activeStage = lock?.kind === "stage" ? Number(lock.value) : hoverStage ?? autoStage;
+  const activeStage = lock?.kind === "stage" && Number(lock.value) <= lastAvailableStage ? Number(lock.value) : hoverStage ?? Math.min(autoStage, lastAvailableStage);
   const activeAsset = lock?.kind === "asset" ? lock.value : hoverAsset;
   const activePair = pairing ? (lock?.kind === "pair" ? lock.value : hoverPair) : null;
   const focused = Boolean(activeAsset || activePair);
@@ -127,8 +128,9 @@ export function DecisionPlane({ asset, pairing = null, launch = null }: Decision
     <div className={`decision-plane${lock ? " is-locked" : ""}${focused ? " has-focus" : ""}${lock?.kind === "stage" ? " is-stage-locked" : ""}`}>
       <div className="decision-stage-controls" role="group" aria-label="Decision plane stages">
         {STAGES.map((stage, index) => {
+          const available = index <= lastAvailableStage;
           const active = activeStage === index;
-          return <button key={stage} type="button" className={active ? "is-active" : undefined} aria-pressed={lock?.kind === "stage" && lock.value === String(index)} onClick={() => setTimedLock({ kind: "stage", value: String(index) })} onMouseEnter={() => setHoverStage(index)} onMouseLeave={() => setHoverStage(null)}>{String(index + 1).padStart(2, "0")} {stage}</button>;
+          return <button key={stage} type="button" className={active ? "is-active" : undefined} disabled={!available} aria-pressed={lock?.kind === "stage" && lock.value === String(index)} onClick={() => setTimedLock({ kind: "stage", value: String(index) })} onMouseEnter={() => setHoverStage(index)} onMouseLeave={() => setHoverStage(null)}>{String(index + 1).padStart(2, "0")} {stage}</button>;
         })}
       </div>
 
@@ -194,6 +196,13 @@ export function DecisionPlane({ asset, pairing = null, launch = null }: Decision
 
         <g className="plane-assets">
           {signals.map((signal) => <g key={`asset-${signal.symbol}`} className={`${assetClass(signal.symbol)}${signal.symbol === "NVDA" ? " is-primary" : ""}`} role="button" tabIndex={0} aria-label={`Focus ${signal.symbol} signal path`} aria-pressed={activeAsset === signal.symbol} onClick={(event) => { event.stopPropagation(); setTimedLock({ kind: "asset", value: signal.symbol }); }} onKeyDown={(event) => handleAssetKey(event, signal.symbol)} onMouseEnter={() => setHoverAsset(signal.symbol)} onMouseLeave={() => setHoverAsset(null)} onFocus={() => setHoverAsset(signal.symbol)} onBlur={() => setHoverAsset(null)}><text x="48" y={signal.sourceY + 4}>{signal.symbol}</text><circle cx="36" cy={signal.sourceY} r="2.5" /></g>)}
+        </g>
+
+        <g className="plane-output-frame" aria-hidden="true">
+          <rect x="676" y="48" width="220" height="410" rx="2" />
+          <line x1="676" y1="238" x2="896" y2="238" />
+          <text x="694" y="68">JEV OUTPUT REGISTER</text>
+          <text x="694" y="358">CONTROLLED STATE</text>
         </g>
 
         {pairing ? <g className="plane-pair-routes">

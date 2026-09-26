@@ -623,12 +623,13 @@ a, button { touch-action: manipulation; }
   transition: border-color .2s, color .2s;
 }
 .landing-root .decision-stage-controls button:hover, .landing-root .decision-stage-controls button.is-active { border-color: var(--accent); color: var(--accent); }
+.landing-root .decision-stage-controls button:disabled { cursor: not-allowed; opacity: .38; }
 .landing-root .decision-stage-controls button:focus-visible { outline: 1.5px solid var(--accent); outline-offset: 2px; }
 .landing-root .decision-plane-svg { display: block; width: 100%; min-height: 0; flex: 1; overflow: visible; -webkit-mask-image: linear-gradient(90deg, transparent 0%, transparent 18%, rgb(0 0 0 / 55%) 30%, black 45%, black 100%); mask-image: linear-gradient(90deg, transparent 0%, transparent 18%, rgb(0 0 0 / 55%) 30%, black 45%, black 100%); }
 .landing-root .plane-guides path { fill: none; stroke: rgb(220 235 215 / 7%); stroke-width: .8; }
-.landing-root .plane-guides path.field-trajectory { stroke: rgb(220 235 215 / 17%); stroke-dasharray: .1 .9; animation: plane-ambient-drift 20s linear infinite; animation-delay: var(--signal-delay, 0s); opacity: .7; }
+.landing-root .plane-guides path.field-trajectory { stroke: rgb(2 198 165 / 14%); stroke-dasharray: .1 .9; animation: plane-ambient-drift 20s linear infinite; animation-delay: var(--signal-delay, 0s); opacity: .78; }
 .landing-root .plane-guides line { stroke: rgb(220 235 215 / 9%); stroke-dasharray: 2 8; }
-.landing-root .decision-route { fill: none; stroke: rgb(220 235 215 / 22%); stroke-dasharray: .08 .92; stroke-linecap: round; stroke-width: 1; vector-effect: non-scaling-stroke; animation: plane-ambient-drift 18s linear infinite; animation-delay: var(--signal-delay, 0s); }
+.landing-root .decision-route { fill: none; stroke: rgb(2 198 165 / 22%); stroke-dasharray: .08 .92; stroke-linecap: round; stroke-width: 1; vector-effect: non-scaling-stroke; animation: plane-ambient-drift 18s linear infinite; animation-delay: var(--signal-delay, 0s); }
 .landing-root .signal-route { opacity: .24; }
 .landing-root .output-route { opacity: .1; }
 .landing-root .output-route:not(.is-primary) { opacity: .08; }
@@ -649,6 +650,8 @@ a, button { touch-action: manipulation; }
 .landing-root .plane-gate { fill: rgb(2 198 165 / 2%); stroke: rgb(2 198 165 / 30%); stroke-width: 1; transition: fill .2s, stroke .2s; }
 .landing-root .plane-gate.is-active { fill: rgb(2 198 165 / 10%); stroke: var(--accent); }
 .landing-root .plane-gate-label, .landing-root .plane-accent { font-family: var(--mono); font-size: 11px; letter-spacing: .07em; }
+.landing-root .plane-accent { fill: var(--accent); }
+.landing-root .h2 em, .landing-root .cta-final h2 em { color: var(--accent); font-style: normal; }
 .landing-root .plane-gate-label { fill: var(--muted); opacity: .58; transition: fill .2s, opacity .2s; }
 .landing-root .plane-gate-label.is-active { opacity: 1; }
 .landing-root .plane-gate-label.is-active { fill: var(--accent); }
@@ -688,6 +691,9 @@ a, button { touch-action: manipulation; }
 .landing-root .plane-launch-label { opacity: .88; }
 .landing-root .plane-launch-label line { stroke: var(--accent); }
 .landing-root .plane-launch-label .plane-accent { font-size: 13px; }
+.landing-root .plane-output-frame rect { fill: rgb(2 198 165 / 2%); stroke: rgb(2 198 165 / 22%); stroke-width: 1; }
+.landing-root .plane-output-frame line { stroke: var(--line); stroke-width: 1; }
+.landing-root .plane-output-frame text { fill: var(--dim); font-family: var(--mono); font-size: 8px; letter-spacing: .13em; }
 .landing-root .plane-scan-sweep { stroke: var(--accent); stroke-width: .7; opacity: 0; transform: translateX(-180px); transform-box: fill-box; transform-origin: center; animation: plane-scan-sweep 12s ease-in-out infinite; }
 .landing-root .decision-plane-rail { display: flex; justify-content: space-between; gap: 16px; border-top: 1px solid var(--line); padding: 12px 0 0 8%; color: var(--muted); font-family: var(--mono); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; opacity: .42; }
 .landing-root .decision-plane-rail b { color: var(--accent); font-weight: 500; }
