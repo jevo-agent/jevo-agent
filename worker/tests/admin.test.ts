@@ -16,9 +16,15 @@ import {
 } from "../src/db/schema";
 import { seedAssets } from "../src/db/seed";
 import { executeAgentCycle } from "../src/agent/cycle";
-import { closeCycleQueue } from "../src/jobs/queues";
+import { closeCycleQueue, getCycleQueue } from "../src/jobs/queues";
 import { closeEventBus } from "../src/events";
-import { getAllowedAdminTokens } from "../src/api/authz";
+import {
+  getAllowedAdminTokens,
+  getEphemeralDevToken,
+  resetAllowedAdminTokensCache,
+} from "../src/api/authz";
+import { env } from "../src/config/env";
+import { launchSchema } from "@jevo/protocol-types";
 
 describe("Admin API (BACKEND 10)", () => {
   let app: FastifyInstance;
@@ -54,6 +60,8 @@ describe("Admin API (BACKEND 10)", () => {
 
     // 3. Create Fastify test app and derive active admin token
     app = await createServer();
+    (env as any).ADMIN_API_TOKENS = "test-admin-suite-token";
+    resetAllowedAdminTokensCache();
     const tokens = getAllowedAdminTokens();
     validToken = [...tokens][0]!;
     authHeaders = { Authorization: `Bearer ${validToken}` };
@@ -707,6 +715,237 @@ describe("Admin API (BACKEND 10)", () => {
         headers: authHeaders,
       });
       expect(res.statusCode).toBe(404);
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // Verification 1: Ephemeral Dev Token (non-prod vs prod mode)
+  // --------------------------------------------------------------------------
+  describe("Verification 1: Ephemeral Dev Token", () => {
+    it("(a) non-production, ADMIN_API_TOKENS empty: generates ephemeral dev token, printed to log, succeeds on admin call", async () => {
+      const originalTokens = env.ADMIN_API_TOKENS;
+      const originalNodeEnv = env.NODE_ENV;
+
+      try {
+        (env as any).ADMIN_API_TOKENS = undefined;
+        (env as any).NODE_ENV = "development";
+        resetAllowedAdminTokensCache();
+
+        const tokens = getAllowedAdminTokens();
+        const devToken = getEphemeralDevToken();
+
+        expect(devToken).toBeString();
+        expect(devToken!.length).toBe(48); // 24 bytes in hex
+        expect(tokens.has(devToken!)).toBe(true);
+
+        // Call an admin endpoint with this ephemeral token
+        const res = await app.inject({
+          method: "POST",
+          url: "/api/v1/admin/agent/pause",
+          headers: { Authorization: `Bearer ${devToken}` },
+        });
+
+        expect(res.statusCode).toBe(200);
+
+        // Resume afterwards
+        await app.inject({
+          method: "POST",
+          url: "/api/v1/admin/agent/resume",
+          headers: { Authorization: `Bearer ${devToken}` },
+        });
+      } finally {
+        (env as any).ADMIN_API_TOKENS = "test-admin-suite-token";
+        (env as any).NODE_ENV = originalNodeEnv;
+        resetAllowedAdminTokensCache();
+        validToken = "test-admin-suite-token";
+        authHeaders.Authorization = `Bearer ${validToken}`;
+      }
+    });
+
+    it("(b) production mode, ADMIN_API_TOKENS empty: allowlist is empty, all admin requests rejected with 401", async () => {
+      const originalTokens = env.ADMIN_API_TOKENS;
+      const originalNodeEnv = env.NODE_ENV;
+
+      try {
+        (env as any).ADMIN_API_TOKENS = undefined;
+        (env as any).NODE_ENV = "production";
+        resetAllowedAdminTokensCache();
+
+        const tokens = getAllowedAdminTokens();
+        const devToken = getEphemeralDevToken();
+
+        expect(tokens.size).toBe(0);
+        expect(devToken).toBeNull();
+
+        // Any token, including dummy or previously active token, must be rejected with 401
+        const res1 = await app.inject({
+          method: "POST",
+          url: "/api/v1/admin/agent/pause",
+          headers: { Authorization: "Bearer any-hypothetical-admin-token" },
+        });
+        expect(res1.statusCode).toBe(401);
+
+        const res2 = await app.inject({
+          method: "POST",
+          url: "/api/v1/admin/scan/trigger",
+          headers: { Authorization: `Bearer ${validToken}` },
+          payload: { kind: "DELTA" },
+        });
+        expect(res2.statusCode).toBe(401);
+      } finally {
+        (env as any).ADMIN_API_TOKENS = "test-admin-suite-token";
+        (env as any).NODE_ENV = originalNodeEnv;
+        resetAllowedAdminTokensCache();
+        validToken = "test-admin-suite-token";
+        authHeaders.Authorization = `Bearer ${validToken}`;
+      }
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // Verification 2: Double-Click Protection on Scan Trigger
+  // --------------------------------------------------------------------------
+  describe("Verification 2: Double-Click Protection on Scan Trigger", () => {
+    it("deduplicates rapid consecutive triggers for same cycle kind to exactly 1 BullMQ job", async () => {
+      const queue = getCycleQueue();
+      // Ensure queue is drained before test
+      await queue.drain();
+
+      // Trigger DELTA twice rapidly in parallel
+      const [res1, res2] = await Promise.all([
+        app.inject({
+          method: "POST",
+          url: "/api/v1/admin/scan/trigger",
+          headers: authHeaders,
+          payload: { kind: "DELTA" },
+        }),
+        app.inject({
+          method: "POST",
+          url: "/api/v1/admin/scan/trigger",
+          headers: authHeaders,
+          payload: { kind: "DELTA" },
+        }),
+      ]);
+
+      expect(res1.statusCode).toBe(200);
+      expect(res2.statusCode).toBe(200);
+
+      const json1 = JSON.parse(res1.body);
+      const json2 = JSON.parse(res2.body);
+
+      // Both should return the same deterministic job ID
+      expect(json1.data.jobId).toBe(json2.data.jobId);
+      expect(json1.data.jobId).toContain("manual-DELTA:");
+
+      // Check BullMQ queue job count for this ID
+      const jobs = await queue.getJobs(["waiting", "active", "delayed"]);
+      const matchingJobs = jobs.filter((j) => j.id === json1.data.jobId);
+
+      // BullMQ level assert: exactly 1 job queued, duplicate was prevented
+      expect(matchingJobs.length).toBe(1);
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // Verification 3: Integration Test 07 + 10 (Approve -> Schedule -> GET /launches and /launches/:id)
+  // --------------------------------------------------------------------------
+  describe("Verification 3: Integration Test 07 + 10 (Approve -> Schedule -> GET /launches and /launches/:id)", () => {
+    it("approves pairing, schedules launch, and asserts valid Launch presentation shape against protocol-types", async () => {
+      // 1. Seed a dedicated fresh pairing candidate
+      const integrationPairingId = `pc-admin-int-${randomUUID().slice(0, 8)}`;
+      await db.insert(pairingCandidates).values({
+        id: integrationPairingId,
+        symbol: "NVDA",
+        memeSymbol: "$GPU",
+        thesis: {
+          whyStock: "Accelerating compute demands",
+          whyMeme: "Decentralized GPU cluster narrative",
+          whyPair: "Direct hardware correlation",
+          whyNow: "Q3 earnings momentum",
+        },
+        components: {
+          narrative: 92,
+          cultural: 85,
+          meme: 88,
+          crypto: 80,
+          timing: 90,
+          stockRelevance: 88,
+        },
+        pairingScore: 87.2,
+        lifecycleState: "PROPOSED",
+      });
+
+      // 2. POST /admin/pairings/:id/approve -> lifecycleState becomes CURATED
+      const approveRes = await app.inject({
+        method: "POST",
+        url: `/api/v1/admin/pairings/${integrationPairingId}/approve`,
+        headers: authHeaders,
+      });
+      expect(approveRes.statusCode).toBe(200);
+      expect(JSON.parse(approveRes.body).data.lifecycleState).toBe("CURATED");
+
+      // 3. POST /admin/launches/schedule -> creates launch_candidates + 6 launch_cycles rows
+      const scheduleRes = await app.inject({
+        method: "POST",
+        url: "/api/v1/admin/launches/schedule",
+        headers: authHeaders,
+        payload: { pairingCandidateId: integrationPairingId },
+      });
+      expect(scheduleRes.statusCode).toBe(201);
+      const scheduleJson = JSON.parse(scheduleRes.body);
+      const createdLaunchId = scheduleJson.data.id;
+      expect(createdLaunchId).toBeDefined();
+
+      // 4. GET /api/v1/launches -> returns array of Launch
+      const listRes = await app.inject({
+        method: "GET",
+        url: "/api/v1/launches",
+      });
+      expect(listRes.statusCode).toBe(200);
+      const listJson = JSON.parse(listRes.body);
+      expect(listJson.data).toBeArray();
+      expect(listJson.data.length).toBeGreaterThan(0);
+
+      const targetLaunch = listJson.data.find((l: any) => l.cycleId === createdLaunchId);
+      expect(targetLaunch).toBeDefined();
+
+      // 5. GET /api/v1/launches/:id -> returns single Launch
+      const detailRes = await app.inject({
+        method: "GET",
+        url: `/api/v1/launches/${createdLaunchId}`,
+      });
+      expect(detailRes.statusCode).toBe(200);
+      const detailJson = JSON.parse(detailRes.body);
+      const launch = detailJson.data;
+
+      // 6. Strict validation against Launch type and schema from protocol-types
+      const parsed = launchSchema.safeParse(launch);
+      expect(parsed.success).toBe(true);
+
+      // Explicit field assertions as requested in user specification:
+      expect(launch.cycleId).toBe(createdLaunchId);
+      expect(launch.stage).toBe("CANDIDATE_SELECTED");
+      expect(launch.readiness).toBe("PENDING"); // mapped from PREPARING
+      expect(launch.countdownSeconds).toBeGreaterThan(0); // computed from stageDeadlineAt - now
+
+      // stages array: exactly 6 rows from launch_cycles
+      expect(launch.stages.length).toBe(6);
+      expect(launch.stages[0].id).toBe("CANDIDATE_SELECTED");
+      expect(launch.stages[0].status).toBe("COMPLETE");
+      expect(launch.stages[1].id).toBe("NARRATIVE_VALIDATION");
+      expect(launch.stages[1].status).toBe("PENDING");
+
+      // policyChecks: computed from checksPassed / checksTotal
+      expect(launch.policyChecks.length).toBe(8);
+      const passedCount = launch.policyChecks.filter((c: any) => c.status === "PASSED").length;
+      expect(passedCount).toBe(0); // newly scheduled starts at 0 checks passed
+      expect(launch.policyChecks[0].status).toBe("PENDING");
+
+      // Clean up integration records
+      await db.delete(launchCycles).where(eq(launchCycles.launchCandidateId, createdLaunchId));
+      await db.delete(launchCandidates).where(eq(launchCandidates.id, createdLaunchId));
+      await db.delete(pairingHistory).where(eq(pairingHistory.pairingCandidateId, integrationPairingId));
+      await db.delete(pairingCandidates).where(eq(pairingCandidates.id, integrationPairingId));
     });
   });
 });

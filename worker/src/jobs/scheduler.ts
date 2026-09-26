@@ -101,6 +101,15 @@ export async function stopCycleWorker(): Promise<void> {
 
 /**
  * Pauses BullMQ queue and worker using native methods.
+ *
+ * OPERATIONAL SEMANTICS (CRITICAL FOR OPERATORS & FRONTEND):
+ * - `queue.pause()` stops new waiting jobs from being dispatched to workers.
+ * - `cycleWorker.pause()` stops the worker from acquiring any new jobs from the queue.
+ * - IN-FLIGHT CYCLES ARE NOT ABORTED: If a cycle job is currently executing when `pause`
+ *   is called, BullMQ allows that active job promise to run to completion (persisting all
+ *   intermediate records and updating status to COMPLETED or FAILED).
+ * - "Pause" is therefore a QUEUE-LEVEL HOLD on subsequent cycles, NOT a SIGKILL or instant-abort
+ *   of the in-progress cycle. Scheduled jobs that fire during the pause remain in waiting state.
  */
 export async function pauseAgentCycleQueue(): Promise<void> {
   const queue = getCycleQueue();

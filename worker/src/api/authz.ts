@@ -58,6 +58,13 @@ export function resetAllowedAdminTokensCache(): void {
 }
 
 /**
+ * Returns the ephemeral dev token generated during boot, or null if not generated.
+ */
+export function getEphemeralDevToken(): string | null {
+  return ephemeralDevToken;
+}
+
+/**
  * Fastify preHandler hook enforcing Bearer token authentication against allowlist.
  * Throws UnauthorizedError on missing or invalid token to halt the hook pipeline cleanly.
  */

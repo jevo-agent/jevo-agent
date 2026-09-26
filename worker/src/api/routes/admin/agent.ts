@@ -8,6 +8,8 @@ import { recordOperatorProtocolEvent } from "./common";
 
 export const adminAgentRoutes: FastifyPluginAsync = async (fastify) => {
   // 2a. POST /api/v1/admin/agent/pause
+  // Note: queue.pause() and worker.pause() halt dispatching of new waiting jobs.
+  // Any cycle job CURRENTLY executing in-flight will continue until completion.
   fastify.post("/agent/pause", async (request, reply) => {
     await pauseAgentCycleQueue();
 
