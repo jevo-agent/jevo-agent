@@ -12,6 +12,7 @@ import { PairingHistory } from "@/components/pairing/PairingHistory";
 import { PairingLifecycleDetail } from "@/components/pairing/PairingLifecycleDetail";
 import { PairingNextAction } from "@/components/pairing/PairingNextAction";
 import { PairingThesis } from "@/components/pairing/PairingThesis";
+import { QueryErrorState } from "@/components/ui/QueryErrorState";
 import { mockAgentState } from "@/data/mock-agent-state";
 import { useAgentStatus, usePairing, usePairings } from "@/lib/api/hooks";
 
@@ -21,10 +22,28 @@ export default function PairingDetailPage({ params }: PairingDetailPageProps) {
   const { slug } = use(params);
   const normalizedSlug = slug.trim().toLowerCase();
 
-  // Register query hooks
-  useAgentStatus();
-  usePairings();
-  usePairing(normalizedSlug);
+  const agentQuery = useAgentStatus();
+  const pairingsQuery = usePairings();
+  const pairingQuery = usePairing(normalizedSlug);
+
+  const isError = agentQuery.isError || pairingsQuery.isError || pairingQuery.isError;
+  const error = pairingQuery.error || pairingsQuery.error || agentQuery.error;
+
+  const handleRefetch = () => {
+    void agentQuery.refetch();
+    void pairingsQuery.refetch();
+    void pairingQuery.refetch();
+  };
+
+  if (isError) {
+    return (
+      <QueryErrorState
+        title={`Failed to Load Pairing (${normalizedSlug})`}
+        error={error}
+        onRetry={handleRefetch}
+      />
+    );
+  }
 
   const { agent, assets, pairings } = mockAgentState;
   const pairing = pairings.find((candidate) => candidate.slug === normalizedSlug);

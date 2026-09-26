@@ -11,20 +11,55 @@ import { OverviewPanel } from "@/components/admin/OverviewPanel";
 import { PairingReviewPanel } from "@/components/admin/PairingReviewPanel";
 import { ProvidersPanel } from "@/components/admin/ProvidersPanel";
 import { WalletContractsPanel } from "@/components/admin/WalletContractsPanel";
+import { QueryErrorState } from "@/components/ui/QueryErrorState";
 import { mockAgentState } from "@/data/mock-agent-state";
 import { useAgentStatus, useOpportunities, usePairings, useLaunches, useMemory } from "@/lib/api/hooks";
 import { useAgentStore } from "@/store/agent-store";
 
 export default function AdminPage() {
-  // Register query hooks so SSE invalidations update admin views
-  useAgentStatus();
-  useOpportunities();
-  usePairings();
-  useLaunches();
-  useMemory();
+  const agentQuery = useAgentStatus();
+  const oppsQuery = useOpportunities();
+  const pairingsQuery = usePairings();
+  const launchesQuery = useLaunches();
+  const memoryQuery = useMemory();
+
+  const isError =
+    agentQuery.isError ||
+    oppsQuery.isError ||
+    pairingsQuery.isError ||
+    launchesQuery.isError ||
+    memoryQuery.isError;
+
+  const error =
+    agentQuery.error ||
+    oppsQuery.error ||
+    pairingsQuery.error ||
+    launchesQuery.error ||
+    memoryQuery.error;
+
+  const handleRefetch = () => {
+    void agentQuery.refetch();
+    void oppsQuery.refetch();
+    void pairingsQuery.refetch();
+    void launchesQuery.refetch();
+    void memoryQuery.refetch();
+  };
 
   const activeAdminPanel = useAgentStore((state) => state.activeAdminPanel);
   const adminControlNotice = useAgentStore((state) => state.adminControlNotice);
+
+  if (isError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--jevo-bg,#0b0d0b)]">
+        <QueryErrorState
+          title="Admin Control Surface Offline"
+          error={error}
+          onRetry={handleRefetch}
+        />
+      </div>
+    );
+  }
+
   const { agent, assets, launch, memory, pairings, providers } = mockAgentState;
   const launchPairing = pairings.find((pairing) => pairing.slug === launch.selectedPairingSlug);
 

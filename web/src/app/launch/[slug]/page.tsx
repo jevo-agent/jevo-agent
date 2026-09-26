@@ -15,6 +15,7 @@ import { LaunchStageInspector } from "@/components/launch/LaunchStageInspector";
 import { PolicyCheckList } from "@/components/launch/PolicyCheckList";
 import { TokenSpecification } from "@/components/launch/TokenSpecification";
 import { TransactionState } from "@/components/launch/TransactionState";
+import { QueryErrorState } from "@/components/ui/QueryErrorState";
 import { mockAgentState } from "@/data/mock-agent-state";
 import { useAgentStatus, useLaunch, useLaunches } from "@/lib/api/hooks";
 
@@ -24,10 +25,28 @@ export default function LaunchDetailPage({ params }: LaunchDetailPageProps) {
   const { slug } = use(params);
   const normalizedSlug = slug.trim().toLowerCase();
 
-  // Register query hooks
-  useAgentStatus();
-  useLaunches();
-  useLaunch(normalizedSlug);
+  const agentQuery = useAgentStatus();
+  const launchesQuery = useLaunches();
+  const launchQuery = useLaunch(normalizedSlug);
+
+  const isError = agentQuery.isError || launchesQuery.isError || launchQuery.isError;
+  const error = launchQuery.error || launchesQuery.error || agentQuery.error;
+
+  const handleRefetch = () => {
+    void agentQuery.refetch();
+    void launchesQuery.refetch();
+    void launchQuery.refetch();
+  };
+
+  if (isError) {
+    return (
+      <QueryErrorState
+        title={`Failed to Load Launch (${normalizedSlug})`}
+        error={error}
+        onRetry={handleRefetch}
+      />
+    );
+  }
 
   const { agent, assets, launch, pairings } = mockAgentState;
   const pairing = pairings.find((candidate) => candidate.slug === normalizedSlug);
@@ -37,16 +56,24 @@ export default function LaunchDetailPage({ params }: LaunchDetailPageProps) {
   const stock = assets.find((candidate) => candidate.symbol === pairing.stockSymbol);
   if (!stock) notFound();
 
-  return <><AgentStatusBar agentStatus={agent.status} jevStatus={agent.jevStatus} currentOperation={agent.currentOperation} lastDecisionAgeSeconds={agent.lastDecisionAgeSeconds} nextCycleInSeconds={agent.nextCycleInSeconds} networkLabel={agent.networkLabel} /><LaunchHeader launch={launch} pairing={pairing} stock={stock} agent={agent} /><main className="protocol-shell py-8 sm:py-10"><div className="grid overflow-hidden border border-[var(--jevo-line)] xl:grid-cols-[minmax(0,1fr)_23rem]">
-    <div className="xl:col-start-1"><LaunchSelectionThesis launch={launch} pairing={pairing} stock={stock} /></div>
-    <div className="xl:col-start-1"><LaunchCountdown launch={launch} pairing={pairing} /></div>
-    <div className="xl:col-start-1"><LaunchCycle launch={launch} /></div>
-    <aside aria-label="Selected launch stage" className="xl:col-start-2 xl:row-start-1 xl:row-span-2 xl:border-l xl:border-[var(--jevo-line)] xl:bg-[rgb(13_16_13_/_72%)]"><LaunchStageInspector launch={launch} pairing={pairing} /></aside>
-    <div className="xl:col-start-1"><PolicyCheckList launch={launch} /></div>
-    <div className="xl:col-start-1"><LaunchActivity launch={launch} /></div>
-    <div className="xl:col-start-1"><TokenSpecification launch={launch} /></div>
-    <aside aria-label="Agent wallet state" className="xl:col-start-2 xl:row-start-3 xl:border-l xl:border-[var(--jevo-line)] xl:bg-[rgb(13_16_13_/_72%)]"><AgentWalletState launch={launch} /></aside>
-    <aside aria-label="Contract reference state" className="xl:col-start-2 xl:row-start-4 xl:border-l xl:border-[var(--jevo-line)] xl:bg-[rgb(13_16_13_/_72%)]"><ContractState launch={launch} /></aside>
-    <aside aria-label="Transaction status" className="xl:col-start-2 xl:row-start-5 xl:border-l xl:border-[var(--jevo-line)] xl:bg-[rgb(13_16_13_/_72%)]"><TransactionState launch={launch} pairing={pairing} /></aside>
-  </div></main></>;
+  return (
+    <>
+      <AgentStatusBar agentStatus={agent.status} jevStatus={agent.jevStatus} currentOperation={agent.currentOperation} lastDecisionAgeSeconds={agent.lastDecisionAgeSeconds} nextCycleInSeconds={agent.nextCycleInSeconds} networkLabel={agent.networkLabel} />
+      <LaunchHeader launch={launch} pairing={pairing} stock={stock} agent={agent} />
+      <main className="protocol-shell py-8 sm:py-10">
+        <div className="grid overflow-hidden border border-[var(--jevo-line)] xl:grid-cols-[minmax(0,1fr)_23rem]">
+          <div className="xl:col-start-1"><LaunchSelectionThesis launch={launch} pairing={pairing} stock={stock} /></div>
+          <div className="xl:col-start-1"><LaunchCountdown launch={launch} pairing={pairing} /></div>
+          <div className="xl:col-start-1"><LaunchCycle launch={launch} /></div>
+          <aside aria-label="Selected launch stage" className="xl:col-start-2 xl:row-start-1 xl:row-span-2 xl:border-l xl:border-[var(--jevo-line)] xl:bg-[rgb(13_16_13_/_72%)]"><LaunchStageInspector launch={launch} pairing={pairing} /></aside>
+          <div className="xl:col-start-1"><PolicyCheckList launch={launch} /></div>
+          <div className="xl:col-start-1"><LaunchActivity launch={launch} /></div>
+          <div className="xl:col-start-1"><TokenSpecification launch={launch} /></div>
+          <aside aria-label="Agent wallet state" className="xl:col-start-2 xl:row-start-3 xl:border-l xl:border-[var(--jevo-line)] xl:bg-[rgb(13_16_13_/_72%)]"><AgentWalletState launch={launch} /></aside>
+          <aside aria-label="Contract reference state" className="xl:col-start-2 xl:row-start-4 xl:border-l xl:border-[var(--jevo-line)] xl:bg-[rgb(13_16_13_/_72%)]"><ContractState launch={launch} /></aside>
+          <aside aria-label="Transaction status" className="xl:col-start-2 xl:row-start-5 xl:border-l xl:border-[var(--jevo-line)] xl:bg-[rgb(13_16_13_/_72%)]"><TransactionState launch={launch} pairing={pairing} /></aside>
+        </div>
+      </main>
+    </>
+  );
 }

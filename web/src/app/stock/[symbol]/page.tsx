@@ -11,6 +11,7 @@ import { JevEvaluation } from "@/components/stock/JevEvaluation";
 import { PairingOpportunities } from "@/components/stock/PairingOpportunities";
 import { SignalInspector } from "@/components/stock/SignalInspector";
 import { StockHeader } from "@/components/stock/StockHeader";
+import { QueryErrorState } from "@/components/ui/QueryErrorState";
 import { mockAgentState } from "@/data/mock-agent-state";
 import { useAgentStatus, useStock, usePairings } from "@/lib/api/hooks";
 
@@ -22,10 +23,28 @@ export default function StockDetailPage({ params }: StockPageProps) {
   const { symbol } = use(params);
   const normalizedSymbol = symbol.trim().toUpperCase();
 
-  // Register query hooks — primes the cache from the real backend or fixtures
-  useAgentStatus();
-  useStock(normalizedSymbol);
-  usePairings();
+  const agentQuery = useAgentStatus();
+  const stockQuery = useStock(normalizedSymbol);
+  const pairingsQuery = usePairings();
+
+  const isError = agentQuery.isError || stockQuery.isError || pairingsQuery.isError;
+  const error = stockQuery.error || agentQuery.error || pairingsQuery.error;
+
+  const handleRefetch = () => {
+    void agentQuery.refetch();
+    void stockQuery.refetch();
+    void pairingsQuery.refetch();
+  };
+
+  if (isError) {
+    return (
+      <QueryErrorState
+        title={`Failed to Load Stock Data (${normalizedSymbol})`}
+        error={error}
+        onRetry={handleRefetch}
+      />
+    );
+  }
 
   const { agent, assets, ranking, pairings, launch, memory } = mockAgentState;
   const asset = assets.find((candidate) => candidate.symbol === normalizedSymbol);
