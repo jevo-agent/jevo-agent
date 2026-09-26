@@ -233,6 +233,27 @@ contracts, wallet addresses, activity timestamps, or fallback narrative
 metrics. Opaque persisted cycle identifiers remain opaque and are not
 converted into synthetic numeric counters.
 
+---
+
+## 7. Interactive Memory Audit & Market Map Visual Hardening
+
+### Interactive `/memory` Workspace
+- **Consecutive Steady-State Grouping**: Consecutive cycle records with identical decision, rank, and score are consolidated into a single card to eliminate redundant visual repetition while preserving the exact count and audit window.
+- **Audit Detail Drawer**: Grouped cards provide an interactive toggle (`▼ Audit all N individual cycles` / `▲ Collapse raw cycle log`) revealing an embedded monospace table containing all underlying raw cycle records (timestamp, cycle ID, rank, score, decision, and summary).
+- **Timeline Milestone Jumping**: Transition and milestone nodes in the chronological timeline strip are clickable (`is-clickable`). Clicking jumps to the corresponding decision card in the right-hand DECISIONS LOG, auto-expands the underlying audit records, smoothly scrolls the viewport, and triggers a temporary glow highlight (`.is-target-highlight`) with a 3.5s timeout.
+- **Shared Grouping Utility**: The grouping algorithms and types are extracted to [`web/src/lib/memory/grouping.ts`](file:///Users/fmpangestu/Codingan/WEB3/FIRST%20PROJECT/Jevo/web/src/lib/memory/grouping.ts) (`groupMemoryRecords`, `parseRankAndScore`, `GroupedAuditEntry`).
+
+### Market Map 2D Scatter Label Collision Avoidance
+- **Bounding-Box Relaxation**: Located in [`web/src/components/app/views/OverviewView.tsx`](file:///Users/fmpangestu/Codingan/WEB3/FIRST%20PROJECT/Jevo/web/src/components/app/views/OverviewView.tsx) (`computeLabelPlacements`), the scatter plot prevents overlapping label text for tightly clustered coordinates (e.g. AMD, PLTR, COIN, AAPL) without displacing node anchor points.
+- **Candidate Evaluation**: Iterates over 10 candidate directional slots around each coordinate, applying penalties for boundary proximity and label collisions, prioritized by opportunity score.
+- **Leader Lines**: Renders subtle dashed leader lines (`.field-label-leader`) when offset relaxation exceeds 20px.
+
+### Landing Page Section 05 Boundary
+- Section 05 (`MemorySection` / `DecisionHistoryChart`) resides directly in [`web/src/components/landing/LandingPage.tsx`](file:///Users/fmpangestu/Codingan/WEB3/FIRST%20PROJECT/Jevo/web/src/components/landing/LandingPage.tsx), which also contains the landing hero currently managed by Codex.
+- To prevent merge collisions, modifications to `LandingPage.tsx` are paused; [`web/src/lib/memory/grouping.ts`](file:///Users/fmpangestu/Codingan/WEB3/FIRST%20PROJECT/Jevo/web/src/lib/memory/grouping.ts) is ready for import once hero updates are complete.
+
+---
+
 ### Remaining work (priority order)
 
 1. Select and verify real market/provider sources for `PROVIDER_MODE=real`.
@@ -256,3 +277,4 @@ The next agent should begin by auditing and selecting the real provider
 sources required for `PROVIDER_MODE=real`.
 
 Do NOT start blockchain work yet.
+
