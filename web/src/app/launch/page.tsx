@@ -14,7 +14,11 @@ export default function LaunchPage() {
   if (!state.data) return <QueryEmptyState title="No canonical launch context" message="The worker has not published an opportunity state for this workspace." />;
   return (
     <AppShell {...state.data}>
-      <LaunchView launch={state.data.launch} pairing={state.data.featuredPairing} />
+      <LaunchView
+        launch={state.data.launch}
+        pairing={state.data.featuredPairing}
+        agent={state.data.agent}
+      />
     </AppShell>
   );
 }

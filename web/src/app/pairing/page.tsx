@@ -14,7 +14,11 @@ export default function PairingMarketplacePage() {
   if (!state.data) return <QueryEmptyState title="No canonical pairing state" message="The worker has not published a pairing candidate and launch context yet." />;
   return (
     <AppShell {...state.data}>
-      <PairingsView pairings={state.data.pairings} />
+      <PairingsView
+        pairings={state.data.pairings}
+        assets={state.data.assets}
+        agent={state.data.agent}
+      />
     </AppShell>
   );
 }

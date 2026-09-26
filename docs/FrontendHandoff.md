@@ -254,6 +254,27 @@ converted into synthetic numeric counters.
 
 ---
 
+## 8. Rich Standby Architecture for `/pairing` and `/launch`
+
+### `/pairing` Standby & Governance Architecture
+- **Genuinely 0 Proposals State**: Replaces minimal empty notices with an active operational telemetry workspace. Explains that the agent is actively scanning each cycle and waiting for convergence between qualified Stock Tokens and culturally viable meme concepts.
+- **Explicit Threshold Criteria**:
+  - **Qualification Gate**: Asset rank in Top 3 (`Rank <= 3`) or explicit JEV qualitative decision `PROMOTE`.
+  - **Scoring Formula**: 5-factor deterministic model (Narrative Resonance 30%, Cultural Fit 25%, Meme Velocity 20%, Crypto Adjacency 15%, Structural Viability 10%).
+  - **Governance Mandate**: Human curation required. Autonomous deployment without human approval is strictly prohibited.
+- **Monitored Candidates Table**: Directly reads real opportunity data from the active cycle query, presenting candidate assets (e.g. NVDA, TSLA, PLTR) with their canonical rank, opportunity score, JEV decision, signal context, and direct link to audit signals (`/stock/[symbol]`).
+- **4-Pillar Thesis Blueprint**: Shows the 4 formal thesis questions generated when a match occurs (*Why Stock*, *Why Meme*, *Why Pair*, *Why Now*).
+- **Autonomous Pipeline Stepper**: Visual 4-stage pipeline from signal scan to launch queue, highlighting the locked operator curation gate.
+- **Distinct `AGENT_PROPOSED` State**: When candidate proposals exist in the database awaiting admin curation, a dedicated governance alert (`🔒 GERBANG KURASI ADMIN AKTIF`) is displayed, distinguishing pending proposals from both the "0 proposals" standby state and approved pairings. Individual proposal cards and the thesis inspector clearly indicate `AWAITING HUMAN OPERATOR REVIEW`.
+
+### `/launch` Standby Lifecycle & Policy Architecture
+- **Preserved Explanatory Text**: Retains the canonical explanation ("Countdown dan checkpoint launch akan aktif setelah kandidat pairing disetujui dan dijadwalkan oleh operator").
+- **Visual 6-Stage Lifecycle Preview**: Renders the complete 6-stage lifecycle strip (`T-24H` to `T-00`: `CANDIDATE_SELECTED`, `NARRATIVE_VALIDATION`, `PAIRING_VALIDATION`, `CONTRACT_PREPARATION`, `FINAL_POLICY_CHECK`, `CONTROLLED_EXECUTION`) in dimmed standby mode, giving operators and users immediate understanding of the launch shape before an active cycle begins.
+- **Standby Readout & Scoped Permissions**: Displays a dimmed tabular `STANDBY` readout, protocol facts panel (opportunity score, check counters, asset status, agent wallet, guardian approval, transaction state), and strict permission boundaries (`Agent can` vs `Agent cannot`).
+- **8 Pre-Launch Policy Checks Grid**: Renders a dedicated 8-card grid showing all safety gates (Valid Stock Token, Approved Pairing Asset, Token Metadata, Contract Parameters, Launch Limits, Duplicate Check, Agent Permission, Transaction Simulation) in standby verification mode.
+
+---
+
 ### Remaining work (priority order)
 
 1. Select and verify real market/provider sources for `PROVIDER_MODE=real`.
@@ -277,4 +298,5 @@ The next agent should begin by auditing and selecting the real provider
 sources required for `PROVIDER_MODE=real`.
 
 Do NOT start blockchain work yet.
+
 
