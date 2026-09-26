@@ -12,9 +12,17 @@ import { PairingReviewPanel } from "@/components/admin/PairingReviewPanel";
 import { ProvidersPanel } from "@/components/admin/ProvidersPanel";
 import { WalletContractsPanel } from "@/components/admin/WalletContractsPanel";
 import { mockAgentState } from "@/data/mock-agent-state";
+import { useAgentStatus, useOpportunities, usePairings, useLaunches, useMemory } from "@/lib/api/hooks";
 import { useAgentStore } from "@/store/agent-store";
 
 export default function AdminPage() {
+  // Register query hooks so SSE invalidations update admin views
+  useAgentStatus();
+  useOpportunities();
+  usePairings();
+  useLaunches();
+  useMemory();
+
   const activeAdminPanel = useAgentStore((state) => state.activeAdminPanel);
   const adminControlNotice = useAgentStore((state) => state.adminControlNotice);
   const { agent, assets, launch, memory, pairings, providers } = mockAgentState;

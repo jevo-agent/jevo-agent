@@ -1,8 +1,18 @@
+"use client";
+
 import { AppShell } from "@/components/app/AppShell";
 import { MemoryView } from "@/components/app/views/MemoryView";
 import { mockAgentState } from "@/data/mock-agent-state";
+import { useAgentStatus, useOpportunities, usePairings, useLaunches, useMemory, useCycles } from "@/lib/api/hooks";
 
 export default function AgentMemoryPage() {
+  useAgentStatus();
+  useOpportunities();
+  usePairings();
+  useLaunches();
+  useMemory();
+  useCycles();
+
   const { agent, agentCycles, assets, ranking, pairings, launch, memory, memoryComparison } = mockAgentState;
   const featuredAsset = assets.find((asset) => asset.symbol === "NVDA");
   const featuredPairing = pairings.find((pairing) => pairing.slug === launch.selectedPairingSlug);

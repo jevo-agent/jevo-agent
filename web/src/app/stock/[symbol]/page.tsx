@@ -1,6 +1,9 @@
-import { notFound } from "next/navigation";
+"use client";
 
-import { AgentStatusBar } from "@/components/agent/AgentStatusBar";
+import { notFound } from "next/navigation";
+import { use } from "react";
+
+import { AppShell } from "@/components/app/AppShell";
 import { AgentMemory } from "@/components/stock/AgentMemory";
 import { DecisionSummary } from "@/components/stock/DecisionSummary";
 import { DecisionTrace } from "@/components/stock/DecisionTrace";
@@ -9,15 +12,22 @@ import { PairingOpportunities } from "@/components/stock/PairingOpportunities";
 import { SignalInspector } from "@/components/stock/SignalInspector";
 import { StockHeader } from "@/components/stock/StockHeader";
 import { mockAgentState } from "@/data/mock-agent-state";
+import { useAgentStatus, useStock, usePairings } from "@/lib/api/hooks";
 
 interface StockPageProps {
   params: Promise<{ symbol: string }>;
 }
 
-export default async function StockDetailPage({ params }: StockPageProps) {
-  const { symbol } = await params;
+export default function StockDetailPage({ params }: StockPageProps) {
+  const { symbol } = use(params);
   const normalizedSymbol = symbol.trim().toUpperCase();
-  const { agent, assets, pairings } = mockAgentState;
+
+  // Register query hooks — primes the cache from the real backend or fixtures
+  useAgentStatus();
+  useStock(normalizedSymbol);
+  usePairings();
+
+  const { agent, assets, ranking, pairings, launch, memory } = mockAgentState;
   const asset = assets.find((candidate) => candidate.symbol === normalizedSymbol);
 
   if (!asset) {
@@ -25,35 +35,46 @@ export default async function StockDetailPage({ params }: StockPageProps) {
   }
 
   const primaryPairing = pairings.find((pairing) => pairing.stockSymbol === asset.symbol);
+  const featuredAsset = asset;
+  const featuredPairing = pairings.find((p) => p.slug === launch.selectedPairingSlug) ?? pairings[0];
 
   return (
-    <div className="stock-detail-root">
-      <AgentStatusBar
-        agentStatus={agent.status}
-        jevStatus={agent.jevStatus}
-        currentOperation={agent.currentOperation}
-        lastDecisionAgeSeconds={agent.lastDecisionAgeSeconds}
-        nextCycleInSeconds={agent.nextCycleInSeconds}
-        networkLabel={agent.networkLabel}
-      />
-      <StockHeader asset={asset} agent={agent} />
-      <main className="protocol-shell py-8 sm:py-10">
-        <div className="grid border border-[var(--jevo-line)] lg:grid-cols-[minmax(0,1.28fr)_minmax(300px,0.72fr)]">
-          <div>
-            <DecisionSummary asset={asset} agent={agent} />
-            <JevEvaluation asset={asset} />
+    <AppShell
+      agent={agent}
+      assets={assets}
+      ranking={ranking}
+      pairings={pairings}
+      launch={launch}
+      memory={memory}
+      featuredAsset={featuredAsset}
+      featuredPairing={featuredPairing}
+      activeSection="opportunities"
+      breadcrumb={
+        <div className="crumbs">
+          JEVO <span>/</span> OPPORTUNITY <span>/</span> <b>{asset.symbol}</b>
+        </div>
+      }
+    >
+      <div className="stock-workspace">
+        <StockHeader asset={asset} agent={agent} />
+        <div className="stock-workspace-content py-6 sm:py-8">
+          <div className="grid border border-[var(--jevo-line)] lg:grid-cols-[minmax(0,1.28fr)_minmax(300px,0.72fr)]">
+            <div>
+              <DecisionSummary asset={asset} agent={agent} />
+              <JevEvaluation asset={asset} />
+            </div>
+            <aside className="border-t border-[var(--jevo-line)] lg:border-t-0 lg:border-l">
+              <SignalInspector asset={asset} />
+              <PairingOpportunities asset={asset} pairing={primaryPairing} />
+            </aside>
           </div>
-          <aside className="border-t border-[var(--jevo-line)] lg:border-t-0 lg:border-l">
-            <SignalInspector asset={asset} />
-            <PairingOpportunities asset={asset} pairing={primaryPairing} />
-          </aside>
-        </div>
 
-        <div className="mt-8 border border-[var(--jevo-line)]">
-          <DecisionTrace asset={asset} cycle={agent.activeCycle} />
-          <AgentMemory asset={asset} />
+          <div className="mt-8 border border-[var(--jevo-line)]">
+            <DecisionTrace asset={asset} cycle={agent.activeCycle} />
+            <AgentMemory asset={asset} />
+          </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }

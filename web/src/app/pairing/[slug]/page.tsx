@@ -1,4 +1,7 @@
+"use client";
+
 import { notFound } from "next/navigation";
+import { use } from "react";
 
 import { AgentStatusBar } from "@/components/agent/AgentStatusBar";
 import { AlternativePairings } from "@/components/pairing/AlternativePairings";
@@ -10,12 +13,19 @@ import { PairingLifecycleDetail } from "@/components/pairing/PairingLifecycleDet
 import { PairingNextAction } from "@/components/pairing/PairingNextAction";
 import { PairingThesis } from "@/components/pairing/PairingThesis";
 import { mockAgentState } from "@/data/mock-agent-state";
+import { useAgentStatus, usePairing, usePairings } from "@/lib/api/hooks";
 
 interface PairingDetailPageProps { params: Promise<{ slug: string }>; }
 
-export default async function PairingDetailPage({ params }: PairingDetailPageProps) {
-  const { slug } = await params;
+export default function PairingDetailPage({ params }: PairingDetailPageProps) {
+  const { slug } = use(params);
   const normalizedSlug = slug.trim().toLowerCase();
+
+  // Register query hooks
+  useAgentStatus();
+  usePairings();
+  usePairing(normalizedSlug);
+
   const { agent, assets, pairings } = mockAgentState;
   const pairing = pairings.find((candidate) => candidate.slug === normalizedSlug);
 

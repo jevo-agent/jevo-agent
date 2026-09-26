@@ -1,8 +1,17 @@
+"use client";
+
 import { AppShell } from "@/components/app/AppShell";
 import { LaunchView } from "@/components/app/views/LaunchView";
 import { mockAgentState } from "@/data/mock-agent-state";
+import { useAgentStatus, useOpportunities, usePairings, useLaunches, useMemory } from "@/lib/api/hooks";
 
 export default function LaunchPage() {
+  useAgentStatus();
+  useOpportunities();
+  usePairings();
+  useLaunches();
+  useMemory();
+
   const { agent, assets, ranking, pairings, launch, memory } = mockAgentState;
   const featuredAsset = assets.find((asset) => asset.symbol === "NVDA");
   const pairing = pairings.find((candidate) => candidate.slug === launch.selectedPairingSlug);

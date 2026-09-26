@@ -1,4 +1,7 @@
+"use client";
+
 import { notFound } from "next/navigation";
+import { use } from "react";
 
 import { AgentStatusBar } from "@/components/agent/AgentStatusBar";
 import { AgentWalletState } from "@/components/launch/AgentWalletState";
@@ -13,12 +16,19 @@ import { PolicyCheckList } from "@/components/launch/PolicyCheckList";
 import { TokenSpecification } from "@/components/launch/TokenSpecification";
 import { TransactionState } from "@/components/launch/TransactionState";
 import { mockAgentState } from "@/data/mock-agent-state";
+import { useAgentStatus, useLaunch, useLaunches } from "@/lib/api/hooks";
 
 interface LaunchDetailPageProps { params: Promise<{ slug: string }>; }
 
-export default async function LaunchDetailPage({ params }: LaunchDetailPageProps) {
-  const { slug } = await params;
+export default function LaunchDetailPage({ params }: LaunchDetailPageProps) {
+  const { slug } = use(params);
   const normalizedSlug = slug.trim().toLowerCase();
+
+  // Register query hooks
+  useAgentStatus();
+  useLaunches();
+  useLaunch(normalizedSlug);
+
   const { agent, assets, launch, pairings } = mockAgentState;
   const pairing = pairings.find((candidate) => candidate.slug === normalizedSlug);
 

@@ -18,7 +18,7 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "JEVO — Autonomous Market Intelligence",
+  title: "JEVO Autonom - Robinhood Chain",
   description:
     "JEVO is an autonomous market intelligence protocol powered by Jev.",
 };
@@ -27,7 +27,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en">
       <body className={`${archivo.variable} ${plexMono.variable}`}>
-        <a href="#main-content" className="skip-link">Skip to main content</a>
+        <a href="#main-content" className="skip-link">
+          Skip to main content
+        </a>
         <Providers>
           <div id="main-content" tabIndex={-1}>
             {children}

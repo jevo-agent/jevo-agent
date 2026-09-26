@@ -97,7 +97,7 @@ export function DecisionPlane({ asset, pairing }: DecisionPlaneProps) {
   function pairClass(symbol: string) {
     const selected = activePair === symbol;
     const dimmed = focused && !selected;
-    return `plane-pair${selected ? " is-focused" : ""}${dimmed ? " is-dimmed" : ""}`;
+    return `plane-pair${symbol === "GPU" ? " is-primary" : ""}${selected ? " is-focused" : ""}${dimmed ? " is-dimmed" : ""}`;
   }
 
   return (
@@ -113,17 +113,21 @@ export function DecisionPlane({ asset, pairing }: DecisionPlaneProps) {
         <title id="decision-plane-title">JEVO autonomous decision plane</title>
         <desc id="decision-plane-description">Market signals enter from the left, pass through the JEV decision gate, rank into an opportunity list, branch into GPU, CUDA, and COMPUTE pairings, and resolve into the NVDA GPU launch candidate. No transaction is submitted.</desc>
         <g className="plane-guides" aria-hidden="true">
-          {[...Array(27)].map((_, index) => <path key={index} d={`M48 ${36 + index * 19} C180 ${36 + index * 19} 260 ${280 + (index - 13) * 5} 348 ${280 + (index - 13) * 5}`} />)}
+          {[...Array(22)].map((_, index) => <path className="field-trajectory" key={index} pathLength={1} d={`M48 ${48 + index * 23} C180 ${48 + index * 23} 260 ${225 + index * 4.5} 348 ${225 + index * 4.5}`} style={{ "--signal-delay": `${index * -0.65}s` } as CSSProperties} />)}
           <line x1="244" y1="24" x2="244" y2="530" />
           <line x1="392" y1="24" x2="392" y2="530" />
           <line x1="548" y1="24" x2="548" y2="530" />
           <line x1="728" y1="24" x2="728" y2="530" />
         </g>
 
+        <g className="plane-scan" aria-hidden="true">
+          <line className="plane-scan-sweep" x1="420" y1="24" x2="420" y2="530" />
+        </g>
+
         <g className="plane-signal-inputs" aria-hidden="true">
           {signals.map((signal, index) => {
             const gateY = 280 + (signal.sourceY - 280) * 0.47;
-            return <path key={`signal-input-${signal.symbol}`} className={`decision-route signal-route${signal.symbol === "NVDA" ? " nvda-route nvda-input-route" : ""}${activeAsset && activeAsset !== signal.symbol ? " is-dimmed" : ""}`} pathLength={1} d={`M48 ${signal.sourceY} C164 ${signal.sourceY} 250 ${gateY} 348 ${gateY}`} style={{ "--signal-delay": `${index * -0.22}s` } as CSSProperties} />;
+            return <path key={`signal-input-${signal.symbol}`} className={`decision-route signal-route${signal.symbol === "NVDA" ? " nvda-route nvda-input-route is-primary" : ""}${activeAsset === signal.symbol ? " is-focused" : ""}${activeAsset && activeAsset !== signal.symbol ? " is-dimmed" : ""}`} pathLength={1} d={`M48 ${signal.sourceY} C164 ${signal.sourceY} 250 ${gateY} 348 ${gateY}`} style={{ "--signal-delay": `${index * -0.22}s` } as CSSProperties} />;
           })}
         </g>
 
@@ -131,12 +135,12 @@ export function DecisionPlane({ asset, pairing }: DecisionPlaneProps) {
           {signals.filter((signal): signal is AssetSignal & { rank: number } => Boolean(signal.rank)).map((signal, index) => {
             const gateY = 280 + (signal.sourceY - 280) * 0.47;
             const rank = rankY[signal.rank];
-            return <path key={`signal-output-${signal.symbol}`} className={`decision-route signal-route output-route${signal.symbol === "NVDA" ? " nvda-route nvda-output-route" : ""}${activeAsset && activeAsset !== signal.symbol ? " is-dimmed" : ""}`} pathLength={1} d={`M372 ${gateY} C430 ${gateY} 452 ${rank} 510 ${rank} L610 ${rank}`} style={{ "--signal-delay": `${(index + signals.length) * -0.22}s` } as CSSProperties} />;
+            return <path key={`signal-output-${signal.symbol}`} className={`decision-route signal-route output-route${signal.symbol === "NVDA" ? " nvda-route nvda-output-route is-primary" : ""}${activeAsset === signal.symbol ? " is-focused" : ""}${activeAsset && activeAsset !== signal.symbol ? " is-dimmed" : ""}`} pathLength={1} d={`M372 ${gateY} C430 ${gateY} 452 ${rank} 510 ${rank} L610 ${rank}`} style={{ "--signal-delay": `${(index + signals.length) * -0.22}s` } as CSSProperties} />;
           })}
         </g>
 
         <g className="plane-signal-marker" aria-hidden="true">
-          <circle className="nvda-signal-marker" r="2.8" cx="48" cy="354">
+          <circle className="nvda-signal-marker" r="2.2" cx="48" cy="354">
             <animateMotion
               dur="12s"
               repeatCount="indefinite"
@@ -157,7 +161,7 @@ export function DecisionPlane({ asset, pairing }: DecisionPlaneProps) {
           {signals.filter((signal): signal is AssetSignal & { rank: number; score: number; delta: string } => Boolean(signal.rank && signal.score && signal.delta)).map((signal) => {
             const y = rankY[signal.rank];
             const focusedRank = activeAsset === signal.symbol;
-            return <g key={`rank-${signal.symbol}`} className={`plane-rank-row${focusedRank ? " is-focused" : ""}${activeAsset && !focusedRank ? " is-dimmed" : ""}`} role="button" tabIndex={0} aria-label={`Focus ${signal.symbol} ranked ${signal.rank}`} aria-pressed={activeAsset === signal.symbol} onClick={(event) => { event.stopPropagation(); setTimedLock({ kind: "asset", value: signal.symbol }); }} onKeyDown={(event) => handleAssetKey(event, signal.symbol)} onMouseEnter={() => setHoverAsset(signal.symbol)} onMouseLeave={() => setHoverAsset(null)} onFocus={() => setHoverAsset(signal.symbol)} onBlur={() => setHoverAsset(null)}>
+            return <g key={`rank-${signal.symbol}`} className={`plane-rank-row${signal.symbol === "NVDA" ? " is-primary" : ""}${focusedRank ? " is-focused" : ""}${activeAsset && !focusedRank ? " is-dimmed" : ""}`} role="button" tabIndex={0} aria-label={`Focus ${signal.symbol} ranked ${signal.rank}`} aria-pressed={activeAsset === signal.symbol} onClick={(event) => { event.stopPropagation(); setTimedLock({ kind: "asset", value: signal.symbol }); }} onKeyDown={(event) => handleAssetKey(event, signal.symbol)} onMouseEnter={() => setHoverAsset(signal.symbol)} onMouseLeave={() => setHoverAsset(null)} onFocus={() => setHoverAsset(signal.symbol)} onBlur={() => setHoverAsset(null)}>
               <text x="510" y={y - 9}>{String(signal.rank).padStart(2, "0")} {signal.symbol} {signal.symbol === "NVDA" ? asset.opportunityScore.toFixed(1) : signal.score.toFixed(1)}</text>
               {signal.symbol === "NVDA" ? <><text className="plane-accent" x="510" y={y + 16}>JEV / PROMOTE #04 → #01</text><text className="plane-note" x="510" y={y + 34}>Opportunity / {asset.opportunityScore.toFixed(1)}</text></> : <text className="plane-note" x="510" y={y + 17}>Δ {signal.delta}</text>}
               <line x1="510" y1={y + 28} x2="684" y2={y + 28} />
@@ -166,13 +170,13 @@ export function DecisionPlane({ asset, pairing }: DecisionPlaneProps) {
         </g>
 
         <g className="plane-assets">
-          {signals.map((signal) => <g key={`asset-${signal.symbol}`} className={assetClass(signal.symbol)} role="button" tabIndex={0} aria-label={`Focus ${signal.symbol} signal path`} aria-pressed={activeAsset === signal.symbol} onClick={(event) => { event.stopPropagation(); setTimedLock({ kind: "asset", value: signal.symbol }); }} onKeyDown={(event) => handleAssetKey(event, signal.symbol)} onMouseEnter={() => setHoverAsset(signal.symbol)} onMouseLeave={() => setHoverAsset(null)} onFocus={() => setHoverAsset(signal.symbol)} onBlur={() => setHoverAsset(null)}><text x="48" y={signal.sourceY + 4}>{signal.symbol}</text><circle cx="36" cy={signal.sourceY} r="2.5" /></g>)}
+          {signals.map((signal) => <g key={`asset-${signal.symbol}`} className={`${assetClass(signal.symbol)}${signal.symbol === "NVDA" ? " is-primary" : ""}`} role="button" tabIndex={0} aria-label={`Focus ${signal.symbol} signal path`} aria-pressed={activeAsset === signal.symbol} onClick={(event) => { event.stopPropagation(); setTimedLock({ kind: "asset", value: signal.symbol }); }} onKeyDown={(event) => handleAssetKey(event, signal.symbol)} onMouseEnter={() => setHoverAsset(signal.symbol)} onMouseLeave={() => setHoverAsset(null)} onFocus={() => setHoverAsset(signal.symbol)} onBlur={() => setHoverAsset(null)}><text x="48" y={signal.sourceY + 4}>{signal.symbol}</text><circle cx="36" cy={signal.sourceY} r="2.5" /></g>)}
         </g>
 
         <g className="plane-pair-routes">
           <path className={`decision-route pair-route gpu-route${activePair && activePair !== "GPU" ? " is-dimmed" : ""}`} pathLength={1} d="M610 162 C660 162 670 88 714 88 L782 88 C820 88 828 120 828 176 L828 246" />
-          <path className={`decision-route pair-route${activePair && activePair !== "CUDA" ? " is-dimmed" : ""}`} pathLength={1} d="M610 162 C660 162 678 144 714 144" />
-          <path className={`decision-route pair-route${activePair && activePair !== "COMPUTE" ? " is-dimmed" : ""}`} pathLength={1} d="M610 162 C660 162 678 210 714 210" />
+          <path className={`decision-route pair-route pair-alt-route${activePair && activePair !== "CUDA" ? " is-dimmed" : ""}`} pathLength={1} d="M610 162 C660 162 678 144 714 144" />
+          <path className={`decision-route pair-route pair-alt-route${activePair && activePair !== "COMPUTE" ? " is-dimmed" : ""}`} pathLength={1} d="M610 162 C660 162 678 210 714 210" />
           <path className="decision-route launch-route" pathLength={1} d="M828 246 C828 304 814 354 772 382 L690 382" />
         </g>
 
@@ -187,7 +191,6 @@ export function DecisionPlane({ asset, pairing }: DecisionPlaneProps) {
           <text className="plane-note" x="708" y="438">T-06 / PREP · TX / NOT SENT</text>
         </g>
 
-        <text className="plane-empty-hint" x="48" y="528">Signals remain muted until Jev selects a route.</text>
       </svg>
 
       <div className="decision-plane-rail" aria-hidden="true"><span>Observe / Stock Tokens</span><span>Jev / Decision Gate</span><span>Pair / <b>$GPU</b></span><span>Launch / <b>Not submitted</b></span></div>
