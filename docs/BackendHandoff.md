@@ -882,12 +882,13 @@ Eleven tasks, each meant to be one Codex/AGY prompt, each landable and reviewabl
 - Depends on: BACKEND 02, BACKEND 05, BACKEND 07
 - Do:
   - Implement shared `AlphaVantageClient` with request pacing (1.25s delay between outbound calls) to prevent Alpha Vantage 1 req/sec burst limit warnings.
-  - Implement TTL in-memory caching (default 6 hours) so that 60-second DELTA cycles read from cache without consuming daily quota.
+  - Implement 22-hour TTL in-memory caching (`ALPHA_VANTAGE_CACHE_TTL_MS=79200000`) matching daily EOD market data cadence so 60-second DELTA cycles read from cache with zero redundant network overhead.
+  - Implement an explicit daily request governor (`maxDailyRequests: 25`) halting outbound calls once the free tier limit is reached and safely falling back to stale cache.
   - Map `GLOBAL_QUOTE` fields (`05. price`, `06. volume`, `high`, `low`) into `MarketSnapshot` with calculated intraday volatility.
   - Map `NEWS_SENTIMENT` articles into `SignalObservation` (`kind: "NEWS"` or `"NARRATIVE"`), scaling raw sentiment `[-1.0, 1.0]` into `[0, 100]` magnitude.
   - Add `MARKET_DATA_MODE=mock|real` and `NARRATIVE_MODE=mock|real` env toggles (default `mock`).
   - Keep `StockTokenProvider` and `SocialProvider` strictly as mock implementations.
-- Tests: `tests/alphaVantage.test.ts` unit tests with mocked payloads, caching verification, provider registry switching, and a live smoke test that skips if `ALPHA_VANTAGE_API_KEY` is omitted.
+- Tests: `tests/alphaVantage.test.ts` unit tests with mocked payloads, caching verification, daily request governor verification, provider registry switching, and a live smoke test that skips if `ALPHA_VANTAGE_API_KEY` is omitted.
 - Stop when: Smoke test succeeds against live Alpha Vantage endpoints, and a manual cycle produces verified real market prices and news headlines without exhausting the daily quota.
 
 ## 21. Deferred Blockchain Phase

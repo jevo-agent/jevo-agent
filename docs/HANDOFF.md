@@ -152,17 +152,21 @@ bun dev
   - `MARKET_DATA_MODE`: Set to `"mock"` by default. Set to `"real"` to fetch live quotes via Alpha Vantage.
   - `NARRATIVE_MODE`: Set to `"mock"` by default. Set to `"real"` to fetch live news/sentiment via Alpha Vantage.
   - `ALPHA_VANTAGE_API_KEY`: Required when `MARKET_DATA_MODE=real` or `NARRATIVE_MODE=real`.
-  - `ALPHA_VANTAGE_CACHE_TTL_MS`: In-memory cache TTL (default `21600000` ms = 6 hours).
+  - `ALPHA_VANTAGE_CACHE_TTL_MS`: In-memory cache TTL (default `79200000` ms = 22 hours, matching daily EOD cadence).
+  - `ALPHA_VANTAGE_MAX_DAILY_REQUESTS`: Strict daily call cap (default `25` requests).
 
 ### Quota Cadence & Rate Limiting Strategy
-1. **Free Tier Budget (25 req/day)**:
+1. **Free Tier Budget (25 req/day) & 22-Hour TTL**:
    - 7 tracked assets (`NVDA`, `TSLA`, `PLTR`, `AAPL`, `GME`, `AMD`, `COIN`).
    - 1 full sweep = 7 market quote requests + 7 narrative news requests = 14 requests total.
-   - Leaves 11 requests of headroom for test runs and manual scans.
-2. **Burst Limit Protection (1 req/sec)**:
+   - Leaves 11 requests of daily headroom.
+   - Cache TTL is set to **22 hours** because US equity market data on free tier is End-of-Day (EOD) and does not update intraday.
+2. **Explicit Daily Request Governor**:
+   - `AlphaVantageClient` tracks requests within a rolling 24-hour window. Once the counter reaches 25, it halts all outbound network calls and safely returns cached data, preventing quota overages regardless of worker cycle frequency.
+3. **Burst Limit Protection (1 req/sec)**:
    - Alpha Vantage enforces a strict 1 request per second burst limit.
    - `AlphaVantageClient` implements an asynchronous mutex queue with a minimum 1.25s delay between outbound calls.
-3. **Zero-Latency Agent Cycles (60s DELTA)**:
+4. **Zero-Latency Agent Cycles (60s DELTA)**:
    - 60-second DELTA cycles read from the TTL cache in < 1ms, completely eliminating redundant outbound API calls.
 
 ---
