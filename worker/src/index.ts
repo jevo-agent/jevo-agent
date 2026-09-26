@@ -8,6 +8,11 @@ import {
   registerRepeatableCycles,
   stopCycleWorker,
 } from "./jobs/scheduler";
+import {
+  startLaunchProgressionWorker,
+  registerLaunchProgressionScheduler,
+  stopLaunchProgressionWorker,
+} from "./jobs/launchProgression";
 import { closeEventBus } from "./events";
 
 async function main() {
@@ -30,11 +35,13 @@ async function main() {
     logger.warn({ err }, "Could not seed initial assets (proceeding anyway)");
   }
 
-  // 2. Start BullMQ worker & scheduler
-  logger.info("Starting BullMQ cycle worker and registering schedulers...");
+  // 2. Start BullMQ workers & schedulers
+  logger.info("Starting BullMQ cycle & launch progression workers and registering schedulers...");
   startCycleWorker();
   await registerRepeatableCycles();
-  logger.info("Cycle worker and schedulers active");
+  startLaunchProgressionWorker();
+  await registerLaunchProgressionScheduler();
+  logger.info("Cycle worker, launch progression worker, and schedulers active");
 
   // 3. Start Fastify server
   const server = await createServer();
@@ -53,6 +60,13 @@ async function main() {
       logger.info("Fastify server closed");
     } catch (err) {
       logger.error({ err }, "Error closing Fastify server");
+    }
+
+    try {
+      await stopLaunchProgressionWorker();
+      logger.info("Launch progression worker and queue closed");
+    } catch (err) {
+      logger.error({ err }, "Error stopping launch progression worker");
     }
 
     try {
