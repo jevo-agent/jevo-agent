@@ -15,22 +15,34 @@
 
 import { useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
+import { isJevoDemoMode } from "@/lib/api/client";
 
 // ─── Event → query key mapping (as specified in task) ────────────────────────
 
 const EVENT_INVALIDATES: Record<string, (subjectId: string | null) => QueryKey[]> = {
   AGENT_SCAN_STARTED: () => [["agent-status"]],
   ASSET_ANALYZED: () => [["agent-status"]],
-  JEV_DECISION_COMPLETED: () => [["agent-status"]],
+  JEV_DECISION_COMPLETED: (subjectId) => [
+    ["agent-status"],
+    ["opportunities"],
+    ...(subjectId ? [["stock", subjectId] as QueryKey] : []),
+  ],
   ASSET_PROMOTED: (subjectId) => [["opportunities"], ["stock", subjectId]],
   ASSET_DEMOTED: (subjectId) => [["opportunities"], ["stock", subjectId]],
   RANKING_UPDATED: () => [["opportunities"]],
-  CYCLE_COMPLETED: () => [["agent-status"], ["cycles"]],
+  CYCLE_COMPLETED: () => [["agent-status"], ["cycles"], ["opportunities"], ["pairings"], ["launches"], ["memory"]],
   CYCLE_FAILED: () => [["agent-status"], ["cycles"]],
   PAIRING_PROPOSED: () => [["pairings"]],
   PAIRING_UPDATED: (subjectId) => [["pairings"], ["pairing", subjectId]],
-  LAUNCH_SELECTED: () => [["launches"]],
-  COUNTDOWN_STARTED: (subjectId) => [["launches", subjectId]],
+  LAUNCH_SELECTED: () => [["launches"], ["pairings"]],
+  LAUNCH_STAGE_ADVANCED: (subjectId) => [
+    ["launches"],
+    ...(subjectId ? [["launch", subjectId] as QueryKey] : []),
+  ],
+  COUNTDOWN_STARTED: (subjectId) => [
+    ["launches"],
+    ...(subjectId ? [["launch", subjectId] as QueryKey] : []),
+  ],
 };
 
 function getStreamUrl(): string | null {
@@ -41,12 +53,15 @@ function getStreamUrl(): string | null {
   return null;
 }
 
-function getPollUrl(cursor?: string | null): string {
+function getPollUrl(cursor?: string | null, demo = false): string {
+  if (demo) {
+    const fixtureBase = "/api/fixture/events";
+    return cursor ? `${fixtureBase}?since=${encodeURIComponent(cursor)}` : fixtureBase;
+  }
   if (typeof process !== "undefined" && process.env.NEXT_PUBLIC_API_URL) {
     const base = `${process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, "")}/events`;
     return cursor ? `${base}?since=${encodeURIComponent(cursor)}` : base;
   }
-  // Fixture polling endpoint
   const base = "/api/fixture/events";
   return cursor ? `${base}?since=${encodeURIComponent(cursor)}` : base;
 }
@@ -72,7 +87,12 @@ export function EventSourceProvider() {
   };
 
   useEffect(() => {
-    const streamUrl = getStreamUrl();
+    const demo = isJevoDemoMode();
+    const streamUrl = demo ? null : getStreamUrl();
+
+    // No configured worker and no explicit demo mode means there is no
+    // realtime source. Do not silently poll fixture endpoints in this state.
+    if (!streamUrl && !demo) return;
 
     // ── SSE branch ───────────────────────────────────────────────────────────
     if (streamUrl && typeof EventSource !== "undefined") {
@@ -116,7 +136,7 @@ export function EventSourceProvider() {
 
     const poll = async () => {
       try {
-        const res = await fetch(getPollUrl(cursorRef.current), {
+        const res = await fetch(getPollUrl(cursorRef.current, demo), {
           cache: "no-store",
         });
         if (!res.ok) return;

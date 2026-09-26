@@ -8,6 +8,7 @@ export const logger = pino({
       "DATABASE_URL",
       "REDIS_URL",
       "JEV_API_KEY",
+      "AI_GATEWAY_API_KEY",
       "ADMIN_API_TOKENS",
       "*.password",
       "*.secret",

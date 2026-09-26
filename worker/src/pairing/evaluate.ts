@@ -14,7 +14,7 @@ import {
   protocolEvents,
 } from "../db/schema";
 import { publishProtocolEvent } from "../events";
-import type { JevProvider } from "../jev";
+import { RealJevProviderError, type JevProvider } from "../jev";
 import { logger } from "../observability/logger";
 import {
   extractTagsFromSignals,
@@ -167,13 +167,21 @@ export async function evaluatePairing(
       ],
     });
 
+    const componentKeys = ["narrative", "cultural", "meme", "crypto", "timing", "stockRelevance"] as const;
+    if (componentKeys.some((key) => typeof componentScoresResult.scores[key] !== "number")) {
+      throw new RealJevProviderError(
+        "INVALID_RESPONSE",
+        `Jev response omitted a required pairing score dimension for ${symbol}`,
+        false,
+      );
+    }
     const components: PairingComponentScores = {
-      narrative: componentScoresResult.scores.narrative ?? 75,
-      cultural: componentScoresResult.scores.cultural ?? 75,
-      meme: componentScoresResult.scores.meme ?? 75,
-      crypto: componentScoresResult.scores.crypto ?? 75,
-      timing: componentScoresResult.scores.timing ?? 75,
-      stockRelevance: componentScoresResult.scores.stockRelevance ?? 75,
+      narrative: componentScoresResult.scores.narrative,
+      cultural: componentScoresResult.scores.cultural,
+      meme: componentScoresResult.scores.meme,
+      crypto: componentScoresResult.scores.crypto,
+      timing: componentScoresResult.scores.timing,
+      stockRelevance: componentScoresResult.scores.stockRelevance,
     };
 
     // 5. Deterministic arithmetic for pairing score

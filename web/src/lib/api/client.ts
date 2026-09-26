@@ -1,16 +1,18 @@
 /**
  * Thin fetch wrapper that reads NEXT_PUBLIC_API_URL (real backend) at runtime.
- * Falls back to the local fixture routes ONLY when NEXT_PUBLIC_API_URL is unset.
+ * Uses local fixture routes only in an explicit development/demo mode.
  *
  * Failure contract:
  *   - If NEXT_PUBLIC_API_URL is set and the request fails (network error, non-2xx,
  *     timeout), this function THROWS. TanStack Query surfaces the error via
  *     query.isError / query.error — no silent fallback to mock data.
- *   - The fixture routes (/api/fixture/*) are used ONLY when the env var is absent,
- *     meaning the dev explicitly hasn't configured a real backend yet.
+ *   - Production never falls back to fixture data when the worker URL is absent.
+ *     Set NEXT_PUBLIC_JEVO_DEMO_MODE=true for an intentional demo build.
  *   - `cache: "no-store"` is used for all requests so the Next.js data cache
  *     never serves stale responses after the backend goes down.
  */
+
+import { z } from "zod";
 
 export interface ApiMeta {
   cursor?: string;
@@ -28,11 +30,24 @@ function getBaseUrl(): string {
   if (envUrl) {
     return envUrl.replace(/\/$/, "");
   }
-  // Fixture fallback — only when env var is NOT set
-  return "/api/fixture";
+
+  const isExplicitDemo =
+    typeof process !== "undefined" && process.env.NEXT_PUBLIC_JEVO_DEMO_MODE === "true";
+
+  if (isExplicitDemo) {
+    return "/api/fixture";
+  }
+
+  throw new Error(
+    "JEVO API is not configured. Set NEXT_PUBLIC_API_URL or explicitly enable NEXT_PUBLIC_JEVO_DEMO_MODE.",
+  );
 }
 
-export async function apiGet<T>(path: string): Promise<ApiEnvelope<T>> {
+export function isJevoDemoMode() {
+  return typeof process !== "undefined" && process.env.NEXT_PUBLIC_JEVO_DEMO_MODE === "true";
+}
+
+export async function apiGet<T>(path: string, dataSchema?: z.ZodType<T>): Promise<ApiEnvelope<T>> {
   const base = getBaseUrl();
   const url = `${base}${path}`;
 
@@ -57,5 +72,16 @@ export async function apiGet<T>(path: string): Promise<ApiEnvelope<T>> {
     throw new Error(`API error ${res.status} ${res.statusText} for ${url}`);
   }
 
-  return res.json() as Promise<ApiEnvelope<T>>;
+  const payload: unknown = await res.json();
+  const envelopeSchema = z.object({
+    data: dataSchema ?? z.unknown(),
+    meta: z
+      .object({
+        cursor: z.string().optional(),
+        total: z.number().int().nonnegative().optional(),
+      })
+      .optional(),
+  });
+
+  return envelopeSchema.parse(payload) as ApiEnvelope<T>;
 }

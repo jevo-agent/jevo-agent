@@ -1,8 +1,8 @@
 import type { FastifyPluginAsync } from "fastify";
 import type { PairingCandidateRecord } from "@jevo/protocol-types";
-import { and, desc, eq, ne } from "drizzle-orm";
+import { and, desc, eq, ne, inArray } from "drizzle-orm";
 import { db } from "../../db/client";
-import { pairingCandidates } from "../../db/schema";
+import { pairingCandidates, pairingDecisions, pairingHistory } from "../../db/schema";
 import { formatResponse } from "../envelope";
 
 export interface PairingsQuery {
@@ -29,7 +29,19 @@ export const pairingsRoutes: FastifyPluginAsync = async (fastify) => {
       rows = rows.filter((r) => r.lifecycleState.toUpperCase() === statusUpper);
     }
 
-    const items: PairingCandidateRecord[] = rows.map((r) => ({
+    const ids = rows.map((row) => row.id);
+    const [decisionRows, historyRows] = ids.length > 0
+      ? await Promise.all([
+          db.select().from(pairingDecisions).where(inArray(pairingDecisions.pairingCandidateId, ids)).orderBy(desc(pairingDecisions.createdAt)),
+          db.select().from(pairingHistory).where(inArray(pairingHistory.pairingCandidateId, ids)).orderBy(desc(pairingHistory.transitionedAt)),
+        ])
+      : [[], []];
+    const decisionByCandidate = new Map<string, typeof decisionRows[number]>();
+    for (const decision of decisionRows) if (!decisionByCandidate.has(decision.pairingCandidateId)) decisionByCandidate.set(decision.pairingCandidateId, decision);
+    const historyByCandidate = new Map<string, typeof historyRows>();
+    for (const entry of historyRows) historyByCandidate.set(entry.pairingCandidateId, [...(historyByCandidate.get(entry.pairingCandidateId) ?? []), entry]);
+
+    const items: Array<PairingCandidateRecord & { decision?: string; confidence?: number; history: Array<{ fromState: string; toState: string; actor: string; transitionedAt: string }> }> = rows.map((r) => ({
       id: r.id,
       symbol: r.symbol,
       memeSymbol: r.memeSymbol,
@@ -38,6 +50,14 @@ export const pairingsRoutes: FastifyPluginAsync = async (fastify) => {
       pairingScore: r.pairingScore,
       lifecycleState: r.lifecycleState as any,
       createdAt: r.createdAt.toISOString(),
+      decision: decisionByCandidate.get(r.id)?.decision,
+      confidence: decisionByCandidate.get(r.id)?.confidence,
+      history: (historyByCandidate.get(r.id) ?? []).map((entry) => ({
+        fromState: entry.fromState,
+        toState: entry.toState,
+        actor: entry.actor,
+        transitionedAt: entry.transitionedAt.toISOString(),
+      })),
     }));
 
     return reply.send(formatResponse(items, { total: items.length }));
@@ -83,6 +103,18 @@ export const pairingsRoutes: FastifyPluginAsync = async (fastify) => {
       createdAt: r.createdAt.toISOString(),
     }));
 
+    const [latestDecision] = await db
+      .select()
+      .from(pairingDecisions)
+      .where(eq(pairingDecisions.pairingCandidateId, pairingRow.id))
+      .orderBy(desc(pairingDecisions.createdAt))
+      .limit(1);
+    const detailHistory = await db
+      .select()
+      .from(pairingHistory)
+      .where(eq(pairingHistory.pairingCandidateId, pairingRow.id))
+      .orderBy(desc(pairingHistory.transitionedAt));
+
     const result = {
       id: pairingRow.id,
       symbol: pairingRow.symbol,
@@ -92,6 +124,14 @@ export const pairingsRoutes: FastifyPluginAsync = async (fastify) => {
       pairingScore: pairingRow.pairingScore,
       lifecycleState: pairingRow.lifecycleState as any,
       createdAt: pairingRow.createdAt.toISOString(),
+      decision: latestDecision?.decision,
+      confidence: latestDecision?.confidence,
+      history: detailHistory.map((entry) => ({
+        fromState: entry.fromState,
+        toState: entry.toState,
+        actor: entry.actor,
+        transitionedAt: entry.transitionedAt.toISOString(),
+      })),
       alternates,
     };
 

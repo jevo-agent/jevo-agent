@@ -13,8 +13,11 @@ export const envSchema = z.object({
   REDIS_URL: z.string().min(1, "REDIS_URL is required"),
   PROVIDER_MODE: z.enum(["mock", "real"]).default("mock"),
   JEV_MODE: z.enum(["mock", "real"]).default("mock"),
+  AI_GATEWAY_API_KEY: z.string().optional(),
+  /** Deprecated compatibility fields; AI Gateway is the only real JEV transport. */
   JEV_API_KEY: z.string().optional(),
   JEV_API_URL: z.string().url().default("https://api.jev.ai/v1"),
+  JEV_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(15_000),
   ADMIN_API_TOKENS: z.string().optional(),
   NEXT_PUBLIC_APP_URL: z.string().optional(),
 });
@@ -33,9 +36,9 @@ export function validateEnv(input: Record<string, unknown> = process.env): AppEn
 
   const parsed = result.data;
 
-  // Real JEV mode requires API key
-  if (parsed.JEV_MODE === "real" && (!parsed.JEV_API_KEY || parsed.JEV_API_KEY.trim() === "")) {
-    throw new Error("Invalid configuration: JEV_API_KEY must be provided when JEV_MODE=real");
+  // Real JEV mode requires the server-side Vercel AI Gateway key.
+  if (parsed.JEV_MODE === "real" && (!parsed.AI_GATEWAY_API_KEY || parsed.AI_GATEWAY_API_KEY.trim() === "")) {
+    throw new Error("Invalid configuration: AI_GATEWAY_API_KEY must be provided when JEV_MODE=real");
   }
 
   // Section 19: Boot-time assertion preventing mock mode in production

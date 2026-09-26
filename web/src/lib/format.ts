@@ -13,6 +13,7 @@ export function formatClock(timestamp: string) {
 }
 
 export function formatCountdown(totalSeconds: number) {
+  if (totalSeconds <= 0) return "—";
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;

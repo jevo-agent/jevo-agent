@@ -8,9 +8,62 @@ import type { Pairing } from "@/types/pairing";
 export function PairingsView({ pairings }: { pairings: Pairing[] }) {
   const [selectedSlug, setSelectedSlug] = useState(pairings[0]?.slug ?? "");
   const selected = pairings.find((pairing) => pairing.slug === selectedSlug) ?? pairings[0];
-  if (!selected) return null;
 
-  return <section className="app-reference-view"><div className="page-head"><div><h2>Pairing marketplace</h2><p>Rank alone never picks the meme. Each proposal carries its own thesis — why this stock, why this meme, why together, why now.</p></div><span className="label">{pairings.length} proposals this cycle · sorted by pairing score</span></div><div className="mkt-row">{pairings.map((pairing) => <button key={pairing.slug} type="button" className="pcard" aria-pressed={pairing.slug === selected.slug} onClick={() => setSelectedSlug(pairing.slug)}><div className="ptop"><span>{pairing.stockSymbol} Stock Token</span><span className="st">{pairing.status.replaceAll("_", " ")}</span></div><div className="pair">{pairing.stockSymbol} × {pairing.symbol}</div><div className="why">{pairing.thesis.core}</div><div className="sc"><span>Pairing score</span><b>{pairing.pairScore}</b></div></button>)}</div><Thesis pairing={selected} /></section>;
+  if (!selected) {
+    return (
+      <section className="app-reference-view">
+        <div className="page-head">
+          <div>
+            <h2>Pairing marketplace</h2>
+            <p>Rank alone never picks the meme. Each proposal carries its own thesis — why this stock, why this meme, why together, why now.</p>
+          </div>
+          <span className="label">0 proposals this cycle</span>
+        </div>
+        <div className="app-pairing-focus empty-state" style={{ marginTop: "2rem" }}>
+          <span className="label">Pairing marketplace / Status</span>
+          <h3>Belum ada pairing yang diusulkan</h3>
+          <p>Belum ada proposal pairing yang dihasilkan untuk siklus saat ini.</p>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="app-reference-view">
+      <div className="page-head">
+        <div>
+          <h2>Pairing marketplace</h2>
+          <p>Rank alone never picks the meme. Each proposal carries its own thesis — why this stock, why this meme, why together, why now.</p>
+        </div>
+        <span className="label">{pairings.length} proposals this cycle · sorted by pairing score</span>
+      </div>
+      <div className="mkt-row">
+        {pairings.map((pairing) => (
+          <button
+            key={pairing.slug}
+            type="button"
+            className="pcard"
+            aria-pressed={pairing.slug === selected.slug}
+            onClick={() => setSelectedSlug(pairing.slug)}
+          >
+            <div className="ptop">
+              <span>{pairing.stockSymbol} Stock Token</span>
+              <span className="st">{pairing.status.replaceAll("_", " ")}</span>
+            </div>
+            <div className="pair">
+              {pairing.stockSymbol} × {pairing.symbol}
+            </div>
+            <div className="why">{pairing.thesis.core}</div>
+            <div className="sc">
+              <span>Pairing score</span>
+              <b>{pairing.pairScore}</b>
+            </div>
+          </button>
+        ))}
+      </div>
+      <Thesis pairing={selected} />
+    </section>
+  );
 }
 
 function Thesis({ pairing }: { pairing: Pairing }) {

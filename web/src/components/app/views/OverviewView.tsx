@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 
 import { formatClock, formatCountdown } from "@/lib/format";
+import { useOpportunities } from "@/lib/api/hooks";
+import { adaptOpportunity, type OpportunityApi } from "@/lib/api/adapters";
 import type { AgentEvent, AgentRuntime, MemoryRecord } from "@/types/agent";
 import type { Launch } from "@/types/launch";
 import type { Pairing } from "@/types/pairing";
@@ -15,9 +17,9 @@ interface OverviewViewProps {
   assets: Stock[];
   ranking: string[];
   pairings: Pairing[];
-  launch: Launch;
+  launch?: Launch | null;
   memory: MemoryRecord[];
-  featuredPairing: Pairing;
+  featuredPairing?: Pairing | null;
 }
 
 type DecisionFilter = "all" | "PROMOTE" | "DEMOTE";
@@ -54,9 +56,24 @@ export function OverviewView({
   // lives once below it as the canonical visual surface.
   const [overviewTab, setOverviewTab] = useState<OverviewTab>("rank");
 
+  const oppsQuery = useOpportunities();
+  const oppsMap = useMemo(() => {
+    return new Map((oppsQuery.data?.data ?? []).map((item) => [item.symbol, item]));
+  }, [oppsQuery.data?.data]);
+
+  // Merge dynamic opportunityScore & rank from useOpportunities() hook so that
+  // ranking table and chart read the EXACT same data source without drift
+  const mergedAssets = useMemo(() => {
+    return assets.map((asset) => {
+      const opp = oppsMap.get(asset.symbol);
+      if (!opp) return asset;
+      return adaptOpportunity(opp);
+    });
+  }, [assets, oppsMap]);
+
   const ordered = useMemo(
-    () => ranking.map((symbol) => assets.find((asset) => asset.symbol === symbol)).filter((asset): asset is Stock => Boolean(asset)),
-    [assets, ranking],
+    () => ranking.map((symbol) => mergedAssets.find((asset) => asset.symbol === symbol)).filter((asset): asset is Stock => Boolean(asset)),
+    [mergedAssets, ranking],
   );
 
   const rows = useMemo(() => {
@@ -74,12 +91,12 @@ export function OverviewView({
       });
   }, [decision, direction, ordered, query, sort]);
 
-  const selectedAsset = assets.find((asset) => asset.symbol === selectedSymbol) ?? ordered[0] ?? assets[0];
-  const topOpportunity = ordered.find((asset) => asset.symbol === "NVDA") ?? selectedAsset;
+  const selectedAsset = mergedAssets.find((asset) => asset.symbol === selectedSymbol) ?? ordered[0] ?? mergedAssets[0];
+  const topOpportunity = ordered[0] ?? selectedAsset;
   const activeSymbol = hoveredSymbol ?? selectedSymbol;
-  const inspectedAsset = assets.find((asset) => asset.symbol === activeSymbol) ?? selectedAsset;
+  const inspectedAsset = mergedAssets.find((asset) => asset.symbol === activeSymbol) ?? selectedAsset;
   const inspectedPairing = inspectedAsset ? pairings.find((pairing) => pairing.stockSymbol === inspectedAsset.symbol) : undefined;
-  const passedChecks = launch.policyChecks.filter((check) => check.status === "PASSED").length;
+  const passedChecks = launch?.policyChecks?.filter((check) => check.status === "PASSED").length ?? 0;
 
   if (!selectedAsset || !inspectedAsset) return null;
 
@@ -167,13 +184,25 @@ export function OverviewView({
               <div>
                 <dt>QUALIFIED PAIRING</dt>
                 <dd>
-                  <b>{featuredPairing.stockSymbol} × {featuredPairing.symbol}</b> <small className="accent">{featuredPairing.pairScore.toFixed(1)} / STRONG PAIR</small>
+                  {featuredPairing ? (
+                    <>
+                      <b>{featuredPairing.stockSymbol} × {featuredPairing.symbol}</b> <small className="accent">{featuredPairing.pairScore.toFixed(1)} / STRONG PAIR</small>
+                    </>
+                  ) : (
+                    <b>NONE</b>
+                  )}
                 </dd>
               </div>
               <div>
                 <dt>LAUNCH</dt>
                 <dd>
-                  <b>{launch.readiness}</b> <small>{launch.transactionState.replaceAll("_", " ")}</small>
+                  {launch ? (
+                    <>
+                      <b>{launch.readiness}</b> <small>{launch.transactionState.replaceAll("_", " ")}</small>
+                    </>
+                  ) : (
+                    <b>STANDBY</b>
+                  )}
                 </dd>
               </div>
               <div>
@@ -200,17 +229,35 @@ export function OverviewView({
           </div>
           <div className="summary-cell">
             <span className="label">PAIRING</span>
-            <strong className="summary-val">
-              {featuredPairing.stockSymbol} × {featuredPairing.symbol}
-            </strong>
-            <small className="summary-sub accent">
-              {featuredPairing.pairScore.toFixed(1)} / STRONG PAIR
-            </small>
+            {featuredPairing ? (
+              <>
+                <strong className="summary-val">
+                  {featuredPairing.stockSymbol} × {featuredPairing.symbol}
+                </strong>
+                <small className="summary-sub accent">
+                  {featuredPairing.pairScore.toFixed(1)} / STRONG PAIR
+                </small>
+              </>
+            ) : (
+              <>
+                <strong className="summary-val">NONE</strong>
+                <small className="summary-sub">NO ACTIVE PAIR</small>
+              </>
+            )}
           </div>
           <div className="summary-cell">
             <span className="label">LAUNCH</span>
-            <strong className="summary-val">{launch.readiness}</strong>
-            <small className="summary-sub">{launch.transactionState.replaceAll("_", " ")}</small>
+            {launch ? (
+              <>
+                <strong className="summary-val">{launch.readiness}</strong>
+                <small className="summary-sub">{launch.transactionState.replaceAll("_", " ")}</small>
+              </>
+            ) : (
+              <>
+                <strong className="summary-val">STANDBY</strong>
+                <small className="summary-sub">NO ACTIVE LAUNCH</small>
+              </>
+            )}
           </div>
         </div>
 
@@ -225,20 +272,34 @@ export function OverviewView({
             </span>
             <span className="rail-item">{agent.currentOperation}</span>
             <span className="rail-item highlight">
-              NVDA <b>#{String(topOpportunity.currentRank).padStart(2, "0")}</b>
+              {topOpportunity.symbol} <b>#{String(topOpportunity.currentRank).padStart(2, "0")}</b>
             </span>
             <span className="rail-item highlight">
               <b>{topOpportunity.jevDecision.replaceAll("_", " ")} {topOpportunity.confidence}%</b>
             </span>
-            <span className="rail-item highlight">
-              PAIR <b>{featuredPairing.stockSymbol} × {featuredPairing.symbol}</b> / STRONG PAIR
-            </span>
-            <span className="rail-item">
-              LAUNCH <b>{launch.readiness}</b>
-            </span>
-            <span className="rail-item">
-              TX <b>{launch.transactionState.replaceAll("_", " ")}</b>
-            </span>
+            {featuredPairing ? (
+              <span className="rail-item highlight">
+                PAIR <b>{featuredPairing.stockSymbol} × {featuredPairing.symbol}</b> / STRONG PAIR
+              </span>
+            ) : (
+              <span className="rail-item">
+                PAIR <b>NONE</b>
+              </span>
+            )}
+            {launch ? (
+              <>
+                <span className="rail-item">
+                  LAUNCH <b>{launch.readiness}</b>
+                </span>
+                <span className="rail-item">
+                  TX <b>{launch.transactionState.replaceAll("_", " ")}</b>
+                </span>
+              </>
+            ) : (
+              <span className="rail-item">
+                LAUNCH <b>STANDBY</b>
+              </span>
+            )}
             <span className="rail-item network">{agent.networkLabel.toUpperCase()}</span>
           </div>
         </div>
@@ -277,6 +338,7 @@ export function OverviewView({
           memory={memory}
           launch={launch}
           passedChecks={passedChecks}
+          oppsMap={oppsMap}
         />
       </section>
 
@@ -301,6 +363,7 @@ export function OverviewView({
           onReset={handleResetSymbol}
           launch={launch}
           passedChecks={passedChecks}
+          oppsMap={oppsMap}
         />
       </section>
 
@@ -327,26 +390,37 @@ export function OverviewView({
             Open pairing workspace ↗
           </Link>
         </div>
-        <div className="app-action-layout">
-          <PairingAction pairing={inspectedPairing} selectedSymbol={inspectedAsset.symbol} />
-          <aside className="app-alternatives" aria-label="Pairing alternatives">
-            <span className="label">Alternatives / fixture-backed</span>
-            {pairings
-              .filter((pairing) => pairing.slug !== inspectedPairing?.slug)
-              .slice(0, 3)
-              .map((pairing) => (
-                <Link href={`/pairing/${pairing.slug}`} key={pairing.slug}>
-                  <b>
-                    {pairing.stockSymbol} × {pairing.symbol}
-                  </b>
-                  <span>
-                    {pairing.pairScore.toFixed(1)} · {pairing.status.replaceAll("_", " ")}
-                  </span>
-                  <i>↗</i>
-                </Link>
-              ))}
-          </aside>
-        </div>
+        {pairings.length === 0 ? (
+          <div className="app-pairing-focus empty-state">
+            <span className="label">Pairing candidate / Intelligence</span>
+            <h3>Belum ada pairing yang diusulkan</h3>
+            <p>Sistem belum mengusulkan kandidat pairing token untuk peluang pasar yang sedang dipantau.</p>
+            <Link className="side-cta" href="/pairing">
+              Inspect pairing workspace →
+            </Link>
+          </div>
+        ) : (
+          <div className="app-action-layout">
+            <PairingAction pairing={inspectedPairing} selectedSymbol={inspectedAsset.symbol} />
+            <aside className="app-alternatives" aria-label="Pairing alternatives">
+              <span className="label">Alternatives / worker state</span>
+              {pairings
+                .filter((pairing) => pairing.slug !== inspectedPairing?.slug)
+                .slice(0, 3)
+                .map((pairing) => (
+                  <Link href={`/pairing/${pairing.slug}`} key={pairing.slug}>
+                    <b>
+                      {pairing.stockSymbol} × {pairing.symbol}
+                    </b>
+                    <span>
+                      {pairing.pairScore.toFixed(1)} · {pairing.status.replaceAll("_", " ")}
+                    </span>
+                    <i>↗</i>
+                  </Link>
+                ))}
+            </aside>
+          </div>
+        )}
       </section>
 
       {/* 06. LAUNCH READINESS */}
@@ -404,6 +478,7 @@ function OverviewWorkspace({
   memory,
   launch,
   passedChecks,
+  oppsMap,
 }: {
   overviewTab: OverviewTab;
   onOverviewTab: (value: OverviewTab) => void;
@@ -419,11 +494,12 @@ function OverviewWorkspace({
   hoveredSymbol: string | null;
   onHover: (symbol: string | null) => void;
   inspectedAsset: Stock;
-  inspectedPairing?: Pairing;
+  inspectedPairing?: Pairing | null;
   agent: AgentRuntime;
   memory: MemoryRecord[];
-  launch: Launch;
+  launch?: Launch | null;
   passedChecks: number;
+  oppsMap: Map<string, OpportunityApi>;
 }) {
   return (
     <div className="overview-workspace" aria-label="Current operating workspace">
@@ -483,6 +559,7 @@ function OverviewWorkspace({
         launch={launch}
         passedChecks={passedChecks}
         isHovered={Boolean(hoveredSymbol && hoveredSymbol !== selectedSymbol)}
+        oppsMap={oppsMap}
       />
     </div>
   );
@@ -656,21 +733,27 @@ function RankPanel({
    SIGNAL NORMALIZATION & OPPORTUNITY FIELD
    ========================================================================== */
 
-function getAssetCoordinates(asset: Stock): { pairability: number; narrative: number } {
-  if (asset.symbol === "NVDA") return { pairability: 97.4, narrative: 98.6 };
-  if (asset.symbol === "TSLA") return { pairability: 94.2, narrative: 95.0 };
-  if (asset.symbol === "PLTR") return { pairability: 90.8, narrative: 88.5 };
-  if (asset.symbol === "AAPL") return { pairability: 85.5, narrative: 82.5 };
-  if (asset.symbol === "GME") return { pairability: 76.5, narrative: 96.0 };
-  if (asset.symbol === "AMD") return { pairability: 81.5, narrative: 78.5 };
-  if (asset.symbol === "COIN") return { pairability: 74.0, narrative: 73.0 };
+type AssetCoordinates = { pairability: number; narrative: number };
 
-  const pairSig = asset.signals.find((s) => s.id.includes("pair") || s.id.includes("meme"));
-  const narrSig = asset.signals.find((s) => s.id.includes("narrative") || s.id.includes("social"));
-  return {
-    pairability: pairSig?.score ?? clamp(asset.opportunityScore * 0.95, 72, 98),
-    narrative: narrSig?.score ?? clamp(asset.opportunityScore * 0.98, 72, 98),
-  };
+function getAssetCoordinates(
+  asset: Stock,
+  oppsMap?: Map<string, OpportunityApi>,
+): AssetCoordinates {
+  const opp = oppsMap?.get(asset.symbol);
+
+  // 1. Sumbu X (Pairability / Opportunity Score):
+  // HARUS pake nilai opportunityScore ASLI dari data yang sama persis dipake ranking table
+  const pairability = opp?.opportunityScore ?? asset.opportunityScore;
+
+  // 2. Sumbu Y (Narrative Strength):
+  // Ambil dari field narrativeMomentum di API (score.narrativeMomentum)
+  const narrative =
+    opp?.score?.narrativeMomentum ??
+    asset.signals.find((signal) => signal.id.includes("narrative") || signal.label.toLowerCase().includes("narrative"))?.score ??
+    opp?.opportunityScore ??
+    asset.opportunityScore;
+
+  return { pairability, narrative };
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -689,18 +772,20 @@ function OpportunityField({
   onReset,
   launch,
   passedChecks,
+  oppsMap,
 }: {
   variant: "compact" | "expanded";
   assets: Stock[];
   selectedAsset: Stock;
-  selectedPairing?: Pairing;
+  selectedPairing?: Pairing | null;
   pairings?: Pairing[];
   onSelect: (symbol: string) => void;
   hoveredSymbol: string | null;
   onHover: (symbol: string | null) => void;
   onReset: () => void;
-  launch: Launch;
+  launch?: Launch | null;
   passedChecks: number;
+  oppsMap?: Map<string, OpportunityApi>;
 }) {
   const fieldRef = useRef<HTMLDivElement>(null);
   const [entered, setEntered] = useState(false);
@@ -708,14 +793,9 @@ function OpportunityField({
   // Normalization boundaries:
   // Coordinate frame is 920 x 480
   const plot = { left: 92, right: 848, top: 48, bottom: 418 };
-  const scaleX = (val: number) => plot.left + ((clamp(val, 70, 100) - 70) / 30) * (plot.right - plot.left);
-  const scaleY = (val: number) => plot.bottom - ((clamp(val, 70, 100) - 70) / 30) * (plot.bottom - plot.top);
-
-  const xTicks = [70, 75, 80, 85, 90, 95, 100];
-  const yTicks = [70, 75, 80, 85, 90, 95, 100];
 
   const signalPoints = assets.map((asset) => {
-    const coords = getAssetCoordinates(asset);
+    const coords = getAssetCoordinates(asset, oppsMap);
     return {
       asset,
       pairability: coords.pairability,
@@ -723,11 +803,33 @@ function OpportunityField({
     };
   });
 
+  const unavailableSymbols: string[] = [];
+
+  // Dynamic domain relative to real score distribution (e.g. ~75 to 100)
+  const allPairability = signalPoints.map((p) => p.pairability);
+  const allNarrative = signalPoints.map((p) => p.narrative);
+
+  const minX = Math.max(70, Math.floor((Math.min(...allPairability) - 2) / 5) * 5);
+  const maxX = 100;
+  const minY = Math.max(70, Math.floor((Math.min(...allNarrative) - 2) / 5) * 5);
+  const maxY = 100;
+
+  const scaleX = (val: number) =>
+    plot.left + ((clamp(val, minX, maxX) - minX) / (maxX - minX)) * (plot.right - plot.left);
+  const scaleY = (val: number) =>
+    plot.bottom - ((clamp(val, minY, maxY) - minY) / (maxY - minY)) * (plot.bottom - plot.top);
+
+  const xTicks: number[] = [];
+  for (let t = minX; t <= maxX; t += 5) xTicks.push(t);
+
+  const yTicks: number[] = [];
+  for (let t = minY; t <= maxY; t += 5) yTicks.push(t);
+
   const positions = signalPoints.map(({ asset, narrative, pairability }) => {
     const x = scaleX(pairability);
     const y = scaleY(narrative);
 
-    // Historic trajectory projection derived deterministically from fixture
+    // Historic trajectory projection derived deterministically
     const historyLength = Math.max(asset.rankHistory.length, asset.scoreHistory.length, 2);
     const anchors = Array.from({ length: historyLength }, (_, index) => {
       const histScore = asset.scoreHistory[Math.min(index, asset.scoreHistory.length - 1)]?.score ?? asset.previousScore;
@@ -739,27 +841,15 @@ function OpportunityField({
     });
     anchors[anchors.length - 1] = { x, y };
 
-    // Deterministic immediate previous state:
-    // NVDA previous was rank #04, score 93.7 -> coords (93.2, 91.0)
-    const prevCoords =
-      asset.symbol === "NVDA"
-        ? { pairability: 93.2, narrative: 91.0 }
-        : asset.symbol === "TSLA"
-        ? { pairability: 91.5, narrative: 92.2 }
-        : asset.symbol === "PLTR"
-        ? { pairability: 92.4, narrative: 91.8 }
-        : asset.symbol === "GME"
-        ? { pairability: 73.0, narrative: 88.0 }
-        : {
-            pairability: clamp(pairability - (asset.opportunityScore - asset.previousScore) * 0.6, 71, 99),
-            narrative: clamp(narrative - (asset.opportunityScore - asset.previousScore) * 0.7, 71, 99),
-          };
+    const prevScore = asset.previousScore > 0 ? asset.previousScore : pairability;
+    const scoreDelta = pairability - prevScore;
+    const prevCoords = {
+      pairability: prevScore,
+      narrative: clamp(narrative - scoreDelta * 0.4, minY, maxY),
+    };
 
     const prevX = scaleX(prevCoords.pairability);
     const prevY = scaleY(prevCoords.narrative);
-
-    const normScore = clamp((asset.opportunityScore - 70) / 30, 0, 1);
-    const radius = 6 + normScore * 6.5;
 
     return {
       asset,
@@ -771,14 +861,14 @@ function OpportunityField({
       previousY: prevY,
       prevCoords,
       trail: anchors.map((anchor) => `${anchor.x.toFixed(1)},${anchor.y.toFixed(1)}`).join(" "),
-      radius,
+      previousScore: prevScore,
     };
   });
 
   const activeSymbol = hoveredSymbol ?? selectedAsset.symbol;
   const inspectedAsset = assets.find((asset) => asset.symbol === activeSymbol) ?? selectedAsset;
   const inspectedPairing = pairings?.find((pairing) => pairing.stockSymbol === inspectedAsset.symbol) ?? selectedPairing;
-  const activePosition = positions.find((p) => p.asset.symbol === activeSymbol) ?? positions[0];
+  const activePosition = positions.find((p) => p.asset.symbol === activeSymbol);
 
   const selectFieldAsset = (symbol: string) => {
     onHover(null);
@@ -838,9 +928,17 @@ function OpportunityField({
           <div className="field-canvas-meta">
             <span className="label">JEV OPPORTUNITY FIELD · CYCLE {assets[0]?.lastEvaluatedAt ? "ACTIVE" : ""}</span>
             <span className="label">HOVER TO PREVIEW · CLICK TO LOCK · ESC RESETS</span>
+            {unavailableSymbols.length > 0 ? (
+              <span className="label" role="status">UNAVAILABLE AXIS DATA · {unavailableSymbols.join(", ")}</span>
+            ) : null}
           </div>
 
-          <svg viewBox="0 0 920 480" role="group" aria-label="JEV Opportunity Field mapping pairability and narrative strength">
+          <svg
+            viewBox="0 0 920 480"
+            preserveAspectRatio="none"
+            role="group"
+            aria-label="JEV Opportunity Field mapping pairability and narrative strength"
+          >
             {/* SVG Definitions */}
             <defs>
               <marker
@@ -855,23 +953,11 @@ function OpportunityField({
                 <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="var(--accent)" />
               </marker>
 
-              {/* Gradient for quadrant 1 */}
-              <radialGradient id="q1-glow" cx="80%" cy="20%" r="70%">
-                <stop offset="0%" stopColor="rgb(2 198 165 / 12%)" />
-                <stop offset="100%" stopColor="rgb(2 198 165 / 0%)" />
-              </radialGradient>
             </defs>
 
             {/* Quadrant Background Zones */}
             <g className="field-quadrants" aria-hidden="true">
               {/* Q1: High Pairability & High Narrative (Top Right) */}
-              <rect
-                x={scaleX(85)}
-                y={plot.top}
-                width={plot.right - scaleX(85)}
-                height={scaleY(85) - plot.top}
-                fill="url(#q1-glow)"
-              />
               <rect
                 x={scaleX(85)}
                 y={plot.top}
@@ -918,17 +1004,17 @@ function OpportunityField({
 
             {/* Quadrant Classification Labels */}
             <g className="field-context" aria-hidden="true">
-              <text x={plot.left + 14} y={plot.top + 22} className="field-quadrant-badge">
-                [ Q2 ] HIGH NARRATIVE / VOLATILITY
+              <text x={plot.left + 14} y={plot.top + 40} className="field-quadrant-badge">
+                HIGH NARRATIVE
               </text>
-              <text x={plot.right - 14} y={plot.top + 22} textAnchor="end" className="field-quadrant-badge text-accent">
-                [ Q1 ] HIGH PAIRABILITY / EXPEDITE ↗
+              <text x={plot.right - 14} y={plot.top + 40} textAnchor="end" className="field-quadrant-badge">
+                HIGH PAIRABILITY
               </text>
               <text x={plot.left + 14} y={plot.bottom - 12} className="field-quadrant-badge">
-                [ Q3 ] LOW CONVICTION / MONITOR
+                LOW CONVICTION
               </text>
               <text x={plot.right - 14} y={plot.bottom - 12} textAnchor="end" className="field-quadrant-badge">
-                [ Q4 ] EMERGING PAIRABILITY
+                EMERGING
               </text>
             </g>
 
@@ -996,18 +1082,12 @@ function OpportunityField({
                 );
               })}
 
-              {/* Axis Headings */}
-              <text x={plot.left + (plot.right - plot.left) / 2} y={plot.bottom + 38} textAnchor="middle" className="field-axis-title">
-                PAIRABILITY SCORE (0–100) ──────►
+              {/* Horizontal axis headings keep the coordinate system legible. */}
+              <text x={plot.left + 14} y={plot.top + 17} className="field-axis-title">
+                NARRATIVE STRENGTH ↑
               </text>
-              <text
-                x={-(plot.top + (plot.bottom - plot.top) / 2)}
-                y={plot.left - 48}
-                transform="rotate(-90)"
-                textAnchor="middle"
-                className="field-axis-title"
-              >
-                ▲ NARRATIVE STRENGTH (0–100)
+              <text x={plot.left + 14} y={plot.bottom + 38} textAnchor="start" className="field-axis-title">
+                PAIRABILITY SCORE →
               </text>
             </g>
 
@@ -1024,10 +1104,10 @@ function OpportunityField({
             {/* JEV Qualification Threshold Boundary Curve (≥ 90) */}
             <g className="field-boundary" aria-hidden="true">
               <path
-                d={`M ${scaleX(74)} ${scaleY(100)} Q ${scaleX(87)} ${scaleY(91)} ${scaleX(100)} ${scaleY(79)}`}
+                d={`M ${scaleX(80)} ${scaleY(100)} Q ${scaleX(90)} ${scaleY(90)} ${scaleX(100)} ${scaleY(80)}`}
                 className="gate-boundary-curve"
               />
-              <text x={scaleX(87) - 10} y={scaleY(91) - 10} className="gate-boundary-label">
+              <text x={scaleX(90) - 10} y={scaleY(90) - 10} className="gate-boundary-label">
                 JEV QUALIFICATION FRONTIER (SCORE ≥ 90.0) ↗
               </text>
             </g>
@@ -1120,7 +1200,7 @@ function OpportunityField({
                 <g
                   // Keep the JEV gate in the quiet upper-left of the field so it
                   // identifies the system without colliding with asset labels.
-                  transform={`translate(${plot.left + 18}, ${plot.top + 38})`}
+                  transform={`translate(${plot.left + 18}, ${plot.top + 62})`}
                   className="field-jev-decision-marker"
                   aria-hidden="true"
                 >
@@ -1150,7 +1230,7 @@ function OpportunityField({
               const isSelected = selectedAsset.symbol === position.asset.symbol;
               const isActive = activeSymbol === position.asset.symbol;
               const labelOnLeft = position.x > plot.right - 130;
-              const labelBelow = position.asset.symbol === "NVDA" || position.y < plot.top + 64;
+              const labelBelow = position.y < plot.top + 64;
               const labelX = position.x + (labelOnLeft ? -16 : 16);
               const labelY = position.y + (labelBelow ? 22 : -3);
 
@@ -1261,12 +1341,6 @@ function OpportunityField({
 
             <div className="sparkline-svg-wrap">
               <svg viewBox="0 0 840 68" preserveAspectRatio="none" className="sparkline-svg">
-                <defs>
-                  <linearGradient id="spark-grad-fill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.22" />
-                    <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.0" />
-                  </linearGradient>
-                </defs>
                 {/* Sparkline horizontal guide lines */}
                 <line x1="0" y1="14" x2="840" y2="14" stroke="rgba(255, 255, 255, 0.05)" strokeDasharray="3 3" />
                 <line x1="0" y1="36" x2="840" y2="36" stroke="rgba(255, 255, 255, 0.05)" strokeDasharray="3 3" />
@@ -1281,11 +1355,8 @@ function OpportunityField({
                     return { x, y, score: h.score };
                   });
                   const pathD = pts.reduce((acc, p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `${acc} L ${p.x} ${p.y}`), "");
-                  const areaD = `${pathD} L ${pts[pts.length - 1]?.x ?? 820} 58 L ${pts[0]?.x ?? 20} 58 Z`;
-
                   return (
                     <g>
-                      <path d={areaD} fill="url(#spark-grad-fill)" />
                       <path d={pathD} fill="none" stroke="var(--accent)" strokeWidth="1.8" />
                       {pts.map((p, idx) => (
                         <g key={idx}>
@@ -1311,12 +1382,13 @@ function OpportunityField({
             launch={launch}
             passedChecks={passedChecks}
             isHovered={Boolean(hoveredSymbol && hoveredSymbol !== selectedAsset.symbol)}
+            oppsMap={oppsMap}
           />
         ) : null}
       </div>
 
       <div className="map-foot label">
-        Anchors derive deterministically from fixture rankHistory and scoreHistory. Axis values are normalized canonical signals; no market-price series is implied.
+        Anchors derive deterministically from worker rank and score history. Axis values are normalized persisted dimensions; no market-price series is implied.
       </div>
     </div>
   );
@@ -1332,17 +1404,20 @@ function DecisionInspector({
   launch,
   passedChecks,
   isHovered,
+  oppsMap,
 }: {
   asset: Stock;
-  pairing?: Pairing;
-  launch: Launch;
+  pairing?: Pairing | null;
+  launch?: Launch | null;
   passedChecks: number;
   isHovered?: boolean;
+  oppsMap?: Map<string, OpportunityApi>;
 }) {
-  const coords = getAssetCoordinates(asset);
+  const coords = getAssetCoordinates(asset, oppsMap);
   const narrative = coords.narrative;
   const pairability = coords.pairability;
-  const launchApplies = pairing?.slug === launch.selectedPairingSlug;
+  const formatCoordinate = (value: number | null) => (value === null ? "—" : value.toFixed(1));
+  const launchApplies = launch && pairing ? pairing.slug === launch.selectedPairingSlug : false;
 
   return (
     <aside className="decision-inspector" aria-live="polite">
@@ -1406,11 +1481,11 @@ function DecisionInspector({
       <div className="decision-signals-grid">
         <div className="sig-item">
           <span className="label">NARRATIVE</span>
-          <strong className="sig-val">{narrative.toFixed(0)}</strong>
+            <strong className="sig-val">{formatCoordinate(narrative)}</strong>
         </div>
         <div className="sig-item">
           <span className="label">PAIRABILITY</span>
-          <strong className="sig-val">{pairability.toFixed(0)}</strong>
+            <strong className="sig-val">{formatCoordinate(pairability)}</strong>
         </div>
       </div>
 
@@ -1447,7 +1522,7 @@ function DecisionInspector({
           <Link href={`/pairing/${pairing.slug}`} className="inspector-cta-secondary">
             INSPECT PAIRING ↗
           </Link>
-        ) : launchApplies ? (
+        ) : launchApplies && launch ? (
           <Link href="/launch" className="inspector-cta-secondary">
             INSPECT LAUNCH ({passedChecks}/{launch.policyChecks.length}) ↗
           </Link>
@@ -1520,7 +1595,7 @@ function PairingAction({ pairing, selectedSymbol }: { pairing?: Pairing; selecte
       <div className="app-pairing-focus empty-state">
         <span className="label">Pairing candidate / {selectedSymbol}</span>
         <h3>NO CANONICAL PAIRING</h3>
-        <p>There is no pairing record for {selectedSymbol} in the Phase 0 fixture.</p>
+        <p>There is no qualified pairing record for {selectedSymbol} in the current worker state.</p>
         <Link className="side-cta" href="/pairing">
           Inspect pairing workspace →
         </Link>
@@ -1558,18 +1633,34 @@ function LaunchSummary({
   pairing,
   passedChecks,
 }: {
-  launch: Launch;
-  pairing: Pairing;
+  launch?: Launch | null;
+  pairing?: Pairing | null;
   passedChecks: number;
 }) {
+  if (!launch) {
+    return (
+      <div className="app-launch-layout empty-state">
+        <div className="app-launch-readout">
+          <span className="label">Autonomous launch / Phase 0</span>
+          <div className="clock-big">STANDBY</div>
+          <h3>Belum ada launch aktif</h3>
+          <p>Countdown dan checkpoint launch akan aktif setelah kandidat pairing disetujui dan dijadwalkan oleh operator.</p>
+          <Link className="side-cta" href="/launch">
+            Open launch workspace →
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="app-launch-layout">
       <div className="app-launch-readout">
         <span className="label">
-          Next agent launch / {pairing.stockSymbol} × {pairing.symbol}
+          Next agent launch / {pairing ? `${pairing.stockSymbol} × ${pairing.symbol}` : "STANDBY"}
         </span>
         <div className="clock-big">T-{formatCountdown(launch.countdownSeconds)}</div>
-        <span className="label">{launch.cycleId} / Phase 0 / simulated</span>
+        <span className="label">{launch.cycleId} / Phase 0 / worker state</span>
         <ul className="lcycle">
           {launch.stages.map((stage) => (
             <li
@@ -1591,7 +1682,7 @@ function LaunchSummary({
           <div className="fact">
             <span className="label">Opportunity / pairing</span>
             <span className="v">
-              96.8 / {pairing.pairScore.toFixed(1)}
+              {pairing ? `${pairing.stockSymbol} / ${pairing.pairScore.toFixed(1)}` : "STANDBY"}
             </span>
           </div>
           <div className="fact">

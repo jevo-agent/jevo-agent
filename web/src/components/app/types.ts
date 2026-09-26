@@ -1,4 +1,4 @@
-import type { AgentRuntime, MemoryRecord } from "@/types/agent";
+import type { AgentCycle, AgentRuntime, MemoryComparison, MemoryRecord, ProviderReference } from "@/types/agent";
 import type { Launch } from "@/types/launch";
 import type { Pairing } from "@/types/pairing";
 import type { Stock } from "@/types/stock";
@@ -8,8 +8,11 @@ export interface AppData {
   assets: Stock[];
   ranking: string[];
   pairings: Pairing[];
-  launch: Launch;
+  launch: Launch | null;
   memory: MemoryRecord[];
   featuredAsset: Stock;
-  featuredPairing: Pairing;
+  featuredPairing: Pairing | null;
+  agentCycles: AgentCycle[];
+  memoryComparison: MemoryComparison;
+  providers: ProviderReference[];
 }

@@ -33,6 +33,12 @@ export const agentRoutes: FastifyPluginAsync = async (fastify) => {
       .from(agentCycles)
       .where(eq(agentCycles.status, "COMPLETED"));
 
+    if (!latestCycle) {
+      return reply.status(409).send({
+        message: "No canonical agent cycle is available yet",
+      });
+    }
+
     const cycleNumber = Math.max(1, completedCycles.length);
 
     // 4. Count decisions and qualified candidates in latest cycle
@@ -83,17 +89,7 @@ export const agentRoutes: FastifyPluginAsync = async (fastify) => {
       };
     });
 
-    if (latestEvents.length === 0) {
-      latestEvents.push({
-        id: "evt-init-runtime",
-        timestamp: new Date().toISOString(),
-        type: "OBSERVE",
-        subject: "SYSTEM",
-        summary: "SYSTEM_INITIALIZED",
-      });
-    }
-
-    const lastScanTime = latestCycle?.completedAt ?? latestCycle?.startedAt ?? new Date();
+    const lastScanTime = latestCycle.completedAt ?? latestCycle.startedAt;
     const lastDecisionAgeSeconds = Math.max(
       0,
       Math.floor((Date.now() - lastScanTime.getTime()) / 1000),
@@ -113,16 +109,18 @@ export const agentRoutes: FastifyPluginAsync = async (fastify) => {
       scanProgress: latestCycle?.status === "RUNNING" ? 50 : 100,
       assetsScanned: latestCycle?.assetsScanned ?? activeAssets.length,
       assetsInUniverse: Math.max(1, activeAssets.length),
-      signalsProcessed: latestCycle?.signalsProcessed ?? 29,
-      narrativesDetected: 14,
-      materiallyChangedNarratives: 4,
+      signalsProcessed: latestCycle?.signalsProcessed ?? 0,
+      narrativesDetected: 0,
+      materiallyChangedNarratives: 0,
       decisionsProcessed: decisionsCount,
       qualifiedCandidates: proposedPairings.length,
       highConvictionCandidates: highConvictionCount,
       dataFreshness: "REALTIME_STREAM",
       lastScanAt: lastScanTime.toISOString(),
       lastDecisionAgeSeconds,
-      nextCycleInSeconds: 300,
+      // The scheduler does not currently expose a deterministic next-run
+      // deadline; zero means unavailable rather than a fabricated countdown.
+      nextCycleInSeconds: 0,
       networkLabel: "Robinhood Chain Testnet",
       latestEvents,
     };

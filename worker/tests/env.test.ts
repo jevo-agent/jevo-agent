@@ -31,13 +31,13 @@ describe("Environment Validation & Mock Guard", () => {
     expect(() => validateEnv(invalidEnv)).toThrow("REDIS_URL is required");
   });
 
-  it("throws error when JEV_MODE=real but JEV_API_KEY is missing", () => {
+  it("throws error when JEV_MODE=real but AI_GATEWAY_API_KEY is missing", () => {
     const invalidEnv = {
       ...BASE_VALID_ENV,
       JEV_MODE: "real",
-      JEV_API_KEY: "",
+      AI_GATEWAY_API_KEY: "",
     };
-    expect(() => validateEnv(invalidEnv)).toThrow("JEV_API_KEY must be provided when JEV_MODE=real");
+    expect(() => validateEnv(invalidEnv)).toThrow("AI_GATEWAY_API_KEY must be provided when JEV_MODE=real");
   });
 
   it("throws error when NODE_ENV=production and PROVIDER_MODE=mock (Section 19 Guard)", () => {
@@ -46,7 +46,7 @@ describe("Environment Validation & Mock Guard", () => {
       NODE_ENV: "production",
       PROVIDER_MODE: "mock",
       JEV_MODE: "real",
-      JEV_API_KEY: "secret-key",
+      AI_GATEWAY_API_KEY: "gateway-key",
     };
     expect(() => validateEnv(invalidEnv)).toThrow(
       "Refusing to start: mock mode is not allowed when NODE_ENV=production",
@@ -71,7 +71,7 @@ describe("Environment Validation & Mock Guard", () => {
       NODE_ENV: "production",
       PROVIDER_MODE: "real",
       JEV_MODE: "real",
-      JEV_API_KEY: "valid-production-key",
+      AI_GATEWAY_API_KEY: "valid-production-key",
     };
     const config = validateEnv(validProdEnv);
     expect(config.NODE_ENV).toBe("production");

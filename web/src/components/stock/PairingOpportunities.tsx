@@ -9,7 +9,7 @@ export function PairingOpportunities({ asset, pairing }: PairingOpportunitiesPro
   if (!pairing) return null;
 
   const opportunities = [
-    { label: `${asset.symbol} × ${pairing.symbol}`, score: pairing.pairScore, description: "AI infrastructure × GPU culture × developer relevance.", href: `/pairing/${pairing.slug}` },
+    { label: `${asset.symbol} × ${pairing.symbol}`, score: pairing.pairScore, description: pairing.thesis.core, href: `/pairing/${pairing.slug}` },
     ...pairing.alternatives.map((alternative) => ({ label: `${asset.symbol} × ${alternative.symbol}`, score: alternative.pairScore, description: alternative.rationale, href: "/pairing" })),
   ];
 

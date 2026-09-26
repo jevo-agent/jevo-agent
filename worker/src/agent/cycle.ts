@@ -19,7 +19,7 @@ import {
   protocolEvents,
   signalObservations,
 } from "../db/schema";
-import { createDecisionEngine, type DecisionEngine } from "../jev";
+import { createDecisionEngine, RealJevProviderError, type DecisionEngine } from "../jev";
 import { logger } from "../observability/logger";
 import { runPairingCycle } from "../pairing";
 import { createProvidersRegistry, type ProvidersRegistry } from "../providers";
@@ -235,10 +235,13 @@ export async function executeAgentCycle(
     }
 
     // Initialize dependencies
+    // Resolve the configured runtime modes when the scheduler invokes a cycle.
+    // Callers may still inject providers/engines in tests, but the production
+    // worker must not silently force the mock implementations.
     const providers =
-      options.providersRegistry ?? createProvidersRegistry("mock");
+      options.providersRegistry ?? createProvidersRegistry();
     const decisionEngine =
-      options.decisionEngine ?? createDecisionEngine("mock");
+      options.decisionEngine ?? createDecisionEngine();
 
     // Step 5: Diff against previous cycle's opportunity_scores per symbol
     let priorCycleId = options.previousCycleId;
@@ -321,6 +324,7 @@ export async function executeAgentCycle(
     const decisionsMap = new Map<string, JevDecisionAction>();
 
     for (const asset of activeAssets) {
+      const prior = priorScoresMap.get(asset.symbol);
       try {
         // Collect Market Snapshot
         const marketSnapshot = await providers.marketData.getSnapshot(
@@ -426,20 +430,19 @@ export async function executeAgentCycle(
         await publishProtocolEvent(analyzedEvt);
 
         // Step 6: Detect meaningful deltas (Skip gate to control LLM cost / rate limits)
-        const prior = priorScoresMap.get(asset.symbol);
         const hasPrior = prior !== undefined;
         // Check delta against prior cycle; threshold is strict (skip if literally identical or difference <= 0.001)
         const deltaMarket = hasPrior ? Math.abs(marketMomentum - prior.marketMomentum) : 100;
         const deltaSocial = hasPrior ? Math.abs(socialVelocity - prior.socialVelocity) : 100;
         const hasMeaningfulDelta = !hasPrior || deltaMarket > 0.001 || deltaSocial > 0.001;
 
-        let jevScores = {
-          narrativeMomentum: 75,
-          culturalRelevance: 75,
-          memeCompatibility: 75,
-          cryptoAdjacency: 75,
-          pairCompatibility: 75,
-        };
+        let jevScores: {
+          narrativeMomentum: number;
+          culturalRelevance: number;
+          memeCompatibility: number;
+          cryptoAdjacency: number;
+          pairCompatibility: number;
+        } | null = null;
 
         if (hasMeaningfulDelta) {
           // Step 7: Request Jev evaluation ONLY for symbols with meaningful changes
@@ -455,12 +458,26 @@ export async function executeAgentCycle(
               socialVelocity,
             });
 
+          const requiredDimensions = [
+            "narrativeMomentum",
+            "culturalRelevance",
+            "memeCompatibility",
+            "cryptoAdjacency",
+            "pairCompatibility",
+          ] as const;
+          if (requiredDimensions.some((dimension) => typeof rawQualitative[dimension] !== "number")) {
+            throw new RealJevProviderError(
+              "INVALID_RESPONSE",
+              "Jev response omitted a required opportunity score dimension",
+              false,
+            );
+          }
           jevScores = {
-            narrativeMomentum: rawQualitative.narrativeMomentum ?? 75,
-            culturalRelevance: rawQualitative.culturalRelevance ?? 75,
-            memeCompatibility: rawQualitative.memeCompatibility ?? 75,
-            cryptoAdjacency: rawQualitative.cryptoAdjacency ?? 75,
-            pairCompatibility: rawQualitative.pairCompatibility ?? 75,
+            narrativeMomentum: rawQualitative.narrativeMomentum,
+            culturalRelevance: rawQualitative.culturalRelevance,
+            memeCompatibility: rawQualitative.memeCompatibility,
+            cryptoAdjacency: rawQualitative.cryptoAdjacency,
+            pairCompatibility: rawQualitative.pairCompatibility,
           };
 
           // Publish JEV_DECISION_COMPLETED (Section 12 Event)
@@ -517,13 +534,22 @@ export async function executeAgentCycle(
           );
 
           if (prior) {
-            jevScores = {
-              narrativeMomentum: prior.narrativeMomentum ?? 75,
-              culturalRelevance: prior.culturalRelevance ?? 75,
-              memeCompatibility: prior.memeCompatibility ?? 75,
-              cryptoAdjacency: prior.cryptoAdjacency ?? 75,
-              pairCompatibility: prior.pairCompatibility ?? 75,
-            };
+            const requiredPriorDimensions = [
+              prior.narrativeMomentum,
+              prior.culturalRelevance,
+              prior.memeCompatibility,
+              prior.cryptoAdjacency,
+              prior.pairCompatibility,
+            ];
+            if (requiredPriorDimensions.every((value) => typeof value === "number")) {
+              jevScores = {
+                narrativeMomentum: prior.narrativeMomentum as number,
+                culturalRelevance: prior.culturalRelevance as number,
+                memeCompatibility: prior.memeCompatibility as number,
+                cryptoAdjacency: prior.cryptoAdjacency as number,
+                pairCompatibility: prior.pairCompatibility as number,
+              };
+            }
           }
 
           const priorDec = priorDecisionsMap.get(asset.symbol);
@@ -551,6 +577,14 @@ export async function executeAgentCycle(
           }
         }
 
+        if (!jevScores) {
+          throw new RealJevProviderError(
+            "INVALID_RESPONSE",
+            "No canonical Jev score dimensions are available for ranking",
+            false,
+          );
+        }
+
         assetsToRank.push({
           symbol: asset.symbol,
           components: {
@@ -560,9 +594,67 @@ export async function executeAgentCycle(
           },
         });
       } catch (err) {
+        if (err instanceof RealJevProviderError) {
+          // A choice may have been persisted before a later score question
+          // failed. Remove that incomplete cycle-local record so the previous
+          // canonical decision remains the only authoritative state.
+          await db
+            .delete(jevDecisions)
+            .where(and(eq(jevDecisions.cycleId, cycleId), eq(jevDecisions.symbol, asset.symbol)));
+          const providerFailureEvt = {
+            eventId: `evt-jev-provider-failed-${cycleId}-${asset.symbol}-${randomUUID().slice(0, 8)}`,
+            eventType: "JEV_PROVIDER_FAILED",
+            cycleId,
+            subjectType: "asset",
+            subjectId: asset.symbol,
+            payload: {
+              symbol: asset.symbol,
+              code: err.code,
+              retryable: err.retryable,
+              ...(err.status === undefined ? {} : { status: err.status }),
+            },
+            schemaVersion: 1,
+            actor: "JEVO_AGENT" as const,
+            createdAt: new Date().toISOString(),
+          };
+          await db.insert(protocolEvents).values({
+            ...providerFailureEvt,
+            createdAt: new Date(providerFailureEvt.createdAt),
+          });
+          await publishProtocolEvent(providerFailureEvt);
+          cycleLogger.warn(
+            { symbol: asset.symbol, code: err.code, retryable: err.retryable, status: err.status },
+            "Jev provider failed; preserving prior canonical state when available",
+          );
+          const priorDimensions = prior
+            ? [
+                prior.narrativeMomentum,
+                prior.culturalRelevance,
+                prior.memeCompatibility,
+                prior.cryptoAdjacency,
+                prior.pairCompatibility,
+              ]
+            : [];
+          const priorDecision = priorDecisionsMap.get(asset.symbol);
+          if (prior && priorDimensions.every((value) => typeof value === "number") && priorDecision) {
+            assetsToRank.push({
+              symbol: asset.symbol,
+              components: {
+                marketMomentum: prior.marketMomentum,
+                socialVelocity: prior.socialVelocity,
+                narrativeMomentum: prior.narrativeMomentum as number,
+                culturalRelevance: prior.culturalRelevance as number,
+                memeCompatibility: prior.memeCompatibility as number,
+                cryptoAdjacency: prior.cryptoAdjacency as number,
+                pairCompatibility: prior.pairCompatibility as number,
+              },
+            });
+            decisionsMap.set(asset.symbol, priorDecision.decision);
+          }
+        }
         // Section 16: Partial provider failure is skipped and logged, cycle continues
         cycleLogger.error(
-          { symbol: asset.symbol, err },
+          { symbol: asset.symbol, code: err instanceof RealJevProviderError ? err.code : undefined },
           "Partial provider failure for asset. Skipping symbol this cycle.",
         );
       }

@@ -66,6 +66,15 @@ export const stocksRoutes: FastifyPluginAsync = async (fastify) => {
       .orderBy(desc(opportunityScores.cycleId))
       .limit(1);
 
+    // An asset can exist before the worker has published a ranking state. Do
+    // not manufacture a score/rank/decision for that case; the frontend must
+    // surface the unavailable canonical state instead.
+    if (!latestRankRow || !latestScoreRow) {
+      return reply.status(409).send({
+        message: `No canonical opportunity state is available for ${symbol}`,
+      });
+    }
+
     // 4. Query latest decision
     const [latestDecisionRow] = await db
       .select()
@@ -99,7 +108,9 @@ export const stocksRoutes: FastifyPluginAsync = async (fastify) => {
       .orderBy(desc(opportunityScores.cycleId))
       .limit(30);
 
-    const scoreHistoryList: OpportunityScoreDetail[] = scoreRows.map((s) => ({
+    const rankTimeByCycle = new Map(rankRows.map((row) => [row.cycleId, row.recordedAt.toISOString()]));
+
+    const scoreHistoryList = scoreRows.map((s) => ({
       symbol: s.symbol,
       cycleId: s.cycleId,
       marketMomentum: s.marketMomentum,
@@ -110,6 +121,7 @@ export const stocksRoutes: FastifyPluginAsync = async (fastify) => {
       cryptoAdjacency: s.cryptoAdjacency,
       pairCompatibility: s.pairCompatibility,
       score: s.score,
+      ...(rankTimeByCycle.has(s.cycleId) ? { recordedAt: rankTimeByCycle.get(s.cycleId) } : {}),
     }));
 
     // 7. Query recent memory events (up to 10 points)
@@ -154,33 +166,20 @@ export const stocksRoutes: FastifyPluginAsync = async (fastify) => {
     const responseData = {
       asset,
       current: {
-        rank: latestRankRow?.currentRank ?? 1,
-        previousRank: latestRankRow?.previousRank ?? null,
-        score: latestScoreRow
-          ? {
-              symbol: latestScoreRow.symbol,
-              cycleId: latestScoreRow.cycleId,
-              marketMomentum: latestScoreRow.marketMomentum,
-              narrativeMomentum: latestScoreRow.narrativeMomentum,
-              socialVelocity: latestScoreRow.socialVelocity,
-              culturalRelevance: latestScoreRow.culturalRelevance,
-              memeCompatibility: latestScoreRow.memeCompatibility,
-              cryptoAdjacency: latestScoreRow.cryptoAdjacency,
-              pairCompatibility: latestScoreRow.pairCompatibility,
-              score: latestScoreRow.score,
-            }
-          : {
-              symbol,
-              cycleId: "cycle-init",
-              marketMomentum: 75,
-              narrativeMomentum: 75,
-              socialVelocity: 75,
-              culturalRelevance: 75,
-              memeCompatibility: 75,
-              cryptoAdjacency: 75,
-              pairCompatibility: 75,
-              score: 75,
-            },
+        rank: latestRankRow.currentRank,
+        previousRank: latestRankRow.previousRank,
+        score: {
+          symbol: latestScoreRow.symbol,
+          cycleId: latestScoreRow.cycleId,
+          marketMomentum: latestScoreRow.marketMomentum,
+          narrativeMomentum: latestScoreRow.narrativeMomentum,
+          socialVelocity: latestScoreRow.socialVelocity,
+          culturalRelevance: latestScoreRow.culturalRelevance,
+          memeCompatibility: latestScoreRow.memeCompatibility,
+          cryptoAdjacency: latestScoreRow.cryptoAdjacency,
+          pairCompatibility: latestScoreRow.pairCompatibility,
+          score: latestScoreRow.score,
+        },
         decision: latestDecisionRow
           ? {
               id: latestDecisionRow.id,
@@ -192,16 +191,7 @@ export const stocksRoutes: FastifyPluginAsync = async (fastify) => {
               modelVersion: latestDecisionRow.modelVersion,
               createdAt: latestDecisionRow.createdAt.toISOString(),
             }
-          : {
-              id: `jd-default-${symbol.toLowerCase()}`,
-              cycleId: "cycle-init",
-              symbol,
-              decision: "HOLD" as const,
-              confidence: 80,
-              signals: [],
-              modelVersion: "jev-2026-08",
-              createdAt: new Date().toISOString(),
-            },
+          : null,
       },
       rankHistory: rankHistoryList,
       scoreHistory: scoreHistoryList,

@@ -2,76 +2,19 @@
 
 import { AppShell } from "@/components/app/AppShell";
 import { MemoryView } from "@/components/app/views/MemoryView";
+import { QueryEmptyState } from "@/components/ui/QueryEmptyState";
 import { QueryErrorState } from "@/components/ui/QueryErrorState";
-import { mockAgentState } from "@/data/mock-agent-state";
-import { useAgentStatus, useOpportunities, usePairings, useLaunches, useMemory, useCycles } from "@/lib/api/hooks";
+import { QueryLoadingState } from "@/components/ui/QueryLoadingState";
+import { useProtocolState } from "@/lib/api/hooks";
 
 export default function AgentMemoryPage() {
-  const agentQuery = useAgentStatus();
-  const oppsQuery = useOpportunities();
-  const pairingsQuery = usePairings();
-  const launchesQuery = useLaunches();
-  const memoryQuery = useMemory();
-  const cyclesQuery = useCycles();
-
-  const isError =
-    agentQuery.isError ||
-    oppsQuery.isError ||
-    pairingsQuery.isError ||
-    launchesQuery.isError ||
-    memoryQuery.isError ||
-    cyclesQuery.isError;
-
-  const error =
-    memoryQuery.error ||
-    cyclesQuery.error ||
-    agentQuery.error ||
-    oppsQuery.error ||
-    pairingsQuery.error ||
-    launchesQuery.error;
-
-  const handleRefetch = () => {
-    void agentQuery.refetch();
-    void oppsQuery.refetch();
-    void pairingsQuery.refetch();
-    void launchesQuery.refetch();
-    void memoryQuery.refetch();
-    void cyclesQuery.refetch();
-  };
-
-  if (isError) {
-    return (
-      <QueryErrorState
-        title="Failed to Load Memory"
-        error={error}
-        onRetry={handleRefetch}
-      />
-    );
-  }
-
-  const { agent, agentCycles, assets, ranking, pairings, launch, memory, memoryComparison } = mockAgentState;
-  const featuredAsset = assets.find((asset) => asset.symbol === "NVDA");
-  const featuredPairing = pairings.find((pairing) => pairing.slug === launch.selectedPairingSlug);
-  if (!featuredAsset || !featuredPairing) throw new Error("The Memory view requires the shared NVDA opportunity and launch pairing.");
-
+  const state = useProtocolState();
+  if (state.isLoading) return <QueryLoadingState title="Loading agent memory" />;
+  if (state.isError) return <QueryErrorState title="Failed to Load Memory" error={state.error} onRetry={() => void state.refetch()} />;
+  if (!state.data) return <QueryEmptyState title="No canonical memory state" message="The worker has not published enough cycle and memory state for this view." />;
   return (
-    <AppShell
-      agent={agent}
-      assets={assets}
-      ranking={ranking}
-      pairings={pairings}
-      launch={launch}
-      memory={memory}
-      featuredAsset={featuredAsset}
-      featuredPairing={featuredPairing}
-    >
-      <MemoryView
-        asset={featuredAsset}
-        agent={agent}
-        cycles={agentCycles}
-        memory={memory}
-        comparison={memoryComparison}
-      />
+    <AppShell {...state.data}>
+      <MemoryView asset={state.data.featuredAsset} agent={state.data.agent} cycles={state.data.agentCycles} memory={state.data.memory} comparison={state.data.memoryComparison} />
     </AppShell>
   );
 }

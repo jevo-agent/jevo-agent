@@ -3890,6 +3890,20 @@ a, button { touch-action: manipulation; }
 }
 
 @media (max-width: 680px) {
+  .jevo-app .sparkline-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .jevo-app .sparkline-metrics {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 5px 8px;
+  }
+  .jevo-app .spark-conf {
+    margin-left: auto;
+  }
+
   .jevo-app .overview-summary-band {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

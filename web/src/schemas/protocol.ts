@@ -43,7 +43,7 @@ export const agentRuntimeSchema = z.object({
   lastDecisionAgeSeconds: z.number().int().nonnegative(),
   nextCycleInSeconds: z.number().int().nonnegative(),
   networkLabel: z.string().min(1),
-  latestEvents: z.array(agentEventSchema).min(1),
+  latestEvents: z.array(agentEventSchema),
 });
 
 export const signalSchema = z.object({
@@ -69,6 +69,9 @@ export const decisionTraceSchema = z.object({
 export const scoreHistoryPointSchema = z.object({
   timestamp: timestampSchema,
   score: z.number().min(0).max(100),
+  /** Optional persisted score dimensions used by the Opportunity Field. */
+  pairability: z.number().min(0).max(100).optional(),
+  narrative: z.number().min(0).max(100).optional(),
 });
 
 export const rankHistoryPointSchema = z.object({
@@ -80,17 +83,17 @@ export const stockSchema = z.object({
   symbol: z.string().min(1),
   name: z.string().min(1),
   currentRank: z.number().int().positive(),
-  previousRank: z.number().int().positive(),
+  previousRank: z.number().int().positive().nullable(),
   opportunityScore: z.number().min(0).max(100),
-  previousScore: z.number().min(0).max(100),
-  rankMovement: z.number().int(),
+  previousScore: z.number().min(0).max(100).nullable(),
+  rankMovement: z.number().int().nullable(),
   jevDecision: z.string().min(1),
-  confidence: z.number().min(0).max(100),
-  lastEvaluatedAt: timestampSchema,
+  confidence: z.number().min(0).max(100).nullable(),
+  lastEvaluatedAt: timestampSchema.nullable(),
   signals: z.array(signalSchema).min(1),
   scoreHistory: z.array(scoreHistoryPointSchema).min(1),
   rankHistory: z.array(rankHistoryPointSchema).min(1),
-  decisionTrace: z.array(decisionTraceSchema).min(1),
+  decisionTrace: z.array(decisionTraceSchema),
 });
 
 export const pairingStatusSchema = z.enum([
@@ -98,6 +101,7 @@ export const pairingStatusSchema = z.enum([
   "CURATED",
   "LAUNCH_CANDIDATE",
   "LAUNCHED",
+  "ARCHIVED",
 ]);
 export const curationStateSchema = z.enum(["PENDING", "APPROVED", "REJECTED"]);
 export const pairingFactorSchema = z.object({
@@ -126,13 +130,15 @@ export const pairingHistorySchema = z.object({
   state: z.string().min(1),
 });
 export const pairingSchema = z.object({
+  /** Canonical worker candidate id; fixture/demo rows may omit it. */
+  id: z.string().min(1).optional(),
   slug: z.string().min(1),
   stockSymbol: z.string().min(1),
   memeName: z.string().min(1),
   symbol: z.string().min(1),
   pairScore: z.number().min(0).max(100),
   jevDecision: z.string().min(1),
-  confidence: z.number().min(0).max(100),
+  confidence: z.number().min(0).max(100).nullable(),
   status: pairingStatusSchema,
   thesis: z.object({
     core: z.string().min(1),
@@ -210,10 +216,10 @@ export const agentCycleSchema = z.object({
   timestamp: timestampSchema,
   assetsEvaluated: z.number().int().nonnegative(),
   decisions: z.number().int().nonnegative(),
-  rankChanges: z.number().int().nonnegative(),
-  pairingChanges: z.number().int().nonnegative(),
-  launchChanges: z.number().int().nonnegative(),
-  qualifiedCandidates: z.number().int().nonnegative(),
+  rankChanges: z.number().int().nonnegative().nullable(),
+  pairingChanges: z.number().int().nonnegative().nullable(),
+  launchChanges: z.number().int().nonnegative().nullable(),
+  qualifiedCandidates: z.number().int().nonnegative().nullable(),
   summary: z.string().min(1),
   status: z.enum(["COMPLETE", "ACTIVE"]),
 });
@@ -225,9 +231,9 @@ export const memoryOverviewSchema = z.object({
   launchStates: z.number().int().nonnegative(),
 });
 export const memoryComparisonSchema = z.object({
-  previousCycle: z.number().int().positive(),
-  currentCycle: z.number().int().positive(),
-  entries: z.array(z.object({ label: z.string().min(1), previous: z.string().min(1), current: z.string().min(1), delta: z.string().min(1) })).min(1),
+  previousCycle: z.number().int().nonnegative().nullable(),
+  currentCycle: z.number().int().nonnegative().nullable(),
+  entries: z.array(z.object({ label: z.string().min(1), previous: z.string().min(1), current: z.string().min(1), delta: z.string().min(1) })),
 });
 export const providerReferenceSchema = z.object({
   id: z.string().min(1),

@@ -11,75 +11,34 @@ import { JevEvaluation } from "@/components/stock/JevEvaluation";
 import { PairingOpportunities } from "@/components/stock/PairingOpportunities";
 import { SignalInspector } from "@/components/stock/SignalInspector";
 import { StockHeader } from "@/components/stock/StockHeader";
+import { QueryEmptyState } from "@/components/ui/QueryEmptyState";
 import { QueryErrorState } from "@/components/ui/QueryErrorState";
-import { mockAgentState } from "@/data/mock-agent-state";
-import { useAgentStatus, useStock, usePairings } from "@/lib/api/hooks";
+import { QueryLoadingState } from "@/components/ui/QueryLoadingState";
+import { useAdaptedStock, useProtocolState } from "@/lib/api/hooks";
 
-interface StockPageProps {
-  params: Promise<{ symbol: string }>;
-}
+interface StockPageProps { params: Promise<{ symbol: string }>; }
 
 export default function StockDetailPage({ params }: StockPageProps) {
   const { symbol } = use(params);
   const normalizedSymbol = symbol.trim().toUpperCase();
+  const state = useProtocolState();
+  const stockState = useAdaptedStock(normalizedSymbol);
 
-  const agentQuery = useAgentStatus();
-  const stockQuery = useStock(normalizedSymbol);
-  const pairingsQuery = usePairings();
+  if (state.isLoading || stockState.isLoading) return <QueryLoadingState title={`Loading ${normalizedSymbol} workspace`} />;
+  if (state.isError || stockState.isError) return <QueryErrorState title={`Failed to Load Stock Data (${normalizedSymbol})`} error={stockState.error ?? state.error} onRetry={() => { void state.refetch(); void stockState.refetch(); }} />;
+  if (!state.data || !stockState.data?.data) return <QueryEmptyState title={`No canonical ${normalizedSymbol} state`} message="The worker has not published this asset in its current ranking state." />;
 
-  const isError = agentQuery.isError || stockQuery.isError || pairingsQuery.isError;
-  const error = stockQuery.error || agentQuery.error || pairingsQuery.error;
-
-  const handleRefetch = () => {
-    void agentQuery.refetch();
-    void stockQuery.refetch();
-    void pairingsQuery.refetch();
-  };
-
-  if (isError) {
-    return (
-      <QueryErrorState
-        title={`Failed to Load Stock Data (${normalizedSymbol})`}
-        error={error}
-        onRetry={handleRefetch}
-      />
-    );
-  }
-
-  const { agent, assets, ranking, pairings, launch, memory } = mockAgentState;
-  const asset = assets.find((candidate) => candidate.symbol === normalizedSymbol);
-
-  if (!asset) {
-    notFound();
-  }
-
-  const primaryPairing = pairings.find((pairing) => pairing.stockSymbol === asset.symbol);
-  const featuredAsset = asset;
-  const featuredPairing = pairings.find((p) => p.slug === launch.selectedPairingSlug) ?? pairings[0];
-
+  const asset = stockState.data.data;
+  if (!asset) notFound();
+  const primaryPairing = state.data.pairings.find((pairing) => pairing.stockSymbol === asset.symbol);
   return (
-    <AppShell
-      agent={agent}
-      assets={assets}
-      ranking={ranking}
-      pairings={pairings}
-      launch={launch}
-      memory={memory}
-      featuredAsset={featuredAsset}
-      featuredPairing={featuredPairing}
-      activeSection="opportunities"
-      breadcrumb={
-        <div className="crumbs">
-          JEVO <span>/</span> OPPORTUNITY <span>/</span> <b>{asset.symbol}</b>
-        </div>
-      }
-    >
+    <AppShell {...state.data} activeSection="opportunities" breadcrumb={<div className="crumbs">JEVO <span>/</span> OPPORTUNITY <span>/</span> <b>{asset.symbol}</b></div>}>
       <div className="stock-workspace">
-        <StockHeader asset={asset} agent={agent} />
+        <StockHeader asset={asset} agent={state.data.agent} />
         <div className="stock-workspace-content py-6 sm:py-8">
           <div className="grid border border-[var(--jevo-line)] lg:grid-cols-[minmax(0,1.28fr)_minmax(300px,0.72fr)]">
             <div>
-              <DecisionSummary asset={asset} agent={agent} />
+              <DecisionSummary asset={asset} agent={state.data.agent} />
               <JevEvaluation asset={asset} />
             </div>
             <aside className="border-t border-[var(--jevo-line)] lg:border-t-0 lg:border-l">
@@ -87,9 +46,8 @@ export default function StockDetailPage({ params }: StockPageProps) {
               <PairingOpportunities asset={asset} pairing={primaryPairing} />
             </aside>
           </div>
-
           <div className="mt-8 border border-[var(--jevo-line)]">
-            <DecisionTrace asset={asset} cycle={agent.activeCycle} />
+            <DecisionTrace asset={asset} cycle={state.data.agent.activeCycle} />
             <AgentMemory asset={asset} />
           </div>
         </div>

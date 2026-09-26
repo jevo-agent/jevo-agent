@@ -1,7 +1,7 @@
 "use client";
 
 import { notFound } from "next/navigation";
-import { use } from "react";
+import { use, useMemo } from "react";
 
 import { AgentStatusBar } from "@/components/agent/AgentStatusBar";
 import { AgentWalletState } from "@/components/launch/AgentWalletState";
@@ -15,51 +15,45 @@ import { LaunchStageInspector } from "@/components/launch/LaunchStageInspector";
 import { PolicyCheckList } from "@/components/launch/PolicyCheckList";
 import { TokenSpecification } from "@/components/launch/TokenSpecification";
 import { TransactionState } from "@/components/launch/TransactionState";
+import { QueryEmptyState } from "@/components/ui/QueryEmptyState";
 import { QueryErrorState } from "@/components/ui/QueryErrorState";
-import { mockAgentState } from "@/data/mock-agent-state";
-import { useAgentStatus, useLaunch, useLaunches } from "@/lib/api/hooks";
+import { QueryLoadingState } from "@/components/ui/QueryLoadingState";
+import { adaptLaunch, pairingSlug } from "@/lib/api/adapters";
+import { useLaunch, useLaunches, useProtocolState } from "@/lib/api/hooks";
+import { isJevoDemoMode } from "@/lib/api/client";
 
 interface LaunchDetailPageProps { params: Promise<{ slug: string }>; }
 
 export default function LaunchDetailPage({ params }: LaunchDetailPageProps) {
   const { slug } = use(params);
   const normalizedSlug = slug.trim().toLowerCase();
-
-  const agentQuery = useAgentStatus();
+  const demo = isJevoDemoMode();
+  const state = useProtocolState();
   const launchesQuery = useLaunches();
-  const launchQuery = useLaunch(normalizedSlug);
+  const launchRef = useMemo(() => launchesQuery.data?.data.find((candidate) => {
+    if (candidate.selectedPairingSlug?.toLowerCase() === normalizedSlug) return true;
+    if (candidate.pairingCandidateId?.toLowerCase() === normalizedSlug) return true;
+    const pairing = state.data?.pairings.find((item) => pairingSlug(item.stockSymbol, item.symbol) === normalizedSlug);
+    return pairing && candidate.pairingCandidateId === pairing.slug;
+  }), [launchesQuery.data, normalizedSlug, state.data?.pairings]);
+  const launchId = launchRef?.id ?? launchRef?.cycleId ?? launchRef?.pairingCandidateId ?? "";
+  const launchQuery = useLaunch(launchId);
 
-  const isError = agentQuery.isError || launchesQuery.isError || launchQuery.isError;
-  const error = launchQuery.error || launchesQuery.error || agentQuery.error;
+  if (state.isLoading || (!demo && (launchesQuery.isPending || (Boolean(launchId) && launchQuery.isPending)))) return <QueryLoadingState title="Loading launch detail" />;
+  if (state.isError || (!demo && (launchesQuery.isError || launchQuery.isError))) return <QueryErrorState title={`Failed to Load Launch (${normalizedSlug})`} error={launchQuery.error ?? launchesQuery.error ?? state.error} onRetry={() => { void state.refetch(); void launchesQuery.refetch(); void launchQuery.refetch(); }} />;
+  const protocolData = state.data;
+  if (!protocolData || (!launchRef && !demo)) return <QueryEmptyState title="No canonical launch state" message="The worker has not published a launch candidate for this route." />;
 
-  const handleRefetch = () => {
-    void agentQuery.refetch();
-    void launchesQuery.refetch();
-    void launchQuery.refetch();
-  };
-
-  if (isError) {
-    return (
-      <QueryErrorState
-        title={`Failed to Load Launch (${normalizedSlug})`}
-        error={error}
-        onRetry={handleRefetch}
-      />
-    );
-  }
-
-  const { agent, assets, launch, pairings } = mockAgentState;
-  const pairing = pairings.find((candidate) => candidate.slug === normalizedSlug);
-
-  if (!pairing || pairing.slug !== launch.selectedPairingSlug) notFound();
-
-  const stock = assets.find((candidate) => candidate.symbol === pairing.stockSymbol);
+  const pairing = protocolData.pairings.find((candidate) => candidate.slug === (launchRef?.selectedPairingSlug ?? protocolData.launch.selectedPairingSlug) || candidate.slug === launchRef?.pairingCandidateId || pairingSlug(candidate.stockSymbol, candidate.symbol) === normalizedSlug);
+  const launch = demo ? protocolData.launch : adaptLaunch(launchQuery.data?.data ?? launchRef!, pairing);
+  if (!pairing || !launch) notFound();
+  const stock = protocolData.assets.find((candidate) => candidate.symbol === pairing.stockSymbol);
   if (!stock) notFound();
 
   return (
     <>
-      <AgentStatusBar agentStatus={agent.status} jevStatus={agent.jevStatus} currentOperation={agent.currentOperation} lastDecisionAgeSeconds={agent.lastDecisionAgeSeconds} nextCycleInSeconds={agent.nextCycleInSeconds} networkLabel={agent.networkLabel} />
-      <LaunchHeader launch={launch} pairing={pairing} stock={stock} agent={agent} />
+      <AgentStatusBar agentStatus={protocolData.agent.status} jevStatus={protocolData.agent.jevStatus} currentOperation={protocolData.agent.currentOperation} lastDecisionAgeSeconds={protocolData.agent.lastDecisionAgeSeconds} nextCycleInSeconds={protocolData.agent.nextCycleInSeconds} networkLabel={protocolData.agent.networkLabel} />
+      <LaunchHeader launch={launch} pairing={pairing} stock={stock} agent={protocolData.agent} />
       <main className="protocol-shell py-8 sm:py-10">
         <div className="grid overflow-hidden border border-[var(--jevo-line)] xl:grid-cols-[minmax(0,1fr)_23rem]">
           <div className="xl:col-start-1"><LaunchSelectionThesis launch={launch} pairing={pairing} stock={stock} /></div>
