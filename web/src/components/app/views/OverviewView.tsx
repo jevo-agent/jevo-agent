@@ -81,12 +81,13 @@ export function OverviewView({
       .filter((asset) => {
         const matchesQuery = !query || `${asset.symbol} ${asset.name}`.toLowerCase().includes(query.toLowerCase());
         const matchesDecision =
-          decision === "all" || (decision === "PROMOTE" ? asset.jevDecision === "PROMOTE" : asset.rankMovement < 0);
+          decision === "all" || (decision === "PROMOTE" ? asset.jevDecision === "PROMOTE" : asset.rankMovement !== null && asset.rankMovement < 0);
         return matchesQuery && matchesDecision;
       })
       .sort((left, right) => {
         const leftValue = sort === "rank" ? left.currentRank : sort === "score" ? left.opportunityScore : left.rankMovement;
         const rightValue = sort === "rank" ? right.currentRank : sort === "score" ? right.opportunityScore : right.rankMovement;
+        if (leftValue === null || rightValue === null) return 0;
         return (leftValue - rightValue) * direction;
       });
   }, [decision, direction, ordered, query, sort]);
@@ -704,10 +705,10 @@ function RankPanel({
                       <i style={{ "--w": `${asset.opportunityScore}%` } as CSSProperties} />
                     </span>
                   </td>
-                  <td className={`delta ${asset.rankMovement > 0 ? "up" : asset.rankMovement < 0 ? "dn" : "flat"}`}>
-                    {asset.rankMovement > 0 ? `▲+${asset.rankMovement}` : asset.rankMovement < 0 ? `▼${Math.abs(asset.rankMovement)}` : "—"}
+                  <td className={`delta ${asset.rankMovement !== null && asset.rankMovement > 0 ? "up" : asset.rankMovement !== null && asset.rankMovement < 0 ? "dn" : "flat"}`}>
+                    {asset.rankMovement !== null && asset.rankMovement > 0 ? `▲+${asset.rankMovement}` : asset.rankMovement !== null && asset.rankMovement < 0 ? `▼${Math.abs(asset.rankMovement)}` : "—"}
                   </td>
-                  <td className={`dec-tag ${asset.jevDecision === "PROMOTE" ? "promote" : asset.rankMovement < 0 ? "demote" : ""}`}>
+                  <td className={`dec-tag ${asset.jevDecision === "PROMOTE" ? "promote" : asset.rankMovement !== null && asset.rankMovement < 0 ? "demote" : ""}`}>
                     {asset.jevDecision.replaceAll("_", " ")}
                   </td>
                   <td className="evaluated">{formatClock(asset.lastEvaluatedAt)} UTC</td>
@@ -733,27 +734,20 @@ function RankPanel({
    SIGNAL NORMALIZATION & OPPORTUNITY FIELD
    ========================================================================== */
 
-type AssetCoordinates = { pairability: number; narrative: number };
+type AssetCoordinates = { opportunity: number; narrative: number };
 
 function getAssetCoordinates(
   asset: Stock,
   oppsMap?: Map<string, OpportunityApi>,
-): AssetCoordinates {
+): AssetCoordinates | null {
   const opp = oppsMap?.get(asset.symbol);
-
-  // 1. Sumbu X (Pairability / Opportunity Score):
-  // HARUS pake nilai opportunityScore ASLI dari data yang sama persis dipake ranking table
-  const pairability = opp?.opportunityScore ?? asset.opportunityScore;
-
-  // 2. Sumbu Y (Narrative Strength):
-  // Ambil dari field narrativeMomentum di API (score.narrativeMomentum)
-  const narrative =
-    opp?.score?.narrativeMomentum ??
-    asset.signals.find((signal) => signal.id.includes("narrative") || signal.label.toLowerCase().includes("narrative"))?.score ??
-    opp?.opportunityScore ??
-    asset.opportunityScore;
-
-  return { pairability, narrative };
+  const narrative = opp?.score?.narrativeMomentum;
+  const opportunity = asset.opportunityScore;
+  if (typeof opportunity !== "number" || typeof narrative !== "number") return null;
+  return {
+    opportunity,
+    narrative,
+  };
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -794,24 +788,25 @@ function OpportunityField({
   // Coordinate frame is 920 x 480
   const plot = { left: 92, right: 848, top: 48, bottom: 418 };
 
-  const signalPoints = assets.map((asset) => {
+  const signalPoints = assets.flatMap((asset) => {
     const coords = getAssetCoordinates(asset, oppsMap);
+    if (!coords) return [];
     return {
       asset,
-      pairability: coords.pairability,
+      opportunity: coords.opportunity,
       narrative: coords.narrative,
     };
   });
 
-  const unavailableSymbols: string[] = [];
+  const unavailableSymbols = assets.filter((asset) => !getAssetCoordinates(asset, oppsMap)).map((asset) => asset.symbol);
 
   // Dynamic domain relative to real score distribution (e.g. ~75 to 100)
-  const allPairability = signalPoints.map((p) => p.pairability);
+  const allOpportunity = signalPoints.map((p) => p.opportunity);
   const allNarrative = signalPoints.map((p) => p.narrative);
 
-  const minX = Math.max(70, Math.floor((Math.min(...allPairability) - 2) / 5) * 5);
+  const minX = allOpportunity.length > 0 ? Math.max(0, Math.floor((Math.min(...allOpportunity) - 2) / 5) * 5) : 0;
   const maxX = 100;
-  const minY = Math.max(70, Math.floor((Math.min(...allNarrative) - 2) / 5) * 5);
+  const minY = allNarrative.length > 0 ? Math.max(0, Math.floor((Math.min(...allNarrative) - 2) / 5) * 5) : 0;
   const maxY = 100;
 
   const scaleX = (val: number) =>
@@ -825,43 +820,27 @@ function OpportunityField({
   const yTicks: number[] = [];
   for (let t = minY; t <= maxY; t += 5) yTicks.push(t);
 
-  const positions = signalPoints.map(({ asset, narrative, pairability }) => {
-    const x = scaleX(pairability);
+  const positions = signalPoints.map(({ asset, narrative, opportunity }) => {
+    const x = scaleX(opportunity);
     const y = scaleY(narrative);
 
     // Historic trajectory projection derived deterministically
-    const historyLength = Math.max(asset.rankHistory.length, asset.scoreHistory.length, 2);
-    const anchors = Array.from({ length: historyLength }, (_, index) => {
-      const histScore = asset.scoreHistory[Math.min(index, asset.scoreHistory.length - 1)]?.score ?? asset.previousScore;
-      const scoreRatio = (asset.opportunityScore - histScore) / 16;
-      return {
-        x: clamp(x - scoreRatio * (plot.right - plot.left) * 0.22, plot.left + 16, plot.right - 16),
-        y: clamp(y + scoreRatio * (plot.bottom - plot.top) * 0.24, plot.top + 16, plot.bottom - 16),
-      };
-    });
-    anchors[anchors.length - 1] = { x, y };
-
-    const prevScore = asset.previousScore > 0 ? asset.previousScore : pairability;
-    const scoreDelta = pairability - prevScore;
-    const prevCoords = {
-      pairability: prevScore,
-      narrative: clamp(narrative - scoreDelta * 0.4, minY, maxY),
-    };
-
-    const prevX = scaleX(prevCoords.pairability);
-    const prevY = scaleY(prevCoords.narrative);
+    const anchors = asset.scoreHistory
+      .map((point) => ({ x: scaleX(point.score), y: scaleY(narrative) }));
+    const currentAnchor = { x, y };
+    if (anchors.length === 0 || anchors[anchors.length - 1].x !== x || anchors[anchors.length - 1].y !== y) anchors.push(currentAnchor);
+    const previousAnchor = anchors.length > 1 ? anchors[0] : null;
 
     return {
       asset,
       narrative,
-      pairability,
+      opportunity,
       x,
       y,
-      previousX: prevX,
-      previousY: prevY,
-      prevCoords,
+      previousX: previousAnchor?.x ?? null,
+      previousY: previousAnchor?.y ?? null,
       trail: anchors.map((anchor) => `${anchor.x.toFixed(1)},${anchor.y.toFixed(1)}`).join(" "),
-      previousScore: prevScore,
+      previousScore: asset.previousScore,
     };
   });
 
@@ -908,10 +887,11 @@ function OpportunityField({
   const history =
     inspectedAsset.scoreHistory.length > 0
       ? inspectedAsset.scoreHistory
-      : [{ score: inspectedAsset.previousScore }, { score: inspectedAsset.opportunityScore }];
+      : [{ score: inspectedAsset.opportunityScore }];
   const startScore = history[0]?.score ?? inspectedAsset.previousScore;
   const endScore = inspectedAsset.opportunityScore;
-  const scoreDelta = endScore - startScore;
+  const hasHistoricalStart = inspectedAsset.scoreHistory.length > 1 || inspectedAsset.previousScore !== null;
+  const scoreDelta = !hasHistoricalStart || startScore === null ? null : endScore - startScore;
 
   return (
     <div
@@ -1084,10 +1064,10 @@ function OpportunityField({
 
               {/* Horizontal axis headings keep the coordinate system legible. */}
               <text x={plot.left + 14} y={plot.top + 17} className="field-axis-title">
-                NARRATIVE STRENGTH ↑
+                NARRATIVE MOMENTUM ↑
               </text>
               <text x={plot.left + 14} y={plot.bottom + 38} textAnchor="start" className="field-axis-title">
-                PAIRABILITY SCORE →
+                OPPORTUNITY SCORE →
               </text>
             </g>
 
@@ -1164,7 +1144,7 @@ function OpportunityField({
                   textAnchor="middle"
                   className="field-axis-badge-text"
                 >
-                  {activePosition.pairability.toFixed(1)}
+                  {activePosition.opportunity.toFixed(1)}
                 </text>
               </g>
             )}
@@ -1173,17 +1153,17 @@ function OpportunityField({
             {activePosition && (
               <g className="field-transition-story" aria-label={`State transition telemetry for ${activePosition.asset.symbol}`}>
                 {/* Vector Trail from Previous to Current */}
-                <line
+                {activePosition.previousX !== null && activePosition.previousY !== null ? <line
                   x1={activePosition.previousX}
                   y1={activePosition.previousY}
                   x2={activePosition.x}
                   y2={activePosition.y}
                   className="field-selected-vector"
                   markerEnd="url(#field-arrow)"
-                />
+                /> : null}
 
                 {/* Previous State Anchor at (previousX, previousY) */}
-                <g className="field-prev-anchor" transform={`translate(${activePosition.previousX}, ${activePosition.previousY})`}>
+                {activePosition.previousX !== null && activePosition.previousY !== null ? <g className="field-prev-anchor" transform={`translate(${activePosition.previousX}, ${activePosition.previousY})`}>
                   <circle cx="0" cy="0" r="7" className="prev-anchor-ring" />
                   <circle cx="0" cy="0" r="2.5" className="prev-anchor-core" />
                   <text
@@ -1192,9 +1172,9 @@ function OpportunityField({
                     textAnchor="middle"
                     className="field-prev-tag"
                   >
-                    PREV #{String(activePosition.asset.previousRank).padStart(2, "0")} ({activePosition.asset.previousScore.toFixed(1)})
+                    PREV {activePosition.asset.previousRank === null || activePosition.asset.previousScore === null ? "UNAVAILABLE" : `#${String(activePosition.asset.previousRank).padStart(2, "0")} (${activePosition.asset.previousScore.toFixed(1)})`}
                   </text>
-                </g>
+                </g> : null}
 
                 {/* Restrained JEV Decision Marker along the transition trajectory */}
                 <g
@@ -1324,17 +1304,17 @@ function OpportunityField({
               </div>
               <div className="sparkline-metrics">
                 <span className="spark-tag">
-                  START <b>{startScore.toFixed(1)}</b>
+                  START <b>{startScore === null ? "—" : startScore.toFixed(1)}</b>
                 </span>
                 <span className="spark-arrow">→</span>
                 <span className="spark-tag current">
                   CURRENT <b>{endScore.toFixed(1)}</b>
                 </span>
-                <span className={`spark-delta ${scoreDelta >= 0 ? "up" : "dn"}`}>
-                  {scoreDelta >= 0 ? `▲ +${scoreDelta.toFixed(1)}` : `▼ ${Math.abs(scoreDelta).toFixed(1)}`} PTS
+                <span className={`spark-delta ${scoreDelta === null || scoreDelta >= 0 ? "up" : "dn"}`}>
+                  {scoreDelta === null ? "—" : scoreDelta >= 0 ? `▲ +${scoreDelta.toFixed(1)}` : `▼ ${Math.abs(scoreDelta).toFixed(1)}`} {scoreDelta === null ? "" : "PTS"}
                 </span>
                 <span className="spark-conf">
-                  CONFIDENCE <b>{inspectedAsset.confidence}%</b>
+                  CONFIDENCE <b>{inspectedAsset.confidence === null ? "—" : `${inspectedAsset.confidence}%`}</b>
                 </span>
               </div>
             </div>
@@ -1414,8 +1394,8 @@ function DecisionInspector({
   oppsMap?: Map<string, OpportunityApi>;
 }) {
   const coords = getAssetCoordinates(asset, oppsMap);
-  const narrative = coords.narrative;
-  const pairability = coords.pairability;
+  const narrative = coords?.narrative ?? null;
+  const opportunity = coords?.opportunity ?? asset.opportunityScore;
   const formatCoordinate = (value: number | null) => (value === null ? "—" : value.toFixed(1));
   const launchApplies = launch && pairing ? pairing.slug === launch.selectedPairingSlug : false;
 
@@ -1451,18 +1431,18 @@ function DecisionInspector({
             {asset.jevDecision.replaceAll("_", " ")}
           </strong>
         </div>
-        <span className="label">JEV DECISION · {asset.confidence}% CONFIDENCE</span>
+        <span className="label">JEV DECISION · {asset.confidence === null ? "—" : `${asset.confidence}%`} CONFIDENCE</span>
       </div>
 
       {/* 5. Trajectory Transition */}
       <div
         className="decision-trajectory-block"
-        aria-label={`JEV state transition from rank ${asset.previousRank} score ${asset.previousScore.toFixed(1)} to rank ${asset.currentRank} score ${asset.opportunityScore.toFixed(1)}`}
+        aria-label={`JEV state transition from ${asset.previousRank === null || asset.previousScore === null ? "unavailable" : `rank ${asset.previousRank} score ${asset.previousScore.toFixed(1)}`} to rank ${asset.currentRank} score ${asset.opportunityScore.toFixed(1)}`}
       >
         <div className="traj-col">
           <span className="label">PREVIOUS</span>
           <b>
-            #{String(asset.previousRank).padStart(2, "0")} / {asset.previousScore.toFixed(1)}
+            {asset.previousRank === null || asset.previousScore === null ? "UNAVAILABLE" : `#${String(asset.previousRank).padStart(2, "0")} / ${asset.previousScore.toFixed(1)}`}
           </b>
         </div>
         <div className="traj-mid">
@@ -1471,21 +1451,21 @@ function DecisionInspector({
         </div>
         <div className="traj-col right">
           <span className="label">CURRENT</span>
-          <b className={asset.currentRank < asset.previousRank ? "accent" : ""}>
+          <b className={asset.previousRank !== null && asset.currentRank < asset.previousRank ? "accent" : ""}>
             #{String(asset.currentRank).padStart(2, "0")} / {asset.opportunityScore.toFixed(1)}
           </b>
         </div>
       </div>
 
-      {/* 6. Narrative & Pairability Signals */}
+      {/* 6. Narrative & Opportunity Signals */}
       <div className="decision-signals-grid">
         <div className="sig-item">
-          <span className="label">NARRATIVE</span>
-            <strong className="sig-val">{formatCoordinate(narrative)}</strong>
+          <span className="label">NARRATIVE MOMENTUM</span>
+          <strong className="sig-val">{formatCoordinate(narrative)}</strong>
         </div>
         <div className="sig-item">
-          <span className="label">PAIRABILITY</span>
-            <strong className="sig-val">{formatCoordinate(pairability)}</strong>
+          <span className="label">OPPORTUNITY SCORE</span>
+          <strong className="sig-val">{formatCoordinate(opportunity)}</strong>
         </div>
       </div>
 

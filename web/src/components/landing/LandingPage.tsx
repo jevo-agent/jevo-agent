@@ -388,7 +388,7 @@ function AgentSection({
                   <span className="label">Output</span>
                   <span className="chainline output-line">
                     PROMOTE {asset.symbol} / #04 → #01 / CONF{" "}
-                    {asset.confidence / 100}
+                    {asset.confidence === null ? "—" : asset.confidence / 100}
                   </span>
                 </div>
               </div>
@@ -659,7 +659,7 @@ function OpportunitySection({
         .sort((left, right) =>
           view === "curr"
             ? left.currentRank - right.currentRank
-            : left.previousRank - right.previousRank,
+          : (left.previousRank === null || right.previousRank === null ? 0 : left.previousRank - right.previousRank),
         ),
     [assets, ranking, view],
   );
@@ -724,37 +724,37 @@ function OpportunitySection({
                     className={`rank-row${rank === 1 ? " top" : ""}`}
                     role="row"
                     href={`/stock/${asset.symbol}`}
-                    aria-label={`Inspect ${asset.symbol} opportunity, rank ${rank}, score ${score.toFixed(1)}`}
+                    aria-label={`Inspect ${asset.symbol} opportunity, rank ${rank ?? "unavailable"}, score ${score === null ? "unavailable" : score.toFixed(1)}`}
                   >
-                    <span className="pos">{String(rank).padStart(2, "0")}</span>
+                    <span className="pos">{rank === null ? "—" : String(rank).padStart(2, "0")}</span>
                     <span className="asset">
                       <b>{asset.symbol}</b>
                       <span>{asset.name.replace(" Stock Token", "")}</span>
                     </span>
                     <span className="bar">
-                      <span>{score.toFixed(1)}</span>
-                      <i style={{ "--w": `${score}%` } as CSSProperties} />
+                      <span>{score === null ? "—" : score.toFixed(1)}</span>
+                      <i style={{ "--w": `${score ?? 0}%` } as CSSProperties} />
                     </span>
                     <span
-                      className={`delta ${view === "curr" && asset.rankMovement > 0 ? "up" : view === "curr" && asset.rankMovement < 0 ? "dn" : "flat"}`}
+                      className={`delta ${view === "curr" && asset.rankMovement !== null && asset.rankMovement > 0 ? "up" : view === "curr" && asset.rankMovement !== null && asset.rankMovement < 0 ? "dn" : "flat"}`}
                     >
                       {view === "curr"
-                        ? asset.rankMovement > 0
+                        ? asset.rankMovement !== null && asset.rankMovement > 0
                           ? `▲ +${asset.rankMovement}`
-                          : asset.rankMovement < 0
+                          : asset.rankMovement !== null && asset.rankMovement < 0
                             ? `▼ ${Math.abs(asset.rankMovement)}`
                             : "—"
                         : "—"}
                     </span>
                     <span
-                      className={`dec ${view === "curr" && asset.jevDecision === "PROMOTE" ? "promote" : view === "curr" && asset.rankMovement < 0 ? "demote" : ""}`}
+                      className={`dec ${view === "curr" && asset.jevDecision === "PROMOTE" ? "promote" : view === "curr" && asset.rankMovement !== null && asset.rankMovement < 0 ? "demote" : ""}`}
                     >
                       {view === "curr" ? asset.jevDecision : "—"}
                     </span>
                     <span className="age">
                       {view === "curr"
                         ? `${formatClock(asset.lastEvaluatedAt)} UTC`
-                        : `Cycle ${cycle - 1}`}
+                        : asset.previousRank === null ? "Cycle unavailable" : `Cycle ${cycle - 1}`}
                     </span>
                     <span className="go">↗</span>
                   </Link>
@@ -1312,7 +1312,7 @@ function MemorySection({
             <span className="label">Jev decision</span>
             <span className="big accent">{asset.jevDecision}</span>
             <p>
-              Confidence {asset.confidence / 100}. Stored with inputs and model
+              Confidence {asset.confidence === null ? "unavailable" : asset.confidence / 100}. Stored with inputs and model
               version.
             </p>
           </div>

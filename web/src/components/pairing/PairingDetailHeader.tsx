@@ -33,7 +33,7 @@ export function PairingDetailHeader({ pairing, stock, agent }: PairingDetailHead
           <HeaderMetric label="Stock rank" value={`#${String(stock.currentRank).padStart(2, "0")}`} />
           <HeaderMetric label="Opportunity" value={stock.opportunityScore.toFixed(1)} />
           <HeaderMetric label="JEV pairing" value={pairing.jevDecision.replaceAll("_", " ")} />
-          <HeaderMetric label="Confidence" value={`${pairing.confidence}%`} meta={`Eval ${formatClock(stock.lastEvaluatedAt)} UTC · ${agent.dataFreshness}`} />
+          <HeaderMetric label="Confidence" value={pairing.confidence === null ? "—" : `${pairing.confidence}%`} meta={`Eval ${formatClock(stock.lastEvaluatedAt)} UTC · ${agent.dataFreshness}`} />
         </div>
       </div>
     </header>

@@ -27,6 +27,13 @@ const EVENT_INVALIDATES: Record<string, (subjectId: string | null) => QueryKey[]
     ["opportunities"],
     ...(subjectId ? [["stock", subjectId] as QueryKey] : []),
   ],
+  JEV_PROVIDER_FAILED: (subjectId) => [
+    ["agent-status"],
+    ["cycles"],
+    ["opportunities"],
+    ["memory"],
+    ...(subjectId ? [["stock", subjectId] as QueryKey] : []),
+  ],
   ASSET_PROMOTED: (subjectId) => [["opportunities"], ["stock", subjectId]],
   ASSET_DEMOTED: (subjectId) => [["opportunities"], ["stock", subjectId]],
   RANKING_UPDATED: () => [["opportunities"]],

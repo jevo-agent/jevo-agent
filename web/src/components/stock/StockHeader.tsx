@@ -8,8 +8,8 @@ interface StockHeaderProps {
 }
 
 export function StockHeader({ asset, agent }: StockHeaderProps) {
-  const isRising = asset.rankMovement > 0;
-  const status = isRising ? "RISING" : asset.rankMovement < 0 ? "FALLING" : "STABLE";
+  const isRising = asset.rankMovement !== null && asset.rankMovement > 0;
+  const status = isRising ? "RISING" : asset.rankMovement !== null && asset.rankMovement < 0 ? "FALLING" : asset.rankMovement === null ? "UNAVAILABLE" : "STABLE";
 
   return (
     <section className="stock-summary border border-[var(--jevo-line)]" aria-labelledby="stock-title">
@@ -24,10 +24,10 @@ export function StockHeader({ asset, agent }: StockHeaderProps) {
           </div>
         </div>
         <HeaderStat label="Opportunity" value={asset.opportunityScore.toString()} accent />
-        <HeaderStat label="Previous rank" value={`#${String(asset.previousRank).padStart(2, "0")}`} />
-        <HeaderStat label="Rank movement" value={`${isRising ? "▲" : asset.rankMovement < 0 ? "▼" : "—"} ${asset.rankMovement > 0 ? "+" : ""}${asset.rankMovement}`} accent={isRising} />
+        <HeaderStat label="Previous rank" value={asset.previousRank === null ? "—" : `#${String(asset.previousRank).padStart(2, "0")}`} />
+        <HeaderStat label="Rank movement" value={asset.rankMovement === null ? "—" : `${isRising ? "▲" : asset.rankMovement < 0 ? "▼" : "—"} ${asset.rankMovement > 0 ? "+" : ""}${asset.rankMovement}`} accent={isRising} />
         <HeaderStat label="JEV decision" value={asset.jevDecision.replace("_", " ")} accent />
-        <HeaderStat label="Confidence" value={`${asset.confidence}%`} />
+        <HeaderStat label="Confidence" value={asset.confidence === null ? "—" : `${asset.confidence}%`} />
         <div className="flex flex-col justify-center border-t border-[var(--jevo-line)] py-5 lg:border-t-0 lg:border-l lg:pl-6">
           <p className="protocol-label">Last evaluated</p>
           <p className="mt-2 font-mono text-sm text-[var(--jevo-text)]">{formatClock(asset.lastEvaluatedAt)} UTC</p>

@@ -20,7 +20,7 @@ export function SignalInspector({ asset }: SignalInspectorProps) {
       <AnimatePresence mode="wait">
         <motion.div key={selectedSignal.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.18 }} className="p-6">
           <p className="font-mono text-7xl tracking-[-0.11em] text-[var(--jevo-accent)]">{selectedSignal.score}</p><h3 className="mt-4 text-3xl font-medium tracking-[-0.075em] text-[var(--jevo-text)]">{selectedSignal.label}</h3><p className="mt-4 leading-7 text-[var(--jevo-muted)]">{selectedSignal.explanation}</p>
-          <dl className="mt-7 border-t border-[var(--jevo-line)] font-mono text-[0.65rem] tracking-[0.07em] uppercase"><InspectorFact label="Delta" value={selectedSignal.deltaLabel} accent /><InspectorFact label="State" value={selectedSignal.state} /><InspectorFact label="Source" value={selectedSignal.source} /><InspectorFact label="Data age" value={`${selectedSignal.dataAgeSeconds}s`} /><InspectorFact label="Evaluated" value={`${formatClock(asset.lastEvaluatedAt)} UTC`} /></dl>
+          <dl className="mt-7 border-t border-[var(--jevo-line)] font-mono text-[0.65rem] tracking-[0.07em] uppercase"><InspectorFact label="Delta" value={selectedSignal.deltaLabel} accent /><InspectorFact label="State" value={selectedSignal.state} /><InspectorFact label="Source" value={selectedSignal.source} /><InspectorFact label="Data age" value={selectedSignal.dataAgeSeconds === null ? "—" : `${selectedSignal.dataAgeSeconds}s`} /><InspectorFact label="Evaluated" value={`${formatClock(asset.lastEvaluatedAt)} UTC`} /></dl>
         </motion.div>
       </AnimatePresence>
     </section>

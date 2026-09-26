@@ -17,7 +17,7 @@ export function MemoryTimeline({ memory }: MemoryTimelineProps) {
     const query = memorySearch.trim().toLowerCase();
     return memory.filter((event) => {
       const typeMatches = memoryFilter === "ALL" || event.eventType === memoryFilter;
-      const searchable = [event.id, event.subject, event.eventType, event.decision, event.previousState, event.currentState, event.cycleId.toString(), event.summary, event.actor, ...event.structuredEvidence.flatMap((item) => [item.label, item.value])].join(" ").toLowerCase();
+      const searchable = [event.id, event.subject, event.eventType, event.decision, event.previousState, event.currentState, event.cycleId?.toString() ?? "UNAVAILABLE", event.summary, event.actor, ...event.structuredEvidence.flatMap((item) => [item.label, item.value])].join(" ").toLowerCase();
       return typeMatches && (!query || searchable.includes(query));
     });
   }, [memory, memoryFilter, memorySearch]);

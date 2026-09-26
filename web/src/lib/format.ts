@@ -2,7 +2,8 @@ export function formatNumber(value: number) {
   return new Intl.NumberFormat("en-US").format(value);
 }
 
-export function formatClock(timestamp: string) {
+export function formatClock(timestamp: string | null | undefined) {
+  if (!timestamp) return "—";
   return new Intl.DateTimeFormat("en-GB", {
     hour: "2-digit",
     minute: "2-digit",

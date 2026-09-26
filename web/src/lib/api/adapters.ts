@@ -35,10 +35,10 @@ function eventType(value: string): AgentRuntime["latestEvents"][number]["type"] 
     : "ACTION";
 }
 
-function cycleNumber(value: string | number): number {
-  if (typeof value === "number") return Math.max(1, value);
+function cycleNumber(value: string | number): number | null {
+  if (typeof value === "number") return Number.isFinite(value) && value >= 0 ? value : null;
   const parsed = Number(value.replace(/\D/g, ""));
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
 function safeText(value: string | null | undefined, unavailable = "UNAVAILABLE") {
@@ -48,7 +48,6 @@ function safeText(value: string | null | undefined, unavailable = "UNAVAILABLE")
 export function adaptAgent(raw: AgentApi): AgentRuntime {
   return agentRuntimeSchema.parse({
     ...raw,
-    activeCycle: Math.max(1, raw.activeCycle),
     latestEvents: raw.latestEvents.map((entry) => ({ ...entry, type: eventType(entry.type) })),
   });
 }
@@ -60,11 +59,11 @@ function signalFromDimension(symbol: string, id: string, label: string, value: n
     label,
     context: "Worker opportunity score dimension",
     score: value,
-    delta: 0,
+    delta: null,
     deltaLabel: "—",
     state: "OBSERVED",
     source: "Worker score state",
-    dataAgeSeconds: 0,
+    dataAgeSeconds: null,
     explanation,
   };
 }
@@ -93,11 +92,11 @@ function makeSignals(raw: OpportunityApi): Stock["signals"] {
     label: "Opportunity score",
     context: "Worker ranking state",
     score: raw.opportunityScore,
-    delta: 0,
+    delta: null,
     deltaLabel: "—",
     state: "OBSERVED",
     source: "Worker ranking",
-    dataAgeSeconds: 0,
+    dataAgeSeconds: null,
     explanation: "The worker exposed the aggregate opportunity score without component dimensions.",
   }];
 }
@@ -122,12 +121,16 @@ export function adaptOpportunity(raw: OpportunityApi): Stock {
   const scoreHistory = history.length > 0
     ? history.map((entry) => ({ timestamp: entry.recordedAt, score: entry.score, ...dimensionsForPoint(entry) }))
     : [{ timestamp: raw.recordedAt, score: raw.opportunityScore }];
-  const rankHistory = history.length > 0
-    ? history.map((entry) => ({ timestamp: entry.recordedAt, rank: entry.currentRank ?? entry.rank ?? raw.currentRank }))
+  const rankedHistory = history.flatMap((entry) => {
+    const rank = entry.currentRank ?? entry.rank;
+    return typeof rank === "number" ? [{ timestamp: entry.recordedAt, rank }] : [];
+  });
+  const rankHistory = rankedHistory.length > 0
+    ? rankedHistory
     : [{ timestamp: raw.recordedAt, rank: raw.currentRank }];
-  const previousScore = raw.previousScore ?? scoreHistory.at(-2)?.score ?? raw.opportunityScore;
-  const previousRank = raw.previousRank ?? raw.currentRank;
-  const decision = safeText(raw.decision, "MAINTAIN");
+  const previousScore = raw.previousScore ?? scoreHistory.at(-2)?.score ?? null;
+  const previousRank = raw.previousRank ?? null;
+  const decision = safeText(raw.decision);
   const decisionTrace = raw.decision
     ? [{
         id: `decision-${raw.symbol}-${String(raw.cycleId)}`,
@@ -139,14 +142,17 @@ export function adaptOpportunity(raw: OpportunityApi): Stock {
 
   return stockSchema.parse({
     symbol: raw.symbol,
-    name: raw.asset?.name ?? `${raw.symbol} Stock Token`,
+    // The worker may omit a display name while the asset registry is being
+    // hydrated. Keep the missing value explicit instead of inventing a
+    // product label that could be mistaken for canonical metadata.
+    name: raw.asset?.name ?? "UNAVAILABLE",
     currentRank: raw.currentRank,
     previousRank,
     opportunityScore: raw.opportunityScore,
     previousScore,
-    rankMovement: previousRank - raw.currentRank,
+    rankMovement: previousRank === null ? null : previousRank - raw.currentRank,
     jevDecision: decision,
-    confidence: raw.confidence ?? 80,
+    confidence: raw.confidence ?? null,
     lastEvaluatedAt: raw.recordedAt,
     signals: makeSignals(raw),
     scoreHistory,
@@ -170,7 +176,7 @@ function factorList(raw: PairingApi): Pairing["factors"] {
       id: `${raw.id}-factor-${index + 1}`,
       label: factor.label,
       score: factor.score,
-      delta: 0,
+      delta: null,
       state: "OBSERVED",
       source: "Worker pairing score",
       explanation: "Persisted pairing component score.",
@@ -193,7 +199,7 @@ function factorList(raw: PairingApi): Pairing["factors"] {
       id: `${raw.id}-${entry.key}`,
       label: entry.label,
       score: entry.score,
-      delta: 0,
+      delta: null,
       state: "OBSERVED",
       source: "Worker pairing score",
       explanation: "Persisted pairing component score.",
@@ -235,7 +241,7 @@ export function adaptPairing(raw: PairingApi): Pairing {
       whyPair: thesis.whyPair ?? "Structured pairing rationale is not available from the worker response.",
       whyNow: thesis.whyNow ?? "Structured timing rationale is not available from the worker response.",
     },
-    factors: factors.length > 0 ? factors : [{ id: `${raw.id}-score`, label: "Pairing score", score: raw.pairingScore, delta: 0, state: "OBSERVED", source: "Worker pairing score", explanation: "Persisted aggregate pairing score." }],
+    factors: factors.length > 0 ? factors : [{ id: `${raw.id}-score`, label: "Pairing score", score: raw.pairingScore, delta: null, state: "OBSERVED", source: "Worker pairing score", explanation: "Persisted aggregate pairing score." }],
     alternatives: (raw.alternates ?? []).flatMap((alternate) => {
       if (!alternate || typeof alternate !== "object") return [];
       const item = alternate as Record<string, unknown>;
@@ -248,16 +254,7 @@ export function adaptPairing(raw: PairingApi): Pairing {
   });
 }
 
-const launchStages = [
-  ["CANDIDATE_SELECTED", "T-24H"],
-  ["NARRATIVE_VALIDATION", "T-18H"],
-  ["PAIRING_VALIDATION", "T-12H"],
-  ["CONTRACT_PREPARATION", "T-06H"],
-  ["FINAL_POLICY_CHECK", "T-01H"],
-  ["CONTROLLED_EXECUTION", "T-00"],
-] as const;
-
-export function adaptLaunch(raw: LaunchApi, pairing?: Pairing): Launch | null {
+export function adaptLaunch(raw: LaunchApi): Launch | null {
   const full = launchSchema.safeParse(raw);
   if (full.success) return full.data;
   // A partial launch response is not a launch state. Do not synthesize a
@@ -289,36 +286,45 @@ export function adaptCycle(raw: CycleApi): AgentCycle {
     timestamp: raw.completedAt ?? raw.startedAt,
     assetsEvaluated: raw.assetsScanned,
     decisions: raw.signalsProcessed,
-    rankChanges: 0,
-    pairingChanges: 0,
-    launchChanges: 0,
-    qualifiedCandidates: 0,
+    rankChanges: null,
+    pairingChanges: null,
+    launchChanges: null,
+    qualifiedCandidates: null,
     summary: `${raw.kind} cycle ${String(raw.id)} / ${raw.status}`,
     status: raw.status === "RUNNING" ? "ACTIVE" : "COMPLETE",
   });
 }
 
-export function adaptStockDetail(raw: StockApi, fallback?: OpportunityApi): Stock {
+export function adaptStockDetail(raw: StockApi, fallback?: OpportunityApi): Stock | null {
   const score = raw.current.score;
+  const latestRank = raw.rankHistory[0];
+  if (!score || !latestRank) return null;
+
+  const scoreByCycle = new Map(raw.scoreHistory.map((entry) => [String(entry.cycleId), entry]));
+  const history = raw.rankHistory.map((entry) => {
+    const scoreEntry = scoreByCycle.get(String(entry.cycleId));
+    return {
+      cycleId: entry.cycleId,
+      currentRank: entry.currentRank,
+      score: scoreEntry?.score ?? entry.opportunityScore,
+      recordedAt: entry.recordedAt,
+      dimensions: scoreEntry,
+    };
+  });
+  const previousScore = fallback?.previousScore ?? history[1]?.score ?? null;
   const opportunity: OpportunityApi = {
-    cycleId: score?.cycleId ?? "stock-detail",
+    cycleId: score.cycleId,
     symbol: raw.asset.symbol,
     currentRank: raw.current.rank,
     previousRank: raw.current.previousRank,
-    opportunityScore: score?.score ?? fallback?.opportunityScore ?? 0,
-    previousScore: fallback?.previousScore ?? raw.scoreHistory.at(-2)?.score ?? score?.score ?? 0,
-    recordedAt: raw.scoreHistory.at(-1)?.recordedAt ?? new Date().toISOString(),
+    opportunityScore: score.score,
+    previousScore,
+    recordedAt: latestRank.recordedAt,
     decision: raw.current.decision?.decision,
     confidence: raw.current.decision?.confidence,
-    score: score ?? undefined,
+    score,
     asset: raw.asset,
-    history: raw.rankHistory.map((entry, index) => ({
-      cycleId: entry.cycleId,
-      currentRank: entry.currentRank,
-      score: raw.scoreHistory[index]?.score ?? entry.opportunityScore,
-      recordedAt: entry.recordedAt,
-      dimensions: raw.scoreHistory[index],
-    })),
+    history,
   };
   const adapted = adaptOpportunity(opportunity);
   const eventTrace = raw.recentEvents.map((event) => ({
@@ -338,6 +344,7 @@ export function createProtocolData(input: {
   memory?: MemoryApi[];
   cycles?: CycleApi[];
 }): AppData | null {
+  if (!input.agent) return null;
   const assets = (input.opportunities ?? []).map(adaptOpportunity).sort((left, right) => left.currentRank - right.currentRank);
   const featuredAsset = assets[0];
   if (!featuredAsset) return null;
@@ -345,7 +352,7 @@ export function createProtocolData(input: {
   const ranking = assets.map((asset) => asset.symbol);
   const pairings = (input.pairings ?? []).map(adaptPairing);
   const candidateLaunches = (input.launches ?? [])
-    .map((raw) => adaptLaunch(raw, pairings.find((pairing) => raw.selectedPairingSlug === pairing.slug || raw.pairingCandidateId === pairing.slug)))
+    .map((raw) => adaptLaunch(raw))
     .filter((launch): launch is Launch => Boolean(launch));
   const launch = candidateLaunches[0] ?? null;
   const featuredPairing =
@@ -354,46 +361,21 @@ export function createProtocolData(input: {
     pairings[0] ??
     null;
 
-  const agent = input.agent
-    ? adaptAgent(input.agent)
-    : {
-        status: "ONLINE" as const,
-        jevStatus: "ACTIVE" as const,
-        currentOperation: "STANDBY",
-        activeCycle: 1,
-        scanProgress: 100,
-        assetsScanned: assets.length,
-        assetsInUniverse: assets.length,
-        signalsProcessed: 0,
-        narrativesDetected: 0,
-        materiallyChangedNarratives: 0,
-        decisionsProcessed: assets.length,
-        qualifiedCandidates: 0,
-        highConvictionCandidates: 0,
-        dataFreshness: "REALTIME",
-        lastScanAt: new Date().toISOString(),
-        lastDecisionAgeSeconds: 0,
-        nextCycleInSeconds: 0,
-        networkLabel: "Robinhood Chain Testnet",
-        latestEvents: [
-          {
-            id: "initial-event",
-            timestamp: new Date().toISOString(),
-            type: "ACTION" as const,
-            subject: "SYSTEM",
-            summary: "SYSTEM_INITIALIZED",
-          },
-        ],
-      };
+  const agent = adaptAgent(input.agent);
 
   const memory = (input.memory ?? []).map(adaptMemory);
   const cycles = (input.cycles ?? []).map(adaptCycle);
-  const previous = assets[0]?.previousScore ?? assets[0]?.opportunityScore ?? 0;
-  const current = assets[0]?.opportunityScore ?? 0;
+  const previous = assets[0]?.previousScore;
+  const current = assets[0]?.opportunityScore;
   const memoryComparison: MemoryComparison = memoryComparisonSchema.parse({
-    previousCycle: Math.max(1, agent.activeCycle - 1),
+    previousCycle: null,
     currentCycle: agent.activeCycle,
-    entries: [{ label: `${featuredAsset.symbol} opportunity`, previous: previous.toFixed(1), current: current.toFixed(1), delta: `${current - previous >= 0 ? "+" : ""}${(current - previous).toFixed(1)}` }],
+    entries: [{
+      label: `${featuredAsset.symbol} opportunity`,
+      previous: previous === null ? "UNAVAILABLE" : previous.toFixed(1),
+      current: current.toFixed(1),
+      delta: previous === null ? "UNAVAILABLE" : `${current - previous >= 0 ? "+" : ""}${(current - previous).toFixed(1)}`,
+    }],
   });
   const providers: ProviderReference[] = [];
   return {

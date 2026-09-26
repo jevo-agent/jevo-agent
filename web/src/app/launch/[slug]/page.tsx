@@ -44,8 +44,8 @@ export default function LaunchDetailPage({ params }: LaunchDetailPageProps) {
   const protocolData = state.data;
   if (!protocolData || (!launchRef && !demo)) return <QueryEmptyState title="No canonical launch state" message="The worker has not published a launch candidate for this route." />;
 
-  const pairing = protocolData.pairings.find((candidate) => candidate.slug === (launchRef?.selectedPairingSlug ?? protocolData.launch.selectedPairingSlug) || candidate.slug === launchRef?.pairingCandidateId || pairingSlug(candidate.stockSymbol, candidate.symbol) === normalizedSlug);
-  const launch = demo ? protocolData.launch : adaptLaunch(launchQuery.data?.data ?? launchRef!, pairing);
+  const pairing = protocolData.pairings.find((candidate) => candidate.slug === (launchRef?.selectedPairingSlug ?? protocolData.launch?.selectedPairingSlug) || candidate.slug === launchRef?.pairingCandidateId || pairingSlug(candidate.stockSymbol, candidate.symbol) === normalizedSlug);
+  const launch = demo ? protocolData.launch : (launchQuery.data?.data || launchRef ? adaptLaunch(launchQuery.data?.data ?? launchRef!) : null);
   if (!pairing || !launch) notFound();
   const stock = protocolData.assets.find((candidate) => candidate.symbol === pairing.stockSymbol);
   if (!stock) notFound();

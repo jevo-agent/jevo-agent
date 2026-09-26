@@ -51,11 +51,11 @@ export const signalSchema = z.object({
   label: z.string().min(1),
   context: z.string().min(1),
   score: z.number().min(0).max(100),
-  delta: z.number(),
+  delta: z.number().nullable(),
   deltaLabel: z.string().min(1),
   state: z.string().min(1),
   source: z.string().min(1),
-  dataAgeSeconds: z.number().int().nonnegative(),
+  dataAgeSeconds: z.number().int().nonnegative().nullable(),
   explanation: z.string().min(1),
 });
 
@@ -108,7 +108,7 @@ export const pairingFactorSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1),
   score: z.number().min(0).max(100),
-  delta: z.number(),
+  delta: z.number().nullable(),
   state: z.string().min(1),
   source: z.string().min(1),
   explanation: z.string().min(1),
@@ -200,7 +200,7 @@ export const launchSchema = z.object({
 
 export const memoryRecordSchema = z.object({
   id: z.string().min(1),
-  cycleId: z.number().int().positive(),
+  cycleId: z.number().int().nonnegative().nullable(),
   eventType: eventTypeSchema,
   subject: z.string().min(1),
   previousState: z.string().min(1),
@@ -212,7 +212,7 @@ export const memoryRecordSchema = z.object({
   summary: z.string().min(1),
 });
 export const agentCycleSchema = z.object({
-  id: z.number().int().positive(),
+  id: z.number().int().nonnegative().nullable(),
   timestamp: timestampSchema,
   assetsEvaluated: z.number().int().nonnegative(),
   decisions: z.number().int().nonnegative(),

@@ -66,10 +66,10 @@ export function MemoryView({ asset, agent, cycles, memory, comparison }: MemoryV
         </ol>
       </div>
       <div className="transition">
-        <div><span className="label">Previous state</span><span className="big">{rankEntry?.previous ?? `#${asset.previousRank} / ${asset.previousScore}`}</span><p>Cycle {comparison.previousCycle}; prior worker state retained for comparison.</p></div>
+        <div><span className="label">Previous state</span><span className="big">{rankEntry?.previous ?? (asset.previousRank === null || asset.previousScore === null ? "UNAVAILABLE" : `#${asset.previousRank} / ${asset.previousScore}`)}</span><p>Cycle {comparison.previousCycle ?? "UNAVAILABLE"}; prior worker state retained for comparison.</p></div>
         <div><span className="label">Observed change</span><span className="big">{narrativeEntry?.delta ?? "No structured delta"}</span><p>{narrativeEntry ? "Worker-persisted evidence changed between cycles." : "No additional structured change was published."}</p></div>
-        <div><span className="label">JEV decision</span><span className="big on">{asset.jevDecision.replaceAll("_", " ")}</span><p>Confidence {asset.confidence}%. Structured output only.</p></div>
-        <div><span className="label">Current state</span><span className="big on">{rankEntry?.current ?? `#${asset.currentRank} / ${asset.opportunityScore}`}</span><p>Cycle {comparison.currentCycle}. State comes from the worker API.</p></div>
+        <div><span className="label">JEV decision</span><span className="big on">{asset.jevDecision.replaceAll("_", " ")}</span><p>Confidence {asset.confidence === null ? "UNAVAILABLE" : `${asset.confidence}%`}. Structured output only.</p></div>
+        <div><span className="label">Current state</span><span className="big on">{rankEntry?.current ?? `#${asset.currentRank} / ${asset.opportunityScore}`}</span><p>Cycle {comparison.currentCycle ?? "UNAVAILABLE"}. State comes from the worker API.</p></div>
       </div>
       <div className="memory-cycle-note"><span className="label">Cycle {agent.activeCycle} / {cycles[0]?.summary ?? "Current worker cycle"}</span><span className="label">{pairEntry ? `Pair score ${pairEntry.current}` : "No pairing state recorded"} / {memory.length} records retained / {agent.dataFreshness}</span></div>
     </section>
