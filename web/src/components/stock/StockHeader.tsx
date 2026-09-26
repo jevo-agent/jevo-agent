@@ -32,7 +32,7 @@ export function StockHeader({ asset, agent }: StockHeaderProps) {
           <p className="protocol-label">Last evaluated</p>
           <p className="mt-2 font-mono text-sm text-[var(--jevo-text)]">{formatClock(asset.lastEvaluatedAt)} UTC</p>
           <p className="mt-2 font-mono text-[0.6rem] tracking-[0.07em] text-[var(--jevo-muted)] uppercase">
-            Freshness / {agent.dataFreshness}<br />cycle_{agent.activeCycle}
+            Freshness / {agent.dataFreshness}<br />cycle_{agent.activeCycle ?? "UNAVAILABLE"}
           </p>
         </div>
       </div>

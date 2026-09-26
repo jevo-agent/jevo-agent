@@ -47,7 +47,7 @@ export default function StockDetailPage({ params }: StockPageProps) {
             </aside>
           </div>
           <div className="mt-8 border border-[var(--jevo-line)]">
-            <DecisionTrace asset={asset} cycle={state.data.agent.activeCycle} />
+            <DecisionTrace asset={asset} cycle={state.data.agent.activeCycle ?? "UNAVAILABLE"} />
             <AgentMemory asset={asset} />
           </div>
         </div>

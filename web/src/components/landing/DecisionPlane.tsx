@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from "react";
 
+import type { Launch } from "@/types/launch";
 import type { Pairing } from "@/types/pairing";
 import type { Stock } from "@/types/stock";
 
@@ -26,10 +27,11 @@ const rankY: Record<number, number> = { 1: 162, 2: 226, 3: 290, 4: 354, 5: 418 }
 
 interface DecisionPlaneProps {
   asset: Stock;
-  pairing: Pairing;
+  pairing?: Pairing | null;
+  launch?: Launch | null;
 }
 
-export function DecisionPlane({ asset, pairing }: DecisionPlaneProps) {
+export function DecisionPlane({ asset, pairing = null, launch = null }: DecisionPlaneProps) {
   const [autoStage, setAutoStage] = useState(0);
   const [hoverAsset, setHoverAsset] = useState<string | null>(null);
   const [hoverPair, setHoverPair] = useState<string | null>(null);
@@ -60,7 +62,7 @@ export function DecisionPlane({ asset, pairing }: DecisionPlaneProps) {
 
   const activeStage = lock?.kind === "stage" ? Number(lock.value) : hoverStage ?? autoStage;
   const activeAsset = lock?.kind === "asset" ? lock.value : hoverAsset;
-  const activePair = lock?.kind === "pair" ? lock.value : hoverPair;
+  const activePair = pairing ? (lock?.kind === "pair" ? lock.value : hoverPair) : null;
   const focused = Boolean(activeAsset || activePair);
 
   function setTimedLock(nextLock: Lock) {
@@ -81,11 +83,18 @@ export function DecisionPlane({ asset, pairing }: DecisionPlaneProps) {
     }
   }
 
-  function handlePairKey(event: KeyboardEvent<SVGGElement>, symbol: string) {
+  function handlePairKey(event: KeyboardEvent<SVGGElement>) {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      setTimedLock({ kind: "pair", value: symbol });
+      const symbol = event.currentTarget.dataset.pairSymbol;
+      if (symbol) setTimedLock({ kind: "pair", value: symbol });
     }
+  }
+
+  function handlePairClick(event: MouseEvent<SVGGElement>) {
+    event.stopPropagation();
+    const symbol = event.currentTarget.dataset.pairSymbol;
+    if (symbol) setTimedLock({ kind: "pair", value: symbol });
   }
 
   function assetClass(symbol: string) {
@@ -97,8 +106,22 @@ export function DecisionPlane({ asset, pairing }: DecisionPlaneProps) {
   function pairClass(symbol: string) {
     const selected = activePair === symbol;
     const dimmed = focused && !selected;
-    return `plane-pair${symbol === "GPU" ? " is-primary" : ""}${selected ? " is-focused" : ""}${dimmed ? " is-dimmed" : ""}`;
+    return `plane-pair${symbol === pairing?.symbol ? " is-primary" : ""}${selected ? " is-focused" : ""}${dimmed ? " is-dimmed" : ""}`;
   }
+
+  const decision = asset.jevDecision === "UNAVAILABLE" ? "UNAVAILABLE" : asset.jevDecision.replaceAll("_", " ");
+  const rankTransition = asset.previousRank === null
+    ? `#${String(asset.currentRank).padStart(2, "0")}`
+    : `#${String(asset.previousRank).padStart(2, "0")} → #${String(asset.currentRank).padStart(2, "0")}`;
+  const pairLabels = pairing
+    ? [
+        { symbol: pairing.symbol, label: `${pairing.stockSymbol} × ${pairing.symbol}`, detail: `${pairing.pairScore.toFixed(1)} / ${pairing.jevDecision.replaceAll("_", " ")}` },
+        ...pairing.alternatives.slice(0, 2).map((alternative) => ({ symbol: alternative.symbol, label: alternative.symbol, detail: `${alternative.pairScore.toFixed(1)} / ALTERNATIVE` })),
+      ]
+    : [];
+  const description = pairing
+    ? `Market signals enter from the left, pass through the JEV decision gate, rank into an opportunity list, branch into ${pairing.stockSymbol} × ${pairing.symbol}, and resolve into the launch lane. ${launch ? `Launch state: ${launch.readiness}.` : "No launch candidate this cycle."}`
+    : "Market signals enter from the left, pass through the JEV decision gate, rank into an opportunity list, and resolve with no qualified pair or launch candidate this cycle.";
 
   return (
     <div className={`decision-plane${lock ? " is-locked" : ""}${focused ? " has-focus" : ""}${lock?.kind === "stage" ? " is-stage-locked" : ""}`}>
@@ -111,7 +134,7 @@ export function DecisionPlane({ asset, pairing }: DecisionPlaneProps) {
 
       <svg className="decision-plane-svg" viewBox="0 0 940 560" role="img" aria-labelledby="decision-plane-title decision-plane-description" onClick={() => setTimedLock(null)}>
         <title id="decision-plane-title">JEVO autonomous decision plane</title>
-        <desc id="decision-plane-description">Market signals enter from the left, pass through the JEV decision gate, rank into an opportunity list, branch into GPU, CUDA, and COMPUTE pairings, and resolve into the NVDA GPU launch candidate. No transaction is submitted.</desc>
+        <desc id="decision-plane-description">{description}</desc>
         <g className="plane-guides" aria-hidden="true">
           {[...Array(22)].map((_, index) => <path className="field-trajectory" key={index} pathLength={1} d={`M48 ${48 + index * 23} C180 ${48 + index * 23} 260 ${225 + index * 4.5} 348 ${225 + index * 4.5}`} style={{ "--signal-delay": `${index * -0.65}s` } as CSSProperties} />)}
           <line x1="244" y1="24" x2="244" y2="530" />
@@ -163,7 +186,7 @@ export function DecisionPlane({ asset, pairing }: DecisionPlaneProps) {
             const focusedRank = activeAsset === signal.symbol;
             return <g key={`rank-${signal.symbol}`} className={`plane-rank-row${signal.symbol === "NVDA" ? " is-primary" : ""}${focusedRank ? " is-focused" : ""}${activeAsset && !focusedRank ? " is-dimmed" : ""}`} role="button" tabIndex={0} aria-label={`Focus ${signal.symbol} ranked ${signal.rank}`} aria-pressed={activeAsset === signal.symbol} onClick={(event) => { event.stopPropagation(); setTimedLock({ kind: "asset", value: signal.symbol }); }} onKeyDown={(event) => handleAssetKey(event, signal.symbol)} onMouseEnter={() => setHoverAsset(signal.symbol)} onMouseLeave={() => setHoverAsset(null)} onFocus={() => setHoverAsset(signal.symbol)} onBlur={() => setHoverAsset(null)}>
               <text x="510" y={y - 9}>{String(signal.rank).padStart(2, "0")} {signal.symbol} {signal.symbol === "NVDA" ? asset.opportunityScore.toFixed(1) : signal.score.toFixed(1)}</text>
-              {signal.symbol === "NVDA" ? <><text className="plane-accent" x="510" y={y + 16}>JEV / PROMOTE #04 → #01</text><text className="plane-note" x="510" y={y + 34}>Opportunity / {asset.opportunityScore.toFixed(1)}</text></> : <text className="plane-note" x="510" y={y + 17}>Δ {signal.delta}</text>}
+              {signal.symbol === asset.symbol ? <><text className="plane-accent" x="510" y={y + 16}>JEV / {decision} {rankTransition}{asset.confidence === null ? "" : ` / ${asset.confidence}%`}</text><text className="plane-note" x="510" y={y + 34}>Opportunity / {asset.opportunityScore.toFixed(1)}</text></> : <text className="plane-note" x="510" y={y + 17}>Δ {signal.delta}</text>}
               <line x1="510" y1={y + 28} x2="684" y2={y + 28} />
             </g>;
           })}
@@ -173,27 +196,24 @@ export function DecisionPlane({ asset, pairing }: DecisionPlaneProps) {
           {signals.map((signal) => <g key={`asset-${signal.symbol}`} className={`${assetClass(signal.symbol)}${signal.symbol === "NVDA" ? " is-primary" : ""}`} role="button" tabIndex={0} aria-label={`Focus ${signal.symbol} signal path`} aria-pressed={activeAsset === signal.symbol} onClick={(event) => { event.stopPropagation(); setTimedLock({ kind: "asset", value: signal.symbol }); }} onKeyDown={(event) => handleAssetKey(event, signal.symbol)} onMouseEnter={() => setHoverAsset(signal.symbol)} onMouseLeave={() => setHoverAsset(null)} onFocus={() => setHoverAsset(signal.symbol)} onBlur={() => setHoverAsset(null)}><text x="48" y={signal.sourceY + 4}>{signal.symbol}</text><circle cx="36" cy={signal.sourceY} r="2.5" /></g>)}
         </g>
 
-        <g className="plane-pair-routes">
-          <path className={`decision-route pair-route gpu-route${activePair && activePair !== "GPU" ? " is-dimmed" : ""}`} pathLength={1} d="M610 162 C660 162 670 88 714 88 L782 88 C820 88 828 120 828 176 L828 246" />
-          <path className={`decision-route pair-route pair-alt-route${activePair && activePair !== "CUDA" ? " is-dimmed" : ""}`} pathLength={1} d="M610 162 C660 162 678 144 714 144" />
-          <path className={`decision-route pair-route pair-alt-route${activePair && activePair !== "COMPUTE" ? " is-dimmed" : ""}`} pathLength={1} d="M610 162 C660 162 678 210 714 210" />
+        {pairing ? <g className="plane-pair-routes">
+          <path className={`decision-route pair-route gpu-route${activePair && activePair !== pairing.symbol ? " is-dimmed" : ""}`} pathLength={1} d="M610 162 C660 162 670 88 714 88 L782 88 C820 88 828 120 828 176 L828 246" />
+          {pairLabels.slice(1).map((pair, index) => <path key={`pair-route-${pair.symbol}`} className={`decision-route pair-route pair-alt-route${activePair && activePair !== pair.symbol ? " is-dimmed" : ""}`} pathLength={1} d={`M610 162 C660 162 678 ${144 + index * 66} 714 ${144 + index * 66}`} />)}
           <path className="decision-route launch-route" pathLength={1} d="M828 246 C828 304 814 354 772 382 L690 382" />
-        </g>
+        </g> : null}
 
         <g className="plane-pair-labels">
-          {(["GPU", "CUDA", "COMPUTE"] as const).map((symbol, index) => <g key={symbol} className={pairClass(symbol)} role="button" tabIndex={0} aria-label={`Focus ${symbol} pairing flow`} aria-pressed={activePair === symbol} onClick={(event) => { event.stopPropagation(); setTimedLock({ kind: "pair", value: symbol }); }} onKeyDown={(event) => handlePairKey(event, symbol)} onMouseEnter={() => setHoverPair(symbol)} onMouseLeave={() => setHoverPair(null)} onFocus={() => setHoverPair(symbol)} onBlur={() => setHoverPair(null)}><text className={symbol === "GPU" ? "plane-pair-symbol selected" : "plane-pair-symbol"} x="714" y={94 + index * 62}>${symbol}</text><text className="plane-note" x="714" y={111 + index * 62}>{symbol === "GPU" ? "95.4 / STRONG PAIR" : "alternative route"}</text></g>)}
+          {pairing ? pairLabels.map((pair, index) => <g key={pair.symbol} className={pairClass(pair.symbol)} role="button" tabIndex={0} data-pair-symbol={pair.symbol} aria-label={`Focus ${pair.label} pairing flow`} aria-pressed={activePair === pair.symbol} onClick={handlePairClick} onKeyDown={handlePairKey} onMouseEnter={() => setHoverPair(pair.symbol)} onMouseLeave={() => setHoverPair(null)} onFocus={() => setHoverPair(pair.symbol)} onBlur={() => setHoverPair(null)}><text className={pair.symbol === pairing.symbol ? "plane-pair-symbol selected" : "plane-pair-symbol"} x="714" y={94 + index * 62}>{pair.label}</text><text className="plane-note" x="714" y={111 + index * 62}>{pair.detail}</text></g>) : <g className="plane-pair-empty" aria-label="No qualified pair this cycle"><text className="plane-note" x="714" y="94">PAIR</text><text className="plane-accent" x="714" y="111">NO QUALIFIED PAIR</text><text className="plane-note" x="714" y="128">THIS CYCLE</text></g>}
         </g>
 
         <g className="plane-launch-label">
           <line x1="690" y1="366" x2="690" y2="454" />
-          <text className="plane-note" x="708" y="388">LAUNCH CANDIDATE</text>
-          <text className="plane-accent" x="708" y="414">{pairing.stockSymbol} × {pairing.symbol}</text>
-          <text className="plane-note" x="708" y="438">T-06 / PREP · TX / NOT SENT</text>
+          {launch && pairing ? <><text className="plane-note" x="708" y="388">LAUNCH / {launch.stage.replaceAll("_", " ")}</text><text className="plane-accent" x="708" y="414">{pairing.stockSymbol} × {pairing.symbol}</text><text className="plane-note" x="708" y="438">{launch.readiness} · TX / {launch.transactionState.replaceAll("_", " ")}</text></> : <><text className="plane-note" x="708" y="388">LAUNCH</text><text className="plane-accent" x="708" y="414">NO LAUNCH CANDIDATE</text><text className="plane-note" x="708" y="438">THIS CYCLE</text></>}
         </g>
 
       </svg>
 
-      <div className="decision-plane-rail" aria-hidden="true"><span>Observe / Stock Tokens</span><span>Jev / Decision Gate</span><span>Pair / <b>$GPU</b></span><span>Launch / <b>Not submitted</b></span></div>
+      <div className="decision-plane-rail" aria-hidden="true"><span>Observe / Stock Tokens</span><span>Jev / Decision Gate</span><span>Pair / <b>{pairing ? `${pairing.stockSymbol} × ${pairing.symbol}` : "No qualified pair"}</b></span><span>Launch / <b>{launch ? launch.transactionState.replaceAll("_", " ") : "No launch candidate"}</b></span></div>
       <span className="decision-plane-lock-status" aria-live="polite">{lock ? `Locked ${lock.kind}: ${lock.value}. Auto emphasis resumes in 5 seconds.` : "Automatic decision sequence active."}</span>
     </div>
   );

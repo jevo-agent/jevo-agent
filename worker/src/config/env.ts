@@ -18,6 +18,10 @@ export const envSchema = z.object({
   JEV_API_KEY: z.string().optional(),
   JEV_API_URL: z.string().url().default("https://api.jev.ai/v1"),
   JEV_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(15_000),
+  MARKET_DATA_MODE: z.enum(["mock", "real"]).default("mock"),
+  NARRATIVE_MODE: z.enum(["mock", "real"]).default("mock"),
+  ALPHA_VANTAGE_API_KEY: z.string().optional(),
+  ALPHA_VANTAGE_CACHE_TTL_MS: z.coerce.number().int().positive().default(6 * 60 * 60 * 1000),
   ADMIN_API_TOKENS: z.string().optional(),
   NEXT_PUBLIC_APP_URL: z.string().optional(),
 });
@@ -39,6 +43,14 @@ export function validateEnv(input: Record<string, unknown> = process.env): AppEn
   // Real JEV mode requires the server-side Vercel AI Gateway key.
   if (parsed.JEV_MODE === "real" && (!parsed.AI_GATEWAY_API_KEY || parsed.AI_GATEWAY_API_KEY.trim() === "")) {
     throw new Error("Invalid configuration: AI_GATEWAY_API_KEY must be provided when JEV_MODE=real");
+  }
+
+  // Real Market Data or Narrative mode requires ALPHA_VANTAGE_API_KEY
+  if (
+    (parsed.MARKET_DATA_MODE === "real" || parsed.NARRATIVE_MODE === "real") &&
+    (!parsed.ALPHA_VANTAGE_API_KEY || parsed.ALPHA_VANTAGE_API_KEY.trim() === "")
+  ) {
+    throw new Error("Invalid configuration: ALPHA_VANTAGE_API_KEY must be provided when MARKET_DATA_MODE=real or NARRATIVE_MODE=real");
   }
 
   // Section 19: Boot-time assertion preventing mock mode in production

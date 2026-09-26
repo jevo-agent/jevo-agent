@@ -35,10 +35,10 @@ function eventType(value: string): AgentRuntime["latestEvents"][number]["type"] 
     : "ACTION";
 }
 
-function cycleNumber(value: string | number): number | null {
-  if (typeof value === "number") return Number.isFinite(value) && value >= 0 ? value : null;
-  const parsed = Number(value.replace(/\D/g, ""));
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+function cycleIdentifier(value: string | number | null | undefined): string | number | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "number") return Number.isFinite(value) && value > 0 ? value : null;
+  return value.trim() || null;
 }
 
 function safeText(value: string | null | undefined, unavailable = "UNAVAILABLE") {
@@ -267,7 +267,7 @@ export function adaptMemory(raw: MemoryApi): MemoryRecord {
   const currentState = Object.entries(raw.currentState).map(([key, value]) => `${key}: ${String(value)}`).join(" · ") || "UNAVAILABLE";
   return memoryRecordSchema.parse({
     id: raw.id,
-    cycleId: cycleNumber(raw.cycleId),
+    cycleId: cycleIdentifier(raw.cycleId),
     eventType: eventType(raw.subjectType === "SYSTEM" ? "ACTION" : raw.decision ?? "MEMORY"),
     subject: raw.subjectId,
     previousState,
@@ -282,7 +282,7 @@ export function adaptMemory(raw: MemoryApi): MemoryRecord {
 
 export function adaptCycle(raw: CycleApi): AgentCycle {
   return agentCycleSchema.parse({
-    id: cycleNumber(raw.id),
+    id: cycleIdentifier(raw.id),
     timestamp: raw.completedAt ?? raw.startedAt,
     assetsEvaluated: raw.assetsScanned,
     decisions: raw.signalsProcessed,
@@ -369,7 +369,7 @@ export function createProtocolData(input: {
   const current = assets[0]?.opportunityScore;
   const memoryComparison: MemoryComparison = memoryComparisonSchema.parse({
     previousCycle: null,
-    currentCycle: agent.activeCycle,
+    currentCycle: cycleIdentifier(agent.activeCycle),
     entries: [{
       label: `${featuredAsset.symbol} opportunity`,
       previous: previous === null ? "UNAVAILABLE" : previous.toFixed(1),

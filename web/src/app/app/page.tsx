@@ -12,7 +12,7 @@ export default function AppPage() {
 
   if (state.isLoading) return <QueryLoadingState title="Loading operational overview" />;
   if (state.isError) return <QueryErrorState title="Failed to Load Agent Overview" error={state.error} onRetry={() => void state.refetch()} />;
-  if (!state.data) return <QueryEmptyState title="No canonical overview state" message="The worker has not published a complete opportunity, pairing, and launch state yet." />;
+  if (!state.data) return <QueryEmptyState title="No canonical opportunity state" message="The worker has not published a ranked opportunity state yet." />;
 
   const { agent, assets, ranking, pairings, launch, memory, featuredPairing } = state.data;
   return (

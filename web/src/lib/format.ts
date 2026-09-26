@@ -2,6 +2,10 @@ export function formatNumber(value: number) {
   return new Intl.NumberFormat("en-US").format(value);
 }
 
+export function formatCycle(value: string | number | null | undefined) {
+  return value === null || value === undefined || value === "" ? "—" : String(value);
+}
+
 export function formatClock(timestamp: string | null | undefined) {
   if (!timestamp) return "—";
   return new Intl.DateTimeFormat("en-GB", {
@@ -13,8 +17,8 @@ export function formatClock(timestamp: string | null | undefined) {
   }).format(new Date(timestamp));
 }
 
-export function formatCountdown(totalSeconds: number) {
-  if (totalSeconds <= 0) return "—";
+export function formatCountdown(totalSeconds: number | null | undefined) {
+  if (totalSeconds === null || totalSeconds === undefined || totalSeconds <= 0) return "—";
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;

@@ -13,7 +13,7 @@ import {
 
 import { DecisionPlane } from "@/components/landing/DecisionPlane";
 import { LandingScroll } from "@/components/landing/LandingScroll";
-import { formatClock, formatCountdown } from "@/lib/format";
+import { formatClock, formatCountdown, formatCycle } from "@/lib/format";
 import type { AgentRuntime, MemoryRecord } from "@/types/agent";
 import type { Launch } from "@/types/launch";
 import type { Pairing } from "@/types/pairing";
@@ -24,10 +24,10 @@ interface LandingPageProps {
   assets: Stock[];
   ranking: string[];
   pairings: Pairing[];
-  launch: Launch;
+  launch: Launch | null;
   memory: MemoryRecord[];
   featuredAsset: Stock;
-  featuredPairing: Pairing;
+  featuredPairing: Pairing | null;
 }
 type PairCandidate = {
   symbol: string;
@@ -48,6 +48,7 @@ export function LandingPage(data: LandingPageProps) {
           agent={data.agent}
           asset={data.featuredAsset}
           pairing={data.featuredPairing}
+          launch={data.launch}
         />
         <AgentSection
           agent={data.agent}
@@ -59,8 +60,8 @@ export function LandingPage(data: LandingPageProps) {
           ranking={data.ranking}
           cycle={data.agent.activeCycle}
         />
-        <PairingSection pairing={data.featuredPairing} />
-        <PipelineSection launch={data.launch} pairing={data.featuredPairing} />
+        {data.featuredPairing ? <PairingSection pairing={data.featuredPairing} asset={data.assets.find((asset) => asset.symbol === data.featuredPairing?.stockSymbol) ?? data.featuredAsset} /> : <LandingUnavailableSection id="pairings" index="03" title="No qualified pairing this cycle" copy="JEV completed the opportunity evaluation without publishing a qualified pairing candidate." />}
+        {data.launch && data.featuredPairing ? <PipelineSection launch={data.launch} pairing={data.featuredPairing} asset={data.assets.find((asset) => asset.symbol === data.featuredPairing?.stockSymbol) ?? data.featuredAsset} /> : <LandingUnavailableSection id="pipeline" index="04" title="No launch candidate this cycle" copy="Launch readiness remains unavailable until a pairing candidate is approved and scheduled." />}
         <MemorySection
           asset={data.featuredAsset}
           memory={data.memory}
@@ -109,14 +110,32 @@ function LandingHeader() {
   );
 }
 
+function LandingUnavailableSection({ id, index, title, copy }: { id: string; index: string; title: string; copy: string }) {
+  return (
+    <section className="section" id={id}>
+      <div className="wrap">
+        <div className="sec-head">
+          <div className="left">
+            <p className="label sec-index">{index} / Protocol state</p>
+            <h2 className="h2">{title}</h2>
+          </div>
+          <p className="body">{copy}</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function LandingHero({
   agent,
   asset,
   pairing,
+  launch,
 }: {
   agent: AgentRuntime;
   asset: Stock;
-  pairing: Pairing;
+  pairing: Pairing | null;
+  launch: Launch | null;
 }) {
   return (
     <section className="hero" id="top">
@@ -125,7 +144,7 @@ function LandingHero({
         <div className="hero-copy">
           <p className="label hero-plane-meta">
             <b>JEVO / Decision plane</b>
-            <span>cycle {agent.activeCycle}</span>
+            <span>cycle {formatCycle(agent.activeCycle)}</span>
           </p>
           <p className="label">Autonomous market intelligence protocol</p>
           <h1>
@@ -152,7 +171,7 @@ function LandingHero({
             State → Jev → Decision → Action <span>Phase 0 / simulated</span>
           </p>
         </div>
-        <DecisionPlane asset={asset} pairing={pairing} />
+        <DecisionPlane asset={asset} pairing={pairing} launch={launch} />
       </div>
       <div className="hero-status">
         <div className="wrap">
@@ -165,14 +184,14 @@ function LandingHero({
           <div className="cell">
             <div className="label">Cycle</div>
             <div className="label">
-              <b>{agent.activeCycle}</b> / last decision{" "}
+              <b>{formatCycle(agent.activeCycle)}</b> / last decision{" "}
               <b>{agent.lastDecisionAgeSeconds}s</b> ago
             </div>
           </div>
           <div className="cell">
             <div className="label">Network</div>
             <div className="label">
-              <b>{agent.networkLabel}</b>
+              <b>{agent.networkLabel ?? "UNAVAILABLE"}</b>
             </div>
           </div>
           <div className="cell">
@@ -301,7 +320,7 @@ function AgentSection({
 }: {
   agent: AgentRuntime;
   asset: Stock;
-  pairing: Pairing;
+  pairing: Pairing | null;
 }) {
   const stageRefs = useRef<Array<HTMLElement | null>>([]);
   const routerRef = useRef<HTMLDivElement | null>(null);
@@ -387,7 +406,7 @@ function AgentSection({
                 <div className="contrast-row">
                   <span className="label">Output</span>
                   <span className="chainline output-line">
-                    PROMOTE {asset.symbol} / #04 → #01 / CONF{" "}
+                    {asset.jevDecision.replaceAll("_", " ")} {asset.symbol} / {asset.previousRank === null ? "UNAVAILABLE" : `#${String(asset.previousRank).padStart(2, "0")}`} → #{String(asset.currentRank).padStart(2, "0")} / CONF{" "}
                     {asset.confidence === null ? "—" : asset.confidence / 100}
                   </span>
                 </div>
@@ -439,7 +458,7 @@ function AgentStoryStagePanel({
   stage,
 }: {
   asset: Stock;
-  pairing: Pairing;
+  pairing: Pairing | null;
   stage: AgentStoryStage;
 }) {
   const detail = AGENT_STORY_STAGES[stage];
@@ -479,14 +498,14 @@ function AgentStoryStagePanel({
         <div className="agent-stage-outcome">
           <span className="label">OPPORTUNITY RANK</span>
           <strong>{asset.symbol}</strong>
-          <b>#04 → #01</b>
+          <b>{asset.previousRank === null ? "UNAVAILABLE" : `#${String(asset.previousRank).padStart(2, "0")}`} → #{String(asset.currentRank).padStart(2, "0")}</b>
           <span className="agent-stage-score">
             {asset.opportunityScore.toFixed(1)}
           </span>
           <span className="agent-stage-decision">PROMOTE</span>
         </div>
       )}
-      {stage === 3 && (
+      {stage === 3 && pairing ? (
         <div className="agent-stage-outcome agent-stage-pair">
           <span className="label">PAIRING THESIS</span>
           <strong>
@@ -499,7 +518,13 @@ function AgentStoryStagePanel({
           <span className="label">LAUNCH CANDIDATE</span>
           <span className="agent-stage-state">TX / NOT SUBMITTED</span>
         </div>
-      )}
+      ) : stage === 3 ? (
+        <div className="agent-stage-outcome agent-stage-pair">
+          <span className="label">PAIRING THESIS</span>
+          <strong>NO QUALIFIED PAIRING</strong>
+          <span className="agent-stage-state">THIS CYCLE</span>
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -513,7 +538,7 @@ function AgentDecisionRouter({
   stage: AgentStoryStage;
   agent: AgentRuntime;
   asset: Stock;
-  pairing: Pairing;
+  pairing: Pairing | null;
 }) {
   const inputNodes = [
     ["MARKET STATE", 82],
@@ -529,11 +554,11 @@ function AgentDecisionRouter({
     ],
     [
       "02 / PAIRING THESIS",
-      `${asset.symbol} × ${pairing.symbol} / ${pairing.pairScore.toFixed(1)}`,
+      pairing ? `${asset.symbol} × ${pairing.symbol} / ${pairing.pairScore.toFixed(1)}` : "NO QUALIFIED PAIRING",
       132,
     ],
-    ["03 / MEMORY EVENT", `CYCLE ${agent.activeCycle}`, 188],
-    ["04 / LAUNCH CANDIDATE", "TX / NOT SUBMITTED", 244],
+    ["03 / MEMORY EVENT", `CYCLE ${formatCycle(agent.activeCycle)}`, 188],
+    ["04 / LAUNCH CANDIDATE", pairing ? "TX / NOT SUBMITTED" : "NO LAUNCH CANDIDATE", 244],
   ] as const;
   const activeOutputs = stage === 2 ? [0] : stage === 3 ? [1, 3] : [];
   return (
@@ -544,7 +569,7 @@ function AgentDecisionRouter({
     >
       <div className="agent-router-meta">
         <span className="label">JEV DECISION SPINE / INPUTS → ACTIONS</span>
-        <span className="label">CYCLE {agent.activeCycle}</span>
+        <span className="label">CYCLE {formatCycle(agent.activeCycle)}</span>
       </div>
       <div
         className="agent-router-field"
@@ -630,12 +655,9 @@ function AgentDecisionRouter({
           {String(asset.currentRank).padStart(2, "0")} /{" "}
           {asset.opportunityScore.toFixed(1)}.
         </li>
-        <li>
-          Pairing thesis: {asset.symbol} × {pairing.symbol} /{" "}
-          {pairing.pairScore.toFixed(1)}.
-        </li>
-        <li>Memory event: cycle {agent.activeCycle}.</li>
-        <li>Launch candidate: transaction not submitted.</li>
+        <li>{pairing ? `Pairing thesis: ${asset.symbol} × ${pairing.symbol} / ${pairing.pairScore.toFixed(1)}.` : "No qualified pairing was published for this cycle."}</li>
+        <li>Memory event: cycle {formatCycle(agent.activeCycle)}.</li>
+        <li>{pairing ? "Launch candidate: transaction not submitted." : "No launch candidate was published for this cycle."}</li>
       </ul>
     </div>
   );
@@ -648,7 +670,7 @@ function OpportunitySection({
 }: {
   assets: Stock[];
   ranking: string[];
-  cycle: number;
+  cycle: string | number | null;
 }) {
   const [view, setView] = useState<"prev" | "curr">("curr");
   const rows = useMemo(
@@ -688,18 +710,18 @@ function OpportunitySection({
               aria-pressed={view === "prev"}
               onClick={() => setView("prev")}
             >
-              Previous / {cycle - 1}
+              Previous / unavailable
             </button>
             <button
               type="button"
               aria-pressed={view === "curr"}
               onClick={() => setView("curr")}
             >
-              Current / {cycle}
+              Current / {formatCycle(cycle)}
             </button>
           </div>
           <span className="label">
-            Last ranking <b>{cycle}</b> / demo fixture
+            Last ranking <b>{formatCycle(cycle)}</b> / worker state
           </span>
         </div>
         <div className="rank" role="table" aria-label="JEVO opportunity rank">
@@ -754,7 +776,7 @@ function OpportunitySection({
                     <span className="age">
                       {view === "curr"
                         ? `${formatClock(asset.lastEvaluatedAt)} UTC`
-                        : asset.previousRank === null ? "Cycle unavailable" : `Cycle ${cycle - 1}`}
+                        : asset.previousRank === null ? "Cycle unavailable" : "Previous cycle"}
                     </span>
                     <span className="go">↗</span>
                   </Link>
@@ -777,7 +799,7 @@ function OpportunitySection({
   );
 }
 
-function PairingSection({ pairing }: { pairing: Pairing }) {
+function PairingSection({ pairing, asset }: { pairing: Pairing; asset: Stock }) {
   const storyRef = useRef<HTMLElement | null>(null);
   const stickyRef = useRef<HTMLDivElement | null>(null);
   const manualTimer = useRef<number | null>(null);
@@ -921,7 +943,7 @@ function PairingSection({ pairing }: { pairing: Pairing }) {
                 <span className="label">Stock Token</span>
                 <b>{pairing.stockSymbol}</b>
                 <span className="label">
-                  Rank <b>#01</b> / 96.8
+                  Rank <b>#{String(asset.currentRank).padStart(2, "0")}</b> / {asset.opportunityScore.toFixed(1)}
                 </span>
               </div>
               <div className="pair-links" aria-hidden="true">
@@ -973,7 +995,7 @@ function PairingSection({ pairing }: { pairing: Pairing }) {
                         : "Alternative"}
                     </b>{" "}
                     / conf{" "}
-                    <b>{active.pairing ? `${pairing.confidence}%` : "—"}</b>
+                    <b>{active.pairing && pairing.confidence !== null ? `${pairing.confidence}%` : "—"}</b>
                   </span>
                 </div>
                 <div className="qa">
@@ -985,7 +1007,7 @@ function PairingSection({ pairing }: { pairing: Pairing }) {
                   <p>
                     {active.pairing
                       ? sourceCopy.thesis.whyMeme
-                      : `The ${active.symbol} concept retains a coherent link to ${pairing.stockSymbol}'s market narrative.`}
+                      : "Structured rationale is unavailable for this alternative."}
                   </p>
                 </div>
                 <div className="qa">
@@ -1004,19 +1026,17 @@ function PairingSection({ pairing }: { pairing: Pairing }) {
                 </div>
                 <div className="comps">
                   {pairing.factors.slice(0, 6).map((factor, index) => {
-                    const factorScore = active.pairing
-                      ? factor.score
-                      : Math.max(70, factor.score - 7);
+                    const factorScore = active.pairing ? factor.score : null;
                     return (
                       <div className="comp" key={factor.id}>
                         <div className="row">
                           <span>{factor.label}</span>
-                          <b className="factor-score">{factorScore}</b>
+                          <b className="factor-score">{factorScore === null ? "—" : factorScore}</b>
                         </div>
                         <i
                           style={
                             {
-                              "--factor-scale": factorScore / 100,
+                              "--factor-scale": (factorScore ?? 0) / 100,
                               "--factor-delay": `${index * 25}ms`,
                             } as CSSProperties
                           }
@@ -1047,11 +1067,12 @@ function PairingSection({ pairing }: { pairing: Pairing }) {
 function PipelineSection({
   launch,
   pairing,
+  asset,
 }: {
   launch: Launch;
   pairing: Pairing;
+  asset: Stock;
 }) {
-  const stages = ["Observe", "Evaluate", "Rank", "Pair", "Validate", "Launch"];
   const canonicalStageIndex = Math.max(
     launch.stages.findIndex((stage) => stage.status === "ACTIVE"),
     0,
@@ -1077,12 +1098,11 @@ function PipelineSection({
           </p>
         </div>
         <ol className="stages">
-          {stages.map((stage, index) => {
-            const source = launch.stages[index];
-            const status = source?.status ?? "PENDING";
+          {launch.stages.map((source, index) => {
+            const status = source.status;
             return (
               <li
-                key={stage}
+                key={source.id}
                 className={`stage ${status === "COMPLETE" ? "done" : status === "ACTIVE" ? "now" : ""}${selectedStageIndex === index ? " inspect" : ""}`}
               >
                 <button
@@ -1101,8 +1121,8 @@ function PipelineSection({
                         ? "Done"
                         : "Pending"}
                   </span>
-                  <h3>{stage}</h3>
-                  <p>{source?.description ?? "Controlled protocol stage"}</p>
+                  <h3>{source.id.replaceAll("_", " ")}</h3>
+                  <p>{source.description}</p>
                 </button>
               </li>
             );
@@ -1143,7 +1163,7 @@ function PipelineSection({
             <div className="facts">
               <div className="fact">
                 <span className="label">Opportunity / pairing</span>
-                <span className="v">96.8 / {pairing.pairScore}</span>
+                <span className="v">{asset.opportunityScore.toFixed(1)} / {pairing.pairScore.toFixed(1)}</span>
               </div>
               <div className="fact">
                 <span className="label">Pre-launch checks</span>
@@ -1295,17 +1315,21 @@ function MemorySection({
         <div className="transition">
           <div>
             <span className="label">Previous state</span>
-            <span className="big">#04 / {asset.previousScore}</span>
+            <span className="big">
+              {asset.previousRank === null || asset.previousScore === null
+                ? "UNAVAILABLE"
+                : `#${String(asset.previousRank).padStart(2, "0")} / ${asset.previousScore.toFixed(1)}`}
+            </span>
             <p>
-              Cycle {agent.activeCycle - 1}, ranked behind AMD, PLTR and TSLA.
+              Previous cycle state is unavailable; the worker published the current state only.
             </p>
           </div>
           <div>
             <span className="label">Observed change</span>
-            <span className="big">+3 signals</span>
+            <span className="big">{asset.signals.length} signals recorded</span>
             <p>
-              AI infrastructure narrative accelerated, social velocity rose, and
-              overlap was detected.
+              Structured worker signal state is retained; no prior-cycle delta
+              was published for this view.
             </p>
           </div>
           <div>
@@ -1318,8 +1342,8 @@ function MemorySection({
           </div>
           <div>
             <span className="label">Current state</span>
-            <span className="big accent">#01 / {asset.opportunityScore}</span>
-            <p>Cycle {agent.activeCycle}. Pairing review opened for $GPU.</p>
+            <span className="big accent">#{String(asset.currentRank).padStart(2, "0")} / {asset.opportunityScore.toFixed(1)}</span>
+            <p>Cycle {formatCycle(agent.activeCycle)}. Pairing state is unavailable for this cycle.</p>
           </div>
         </div>
       </div>
@@ -1482,7 +1506,7 @@ function DecisionHistoryChart({
       ? `#${String(points[selectedIndex - 1]?.rank ?? "—").padStart(2, "0")} → #${String(selectedPoint?.rank ?? "—").padStart(2, "0")}`
       : "Initial observed state";
   const selectedCycle =
-    selectedIndex === latestIndex ? String(agent.activeCycle) : "ARCHIVE";
+    selectedIndex === latestIndex ? formatCycle(agent.activeCycle) : "ARCHIVE";
 
   useEffect(() => {
     const node = chartRef.current;
@@ -1839,7 +1863,7 @@ function LandingFooter({ agent }: { agent: AgentRuntime }) {
             <span className="hidden brand-sub">/ Powered by Jev</span>
           </Link>
           <p className="label footer-phase">
-            {agent.networkLabel} / phase 0 / simulated state
+            {agent.networkLabel ?? "UNAVAILABLE"} / phase 0 / simulated state
           </p>
         </div>
         <nav className="foot-links" aria-label="Footer">

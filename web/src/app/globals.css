@@ -4046,3 +4046,497 @@ a, button { touch-action: manipulation; }
 .jevo-app .field-quadrant-badge {
   opacity: .72;
 }
+
+/* ==========================================================================
+   AGENT MEMORY REFINED: HIGH-DENSITY AUDIT & TIMELINE SYSTEM
+   Eliminates wall-of-repetition by grouping identical cycles, highlighting
+   moments of change, and replacing 20-box grids with a consolidated timeline.
+   ========================================================================== */
+
+.jevo-app .memory-view-refined .page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 20px;
+  margin: 28px 0 20px;
+}
+
+.jevo-app .mem-head-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.jevo-app .mem-head-counter {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--dim);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.jevo-app .mem-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 7.8fr) minmax(0, 4.2fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.jevo-app .mem-main-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* Historical SVG Chart container */
+.jevo-app .mem-chart {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 16px 18px 14px;
+  position: relative;
+}
+
+.jevo-app .mem-chart-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 12px;
+}
+
+.jevo-app .mem-meta-left {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.jevo-app .mem-active-time {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--dim);
+}
+
+.jevo-app .mem-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 2px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.jevo-app .mem-status-pill--steady {
+  background: rgb(220 235 215 / 5%);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.jevo-app .mem-status-pill--active {
+  background: rgb(2 198 165 / 10%);
+  border: 1px solid rgb(2 198 165 / 35%);
+  color: var(--accent);
+}
+
+.jevo-app .mem-zone-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+
+.jevo-app .mem-steady-watermark {
+  fill: rgb(220 235 215 / 14%);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+}
+
+.jevo-app .mem-pt-group {
+  cursor: pointer;
+  outline: none;
+}
+
+.jevo-app .mem-pt-group:focus-visible .mem-pt,
+.jevo-app .mem-pt-group:hover .mem-pt,
+.jevo-app .mem-pt-group.is-selected .mem-pt {
+  fill: var(--accent);
+  stroke: #ffffff;
+  stroke-width: 2px;
+}
+
+.jevo-app .mem-pt-halo {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1px;
+  opacity: 0.35;
+  animation: jevo-node-breathe 2.4s ease-in-out infinite;
+}
+
+/* Consolidated Timeline Bar (Replaces 20-box grid) */
+.jevo-app .mem-timeline-bar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 14px 18px;
+}
+
+.jevo-app .mem-tl-anchor {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 130px;
+}
+
+.jevo-app .mem-tl-anchor--latest {
+  text-align: right;
+  align-items: flex-end;
+}
+
+.jevo-app .mem-tl-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--dim);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.jevo-app .mem-tl-time {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.jevo-app .mem-tl-stat {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.jevo-app .mem-tl-stat--active {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.jevo-app .mem-tl-track {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  position: relative;
+}
+
+.jevo-app .mem-tl-track-steady {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+}
+
+.jevo-app .mem-tl-rail-line {
+  width: 100%;
+  height: 2px;
+  background: repeating-linear-gradient(90deg, var(--line-strong) 0, var(--line-strong) 6px, transparent 6px, transparent 12px);
+  margin-bottom: 4px;
+}
+
+.jevo-app .mem-tl-steady-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  background: rgb(2 198 165 / 7%);
+  border: 1px solid rgb(2 198 165 / 22%);
+  border-radius: 12px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+.jevo-app .mem-tl-steady-badge b {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.jevo-app .mem-tl-steady-badge .dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.jevo-app .mem-tl-sub {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.jevo-app .mem-tl-track-transitions {
+  width: 100%;
+}
+
+.jevo-app .mem-tl-milestones-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.jevo-app .mem-tl-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.jevo-app .mem-tl-node:hover {
+  background: rgb(220 235 215 / 5%);
+  border-color: var(--line);
+}
+
+.jevo-app .mem-tl-node.is-change {
+  border-color: rgb(2 198 165 / 35%);
+  background: rgb(2 198 165 / 8%);
+}
+
+.jevo-app .mem-tl-node-tag {
+  font-family: var(--mono);
+  font-size: 8px;
+  color: var(--dim);
+  text-transform: uppercase;
+}
+
+.jevo-app .mem-tl-node b {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+}
+
+.jevo-app .mem-tl-node.is-change b {
+  color: var(--accent);
+}
+
+.jevo-app .mem-tl-node-time {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--muted);
+}
+
+/* Decisions Audit Trail Column */
+.jevo-app .mem-decisions-col {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.jevo-app .mlog-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  background: rgb(11 13 11 / 40%);
+}
+
+.jevo-app .mlog-head-left h3 {
+  margin: 0;
+  font-size: 14px;
+  font-stretch: 92%;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.jevo-app .mlog-head-left .label {
+  font-size: 9px;
+  color: var(--dim);
+}
+
+.jevo-app .mlog-count-badge {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  background: rgb(220 235 215 / 4%);
+  border: 1px solid var(--line);
+  padding: 3px 8px;
+  border-radius: 2px;
+}
+
+.jevo-app .mlog-grouped {
+  list-style: none;
+  margin: 0;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+.jevo-app .mlog-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-radius: 4px;
+  padding: 12px 14px;
+  transition: border-color 0.15s ease;
+}
+
+/* Steady-state collapsed card: compact & clean */
+.jevo-app .mlog-card--steady {
+  background: rgb(220 235 215 / 2.5%);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--dim);
+}
+
+.jevo-app .mlog-card--steady:hover {
+  border-color: var(--line-strong);
+  border-left-color: var(--muted);
+}
+
+/* Change card: high-priority highlight */
+.jevo-app .mlog-card--change {
+  background: rgb(2 198 165 / 7%);
+  border: 1px solid rgb(2 198 165 / 40%);
+  border-left: 3px solid var(--accent);
+  box-shadow: 0 0 12px rgb(2 198 165 / 8%);
+}
+
+.jevo-app .mlog-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.jevo-app .mlog-time-badge {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--dim);
+  letter-spacing: 0.04em;
+}
+
+.jevo-app .mlog-tag {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 2px;
+}
+
+.jevo-app .mlog-tag--steady {
+  background: rgb(220 235 215 / 5%);
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+
+.jevo-app .mlog-tag--change {
+  background: var(--accent);
+  color: #0b0d0b;
+  font-weight: 700;
+}
+
+.jevo-app .mlog-decision {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.jevo-app .mlog-decision.on {
+  color: var(--accent);
+}
+
+.jevo-app .mlog-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.jevo-app .mlog-headline {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.jevo-app .mlog-reason-sub {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.jevo-app .mlog-change-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-family: var(--mono);
+}
+
+.jevo-app .mlog-change-summary b {
+  font-size: 13.5px;
+  color: var(--accent);
+}
+
+.jevo-app .mlog-change-summary span {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.jevo-app .mlog-card-desc {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.45;
+}
+
+.jevo-app .mlog-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--dim);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+@media (max-width: 980px) {
+  .jevo-app .mem-grid {
+    grid-template-columns: 1fr;
+  }
+  .jevo-app .mem-timeline-bar {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .jevo-app .mem-tl-anchor--latest {
+    text-align: left;
+    align-items: flex-start;
+  }
+}

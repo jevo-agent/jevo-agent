@@ -14,7 +14,7 @@ interface AppShellProps extends AppData {
 }
 
 export function AppShell({ children, activeSection, breadcrumb, ...data }: AppShellProps) {
-  const statusAsset = data.featuredAsset ?? data.assets.find((asset) => asset.symbol === "NVDA") ?? data.assets[0];
+  const statusAsset = data.featuredAsset ?? data.assets.find((asset) => asset.symbol === "NVDA") ?? data.assets[0] ?? null;
   const statusPairing = data.launch
     ? data.pairings.find((pairing) => pairing.slug === data.launch?.selectedPairingSlug) ?? data.featuredPairing
     : data.featuredPairing;

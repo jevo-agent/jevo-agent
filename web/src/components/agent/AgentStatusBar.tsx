@@ -15,8 +15,8 @@ function formatDuration(totalSeconds: number) {
   return minutes === 0 ? `${seconds}s ago` : `${minutes}m ${seconds.toString().padStart(2, "0")}s`;
 }
 
-function formatCountdown(totalSeconds: number) {
-  if (totalSeconds <= 0) return "—";
+function formatCountdown(totalSeconds: number | null | undefined) {
+  if (totalSeconds === null || totalSeconds === undefined || totalSeconds <= 0) return "—";
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
@@ -41,7 +41,7 @@ export function AgentStatusBar({
         <StatusItem label="Market" value={currentOperation} />
         <StatusItem label="Last decision" value={formatDuration(lastDecisionAgeSeconds)} />
         <StatusItem label="Next cycle" value={formatCountdown(nextCycleInSeconds)} />
-        <StatusItem label="Network" value={networkLabel} />
+        <StatusItem label="Network" value={networkLabel ?? "UNAVAILABLE"} />
       </div>
     </aside>
   );

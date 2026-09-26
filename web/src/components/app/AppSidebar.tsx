@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import type { AgentRuntime } from "@/types/agent";
+import { formatCycle } from "@/lib/format";
 
 interface AppSidebarProps { agent: AgentRuntime; activeSection?: string; }
 
@@ -140,7 +141,7 @@ export function AppSidebar({ agent, activeSection: activeSectionProp }: AppSideb
               <span className="label"><b>NOT CONNECTED</b></span>
             </div>
           </div>
-          <span className="sr-only">{agent.networkLabel} / cycle {agent.activeCycle}</span>
+          <span className="sr-only">{agent.networkLabel ?? "Network unavailable"} / cycle {formatCycle(agent.activeCycle)}</span>
         </div>
       </aside>
 

@@ -28,21 +28,21 @@ export const agentRuntimeSchema = z.object({
   status: agentStatusSchema,
   jevStatus: jevStatusSchema,
   currentOperation: z.string().min(1),
-  activeCycle: z.number().int().positive(),
+  activeCycle: z.union([z.string().min(1), z.number().int().positive()]).nullable(),
   scanProgress: z.number().min(0).max(100),
   assetsScanned: z.number().int().nonnegative(),
-  assetsInUniverse: z.number().int().positive(),
+  assetsInUniverse: z.number().int().nonnegative().nullable(),
   signalsProcessed: z.number().int().nonnegative(),
-  narrativesDetected: z.number().int().nonnegative(),
-  materiallyChangedNarratives: z.number().int().nonnegative(),
+  narrativesDetected: z.number().int().nonnegative().nullable(),
+  materiallyChangedNarratives: z.number().int().nonnegative().nullable(),
   decisionsProcessed: z.number().int().nonnegative(),
   qualifiedCandidates: z.number().int().nonnegative(),
   highConvictionCandidates: z.number().int().nonnegative(),
   dataFreshness: z.string().min(1),
   lastScanAt: timestampSchema,
   lastDecisionAgeSeconds: z.number().int().nonnegative(),
-  nextCycleInSeconds: z.number().int().nonnegative(),
-  networkLabel: z.string().min(1),
+  nextCycleInSeconds: z.number().int().nonnegative().nullable(),
+  networkLabel: z.string().min(1).nullable(),
   latestEvents: z.array(agentEventSchema),
 });
 
@@ -188,19 +188,19 @@ export const launchSchema = z.object({
   stage: launchStageSchema,
   countdownSeconds: z.number().int().nonnegative(),
   readiness: z.enum(["READY", "PENDING", "BLOCKED"]),
-  stages: z.array(launchCycleStageSchema).min(1),
-  policyChecks: z.array(policyCheckSchema).min(1),
+  stages: z.array(launchCycleStageSchema),
+  policyChecks: z.array(policyCheckSchema),
   guardianRequirement: z.object({ required: z.boolean(), status: z.enum(["REQUIRED", "AWAITING", "APPROVED"]) }),
   wallet: z.object({ label: z.string().min(1), displayAddress: z.string().min(1), network: z.string().min(1), permission: z.string().min(1), status: z.string().min(1), emergencyPause: z.enum(["AVAILABLE", "UNAVAILABLE"]) }),
   contracts: z.array(z.object({ label: z.string().min(1), displayAddress: z.string().min(1), referenceState: z.string().min(1) })).min(1),
   token: z.object({ name: z.string().min(1), symbol: z.string().min(1), pairingAsset: z.string().min(1), network: z.string().min(1), launchMechanism: z.string().min(1), contractState: z.string().min(1) }),
-  activity: z.array(launchActivitySchema).min(1),
+  activity: z.array(launchActivitySchema),
   transactionState: z.enum(["NOT_SUBMITTED", "PREPARING", "SUBMITTED", "CONFIRMED"]),
 });
 
 export const memoryRecordSchema = z.object({
   id: z.string().min(1),
-  cycleId: z.number().int().nonnegative().nullable(),
+  cycleId: z.union([z.string().min(1), z.number().int().positive()]).nullable(),
   eventType: eventTypeSchema,
   subject: z.string().min(1),
   previousState: z.string().min(1),
@@ -212,7 +212,7 @@ export const memoryRecordSchema = z.object({
   summary: z.string().min(1),
 });
 export const agentCycleSchema = z.object({
-  id: z.number().int().nonnegative().nullable(),
+  id: z.union([z.string().min(1), z.number().int().positive()]).nullable(),
   timestamp: timestampSchema,
   assetsEvaluated: z.number().int().nonnegative(),
   decisions: z.number().int().nonnegative(),
@@ -231,8 +231,8 @@ export const memoryOverviewSchema = z.object({
   launchStates: z.number().int().nonnegative(),
 });
 export const memoryComparisonSchema = z.object({
-  previousCycle: z.number().int().nonnegative().nullable(),
-  currentCycle: z.number().int().nonnegative().nullable(),
+  previousCycle: z.union([z.string().min(1), z.number().int().positive()]).nullable(),
+  currentCycle: z.union([z.string().min(1), z.number().int().positive()]).nullable(),
   entries: z.array(z.object({ label: z.string().min(1), previous: z.string().min(1), current: z.string().min(1), delta: z.string().min(1) })),
 });
 export const providerReferenceSchema = z.object({

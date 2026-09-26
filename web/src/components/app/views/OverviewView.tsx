@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 
-import { formatClock, formatCountdown } from "@/lib/format";
+import { formatClock, formatCountdown, formatCycle } from "@/lib/format";
 import { useOpportunities } from "@/lib/api/hooks";
 import { adaptOpportunity, type OpportunityApi } from "@/lib/api/adapters";
 import type { AgentEvent, AgentRuntime, MemoryRecord } from "@/types/agent";
@@ -164,7 +164,7 @@ export function OverviewView({
             <dl className="operating-telemetry-list">
               <div>
                 <dt>CYCLE</dt>
-                <dd>{agent.activeCycle}</dd>
+                <dd>{formatCycle(agent.activeCycle)}</dd>
               </div>
               <div>
                 <dt>SCAN</dt>
@@ -179,7 +179,7 @@ export function OverviewView({
               <div>
                 <dt>DECISION</dt>
                 <dd>
-                  <b className="accent">{topOpportunity.jevDecision.replaceAll("_", " ")}</b> <small>{topOpportunity.confidence}% CONFIDENCE</small>
+                  <b className="accent">{topOpportunity.jevDecision.replaceAll("_", " ")}</b> <small>{topOpportunity.confidence === null ? "—" : `${topOpportunity.confidence}%`} CONFIDENCE</small>
                 </dd>
               </div>
               <div>
@@ -208,7 +208,7 @@ export function OverviewView({
               </div>
               <div>
                 <dt>SETTLEMENT</dt>
-                <dd>{agent.networkLabel.toUpperCase()} · PHASE 0</dd>
+                <dd>{agent.networkLabel ? `${agent.networkLabel.toUpperCase()} · PHASE 0` : "UNAVAILABLE · PHASE 0"}</dd>
               </div>
             </dl>
           </div>
@@ -226,7 +226,7 @@ export function OverviewView({
           <div className="summary-cell">
             <span className="label">JEV DECISION</span>
             <strong className="summary-val accent">{topOpportunity.jevDecision.replaceAll("_", " ")}</strong>
-            <small className="summary-sub">{topOpportunity.confidence}% CONFIDENCE</small>
+            <small className="summary-sub">{topOpportunity.confidence === null ? "—" : `${topOpportunity.confidence}%`} CONFIDENCE</small>
           </div>
           <div className="summary-cell">
             <span className="label">PAIRING</span>
@@ -269,14 +269,14 @@ export function OverviewView({
               <i className="live-dot" aria-hidden="true" /> JEV ACTIVE
             </span>
             <span className="rail-item">
-              CYCLE <b>{agent.activeCycle}</b>
+              CYCLE <b>{formatCycle(agent.activeCycle)}</b>
             </span>
             <span className="rail-item">{agent.currentOperation}</span>
             <span className="rail-item highlight">
               {topOpportunity.symbol} <b>#{String(topOpportunity.currentRank).padStart(2, "0")}</b>
             </span>
             <span className="rail-item highlight">
-              <b>{topOpportunity.jevDecision.replaceAll("_", " ")} {topOpportunity.confidence}%</b>
+              <b>{topOpportunity.jevDecision.replaceAll("_", " ")} {topOpportunity.confidence === null ? "—" : `${topOpportunity.confidence}%`}</b>
             </span>
             {featuredPairing ? (
               <span className="rail-item highlight">
@@ -301,7 +301,7 @@ export function OverviewView({
                 LAUNCH <b>STANDBY</b>
               </span>
             )}
-            <span className="rail-item network">{agent.networkLabel.toUpperCase()}</span>
+            <span className="rail-item network">{agent.networkLabel?.toUpperCase() ?? "UNAVAILABLE"}</span>
           </div>
         </div>
       </section>
@@ -1594,7 +1594,7 @@ function PairingAction({ pairing, selectedSymbol }: { pairing?: Pairing; selecte
       </div>
       <div className="side-score">
         <b>{pairing.pairScore.toFixed(1)}</b>
-        <span>STRONG PAIR / CONF {pairing.confidence}%</span>
+        <span>STRONG PAIR / CONF {pairing.confidence === null ? "—" : `${pairing.confidence}%`}</span>
       </div>
       <div className="srow">
         <span>JEV decision</span>
@@ -1707,7 +1707,7 @@ function MemorySummary({ agent, memory }: { agent: AgentRuntime; memory: MemoryR
   return (
     <div className="app-memory-layout">
       <div className="app-memory-stats">
-        <span className="label">Cycle {agent.activeCycle} / retained evidence</span>
+        <span className="label">Cycle {formatCycle(agent.activeCycle)} / retained evidence</span>
         <strong>{memory.length}</strong>
         <p>Observable memory records retained for audit across the current decision loop.</p>
         <Link className="side-cta" href="/memory">

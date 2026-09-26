@@ -21,7 +21,7 @@ export function LaunchHeader({ launch, pairing, stock, agent }: LaunchHeaderProp
           <LaunchMetric label="Pair score" value={pairing.pairScore.toFixed(1)} />
           <LaunchMetric label="Readiness" value={launch.readiness} accent />
           <LaunchMetric label="Policy checks" value={`${passedChecks} / ${launch.policyChecks.length}`} />
-          <LaunchMetric label="Network" value={agent.networkLabel} meta={`Eval ${formatClock(stock.lastEvaluatedAt)} UTC · ${agent.dataFreshness}`} />
+          <LaunchMetric label="Network" value={agent.networkLabel ?? "UNAVAILABLE"} meta={`Eval ${formatClock(stock.lastEvaluatedAt)} UTC · ${agent.dataFreshness}`} />
         </div>
       </div>
     </header>

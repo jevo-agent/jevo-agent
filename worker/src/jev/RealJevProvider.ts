@@ -6,6 +6,7 @@ import type {
   ChoiceResult,
   JevProvider,
   NoulInput,
+  NoulResult,
   ScoreInput,
   ScoreResult,
 } from "./JevProvider";

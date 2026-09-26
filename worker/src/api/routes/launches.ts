@@ -65,7 +65,8 @@ export function mapRowToLaunch(
     readiness = "PENDING";
   }
 
-  // 6 checklist stages from launch_cycles
+  // Checklist stages are persisted in launch_cycles. If the rows are missing,
+  // expose an empty stage list rather than reconstructing a plausible launch.
   const stages = cycleRows.length > 0
     ? cycleRows.map((cr) => {
         const meta = STAGE_ORDER[cr.stageLabel] ?? {
@@ -80,14 +81,7 @@ export function mapRowToLaunch(
           requirement: meta.requirement,
         };
       })
-    : [
-        { id: "CANDIDATE_SELECTED" as const, scheduledPoint: "T-24H", status: "COMPLETE" as const, description: "Opportunity and pair thesis were locked for launch review.", requirement: "Candidate selection is recorded in the active launch cycle." },
-        { id: "NARRATIVE_VALIDATION" as const, scheduledPoint: "T-18H", status: "PENDING" as const, description: "Narrative pressure and the why-now context remained above the launch threshold.", requirement: "The selected narrative must remain valid before pair validation." },
-        { id: "PAIRING_VALIDATION" as const, scheduledPoint: "T-12H", status: "PENDING" as const, description: "Pairing score, metadata, Stock Token identity, and policy constraints are being validated.", requirement: "Complete pair and policy validation before contract preparation." },
-        { id: "CONTRACT_PREPARATION" as const, scheduledPoint: "T-06H", status: "PENDING" as const, description: "Approved launch parameters will be assembled for the Launch Executor and Pons adapter.", requirement: "Use only the approved metadata and policy-bounded execution payload." },
-        { id: "FINAL_POLICY_CHECK" as const, scheduledPoint: "T-01H", status: "PENDING" as const, description: "Permissions, transaction simulation, launch limits, and guardian requirements will be reviewed.", requirement: "All policy checks and guardian approval must be complete before execution." },
-        { id: "CONTROLLED_EXECUTION" as const, scheduledPoint: "T-00", status: "PENDING" as const, description: "The approved action may be submitted through the restricted Launch Executor.", requirement: "A backend-driven approval and execution event is required; no automatic transition occurs." },
-      ];
+    : [];
 
   // 8 policy checks based on checksPassed / checksTotal
   const policyChecks = BASE_POLICY_CHECKS.map((chk, idx) => ({
@@ -105,9 +99,9 @@ export function mapRowToLaunch(
     ? `${pairing.symbol.toLowerCase()}-${pairing.memeSymbol.replace(/^\$/, "").toLowerCase()}`
     : candidate.pairingCandidateId.toLowerCase();
 
-  const tokenName = pairing ? pairing.memeSymbol.replace(/^\$/, "") : "TOKEN";
-  const tokenSymbol = pairing ? pairing.memeSymbol : "$TOKEN";
-  const pairingAsset = pairing ? `${pairing.symbol} Stock Token` : "Stock Token";
+  const tokenName = pairing ? pairing.memeSymbol.replace(/^\$/, "") : "UNAVAILABLE";
+  const tokenSymbol = pairing ? pairing.memeSymbol : "UNAVAILABLE";
+  const pairingAsset = pairing ? `${pairing.symbol} Stock Token` : "UNAVAILABLE";
 
   return {
     cycleId: candidate.id,
@@ -119,35 +113,28 @@ export function mapRowToLaunch(
     policyChecks,
     guardianRequirement: { required: true, status: "REQUIRED" },
     wallet: {
-      label: "JEVO Agent Wallet",
-      displayAddress: "0x7A4f...91B2",
-      network: "Robinhood Chain",
-      permission: "Launch Executor",
-      status: "Authorized",
-      emergencyPause: "AVAILABLE",
+      label: "JEVO Agent Wallet / unavailable",
+      displayAddress: "UNAVAILABLE",
+      network: "UNAVAILABLE",
+      permission: "UNAVAILABLE",
+      status: "NOT_CONNECTED",
+      emergencyPause: "UNAVAILABLE",
     },
-    contracts: [
-      { label: "Launch Executor", displayAddress: "0xEXE...204", referenceState: "Phase 0 reference" },
-      { label: "Token Factory", displayAddress: "0xFAC...781", referenceState: "Phase 0 reference" },
-      { label: "Policy Contract", displayAddress: "0xPOL...319", referenceState: "Phase 0 reference" },
-      { label: "Pons Adapter", displayAddress: "0xPON...447", referenceState: "Phase 0 reference" },
-    ],
+    contracts: [],
     token: {
       name: tokenName,
       symbol: tokenSymbol,
       pairingAsset,
-      network: "Robinhood Chain",
-      launchMechanism: "Pons",
-      contractState: "Pending",
+      network: "UNAVAILABLE",
+      launchMechanism: "UNAVAILABLE",
+      contractState: "UNAVAILABLE",
     },
-    activity: [
-      {
-        id: `launch-act-${candidate.id}-01`,
-        timestamp: new Date().toISOString(),
-        type: "SELECTION",
-        summary: `Candidate selected. ${pairing?.symbol ?? "Asset"} × ${tokenSymbol} entered launch cycle ${candidate.id}.`,
-      },
-    ],
+    activity: cycleRows.flatMap((row) => row.completedAt ? [{
+      id: row.id,
+      timestamp: row.completedAt.toISOString(),
+      type: "STAGE_COMPLETED",
+      summary: `${row.stageLabel} completed for launch candidate ${candidate.id}.`,
+    }] : []),
     transactionState: "NOT_SUBMITTED",
   };
 }

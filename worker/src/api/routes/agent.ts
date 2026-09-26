@@ -27,19 +27,11 @@ export const agentRoutes: FastifyPluginAsync = async (fastify) => {
       .from(assets)
       .where(eq(assets.active, true));
 
-    // 3. Count completed cycles for cycle number
-    const completedCycles = await db
-      .select({ id: agentCycles.id })
-      .from(agentCycles)
-      .where(eq(agentCycles.status, "COMPLETED"));
-
     if (!latestCycle) {
       return reply.status(409).send({
         message: "No canonical agent cycle is available yet",
       });
     }
-
-    const cycleNumber = Math.max(1, completedCycles.length);
 
     // 4. Count decisions and qualified candidates in latest cycle
     let decisionsCount = 0;
@@ -105,13 +97,16 @@ export const agentRoutes: FastifyPluginAsync = async (fastify) => {
         : latestCycle?.status === "RUNNING"
           ? "ANALYZING_MARKET"
           : "STANDBY",
-      activeCycle: cycleNumber,
+      // Cycle ids are opaque persisted identifiers (for example
+      // `cycle-delta-...`), so do not turn them into a synthetic counter.
+      activeCycle: latestCycle.id,
       scanProgress: latestCycle?.status === "RUNNING" ? 50 : 100,
       assetsScanned: latestCycle?.assetsScanned ?? activeAssets.length,
-      assetsInUniverse: Math.max(1, activeAssets.length),
+      assetsInUniverse: activeAssets.length,
       signalsProcessed: latestCycle?.signalsProcessed ?? 0,
-      narrativesDetected: 0,
-      materiallyChangedNarratives: 0,
+      // Narrative counts are not persisted by the current scanner contract.
+      narrativesDetected: null,
+      materiallyChangedNarratives: null,
       decisionsProcessed: decisionsCount,
       qualifiedCandidates: proposedPairings.length,
       highConvictionCandidates: highConvictionCount,
@@ -120,8 +115,9 @@ export const agentRoutes: FastifyPluginAsync = async (fastify) => {
       lastDecisionAgeSeconds,
       // The scheduler does not currently expose a deterministic next-run
       // deadline; zero means unavailable rather than a fabricated countdown.
-      nextCycleInSeconds: 0,
-      networkLabel: "Robinhood Chain Testnet",
+      nextCycleInSeconds: null,
+      // No configured chain/provider is authoritative in Phase 0.
+      networkLabel: null,
       latestEvents,
     };
 

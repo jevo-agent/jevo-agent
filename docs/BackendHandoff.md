@@ -870,6 +870,26 @@ Eleven tasks, each meant to be one Codex/AGY prompt, each landable and reviewabl
 - Tests: `tests/realJevProvider.test.ts` unit tests verifying choice mapping, score rescaling, boolean/noul abstraction, error handling, and credential safety; full suite passing 88 tests.
 - Stop when: `RealJevProvider` successfully evaluates choices, scores, and nouls against mock and live gateway tests, and all unit/integration tests pass.
 
+**BACKEND 12 & 13 (narrative half) — Real Market Data & Narrative Provider via Alpha Vantage**
+
+- Goal: Production-ready `RealMarketDataProvider` and `RealNarrativeProvider` communicating with Alpha Vantage API (`GLOBAL_QUOTE` and `NEWS_SENTIMENT`), toggled via environment variables, with strict rate limiting and TTL caching to respect the 25 req/day free tier quota.
+- Files:
+  - `worker/src/providers/alphavantage/client.ts`
+  - `worker/src/providers/alphavantage/RealMarketDataProvider.ts`
+  - `worker/src/providers/alphavantage/RealNarrativeProvider.ts`
+  - `worker/src/providers/index.ts`
+  - `worker/tests/alphaVantage.test.ts`
+- Depends on: BACKEND 02, BACKEND 05, BACKEND 07
+- Do:
+  - Implement shared `AlphaVantageClient` with request pacing (1.25s delay between outbound calls) to prevent Alpha Vantage 1 req/sec burst limit warnings.
+  - Implement TTL in-memory caching (default 6 hours) so that 60-second DELTA cycles read from cache without consuming daily quota.
+  - Map `GLOBAL_QUOTE` fields (`05. price`, `06. volume`, `high`, `low`) into `MarketSnapshot` with calculated intraday volatility.
+  - Map `NEWS_SENTIMENT` articles into `SignalObservation` (`kind: "NEWS"` or `"NARRATIVE"`), scaling raw sentiment `[-1.0, 1.0]` into `[0, 100]` magnitude.
+  - Add `MARKET_DATA_MODE=mock|real` and `NARRATIVE_MODE=mock|real` env toggles (default `mock`).
+  - Keep `StockTokenProvider` and `SocialProvider` strictly as mock implementations.
+- Tests: `tests/alphaVantage.test.ts` unit tests with mocked payloads, caching verification, provider registry switching, and a live smoke test that skips if `ALPHA_VANTAGE_API_KEY` is omitted.
+- Stop when: Smoke test succeeds against live Alpha Vantage endpoints, and a manual cycle produces verified real market prices and news headlines without exhausting the daily quota.
+
 ## 21. Deferred Blockchain Phase
 
 None of BACKEND 00–10 touches `contracts/`, signs anything, or calls Pons. `launch_candidates.transactionStatus` has exactly one possible value this phase — `"not_submitted"` — by the type itself, not by convention.
@@ -899,3 +919,64 @@ When that phase starts, it gets its own handoff document in this same shape — 
 | At the brief's own scan frequencies (Section 9), what does real Jev call volume actually cost?                     | Ongoing, once Jev pricing is known     | Worth a back-of-envelope check before the fast-signal cadence (15–60s) is left running unattended                                                 |
 
 None of these block starting BACKEND 00–02 — they're ordered by which task they'd first affect, not by urgency today.
+
+---
+
+## 23. Current repository runtime (Sep 26, 2026)
+
+The implementation now has a verified worker/web path for canonical partial
+state:
+
+```text
+mock market provider -> BullMQ agent cycle -> DecisionEngine + RealJevProvider
+-> Postgres -> REST/SSE -> web Zod adapters -> TanStack Query -> UI
+```
+
+Local verification uses `JEV_MODE=real`, `PROVIDER_MODE=mock`,
+`NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1`, and
+`NEXT_PUBLIC_JEVO_DEMO_MODE=false`. Redis/BullMQ provide cycle execution and
+Postgres remains the source of persisted state. The real JEV adapter uses
+`typesafe-ai/jev` via AI SDK `experimental_evaluate` with a server-only
+`AI_GATEWAY_API_KEY`, bounded timeout/retry, structured schema validation, and
+no mock fallback in real mode. It persists only observable structured output;
+hidden model reasoning is never persisted or returned.
+
+### Partial protocol output
+
+An opportunity/ranking result is valid even when a cycle produces no pairing
+candidate and no launch candidate. API presentation routes return empty
+pairing/launch collections and explicit unavailable values when the database
+does not contain a value. They do not synthesize cycle counters, scheduler
+deadlines, network metadata, launch stages, wallet/contract addresses,
+activity timestamps, or fallback narrative metrics. Per-asset JEV failures
+emit `JEV_PROVIDER_FAILED`, leave that asset unavailable for that cycle, and
+allow successful assets to continue; there is no silent mock fallback.
+
+### Current real vs mock boundary
+
+Real: worker cycle orchestration, DecisionEngine, RealJevProvider, Postgres
+persistence, ranking, memory/events, REST endpoints, SSE stream, and frontend
+cache invalidation. Mock: market observations and any narrative/news/social or
+Stock Token provider still selected by `PROVIDER_MODE=mock`. Pairing and launch
+remain derived optional outputs; no wallet, contract, or mainnet execution is
+enabled.
+
+### Next work / do not regress
+
+1. Audit and select verified real market, narrative/news/social, and Stock Token
+   provider sources for `PROVIDER_MODE=real`.
+2. Run a full real-data cycle and compare persistence, REST, SSE, and UI.
+3. Harden observability and deployment runbooks.
+4. Only then plan agent wallet/contracts on testnet; mainnet execution is not
+   part of this phase.
+
+Do not add production fixture fallback, fabricate missing presentation values,
+expose hidden chain-of-thought, or make pairing/launch a prerequisite for
+opportunity state.
+
+## NEXT AGENT TASK
+
+The next agent should begin by auditing and selecting the real provider
+sources required for `PROVIDER_MODE=real`.
+
+Do NOT start blockchain work yet.

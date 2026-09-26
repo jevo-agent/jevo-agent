@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { formatClock } from "@/lib/format";
 import type { Stock } from "@/types/stock";
 
-interface DecisionTraceProps { asset: Stock; cycle: number; }
+interface DecisionTraceProps { asset: Stock; cycle: string | number; }
 
 const traceLabels = { OBSERVE: "Observe", SIGNAL: "Signal", JEV_DECISION: "JEV", PAIRING: "Pair", LAUNCH: "Launch", MEMORY: "Memory", POLICY: "Policy", ACTION: "Action" } as const;
 

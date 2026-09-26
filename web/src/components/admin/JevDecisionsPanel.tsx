@@ -10,7 +10,7 @@ import type { Pairing } from "@/types/pairing";
 import type { Stock } from "@/types/stock";
 
 interface JevDecisionsPanelProps { agent: AgentRuntime; assets: Stock[]; pairings: Pairing[]; memory: MemoryRecord[]; }
-type DecisionRecord = { id: string; subject: string; decision: string; confidence: number | null; previous: string; current: string; score: number; timestamp: string | null; cycle: number; evidence: { label: string; value: string }[]; state: string };
+type DecisionRecord = { id: string; subject: string; decision: string; confidence: number | null; previous: string; current: string; score: number; timestamp: string | null; cycle: string | number | null; evidence: { label: string; value: string }[]; state: string };
 
 export function JevDecisionsPanel({ agent, assets, pairings, memory }: JevDecisionsPanelProps) {
   const selectedAdminDecisionId = useAgentStore((state) => state.selectedAdminDecisionId);

@@ -1,4 +1,7 @@
 import { env } from "../config/env";
+import { RealMarketDataProvider } from "./alphavantage/RealMarketDataProvider";
+import { RealNarrativeProvider } from "./alphavantage/RealNarrativeProvider";
+import { AlphaVantageClient } from "./alphavantage/client";
 import { MockMarketDataProvider } from "./mock/MockMarketDataProvider";
 import { MockNarrativeProvider } from "./mock/MockNarrativeProvider";
 import { MockSocialProvider } from "./mock/MockSocialProvider";
@@ -12,28 +15,70 @@ export * from "./mock/MockMarketDataProvider";
 export * from "./mock/MockNarrativeProvider";
 export * from "./mock/MockSocialProvider";
 export * from "./mock/MockStockTokenProvider";
+export * from "./alphavantage/RealMarketDataProvider";
+export * from "./alphavantage/RealNarrativeProvider";
+export * from "./alphavantage/client";
+
+export interface CreateProvidersRegistryOptions {
+  marketDataMode?: "mock" | "real";
+  narrativeMode?: "mock" | "real";
+}
 
 export function createProvidersRegistry(
-  mode: "mock" | "real" = env.PROVIDER_MODE,
+  optionsOrMode?: "mock" | "real" | CreateProvidersRegistryOptions,
 ): ProvidersRegistry {
-  if (mode === "real") {
-    // Real vendors will be plugged in once vendor decisions are finalized (Section 22)
-    throw new Error("Real providers not yet integrated. Configure PROVIDER_MODE=mock.");
+  let marketMode: "mock" | "real";
+  let narrativeMode: "mock" | "real";
+
+  if (typeof optionsOrMode === "string") {
+    // Backward compatibility with legacy PROVIDER_MODE toggle
+    marketMode = optionsOrMode === "real" ? "real" : env.MARKET_DATA_MODE;
+    narrativeMode = optionsOrMode === "real" ? "real" : env.NARRATIVE_MODE;
+  } else {
+    marketMode = optionsOrMode?.marketDataMode ?? env.MARKET_DATA_MODE;
+    narrativeMode = optionsOrMode?.narrativeMode ?? env.NARRATIVE_MODE;
   }
 
+  let sharedClient: AlphaVantageClient | undefined;
+  if (marketMode === "real" || narrativeMode === "real") {
+    const apiKey = env.ALPHA_VANTAGE_API_KEY;
+    if (apiKey && apiKey.trim().length > 0) {
+      sharedClient = new AlphaVantageClient({
+        apiKey,
+        cacheTtlMs: env.ALPHA_VANTAGE_CACHE_TTL_MS,
+      });
+    }
+  }
+
+  const marketData =
+    marketMode === "real"
+      ? wrapProviderWithHealthLogging(
+          "real-market-data-alphavantage",
+          new RealMarketDataProvider({ client: sharedClient }),
+        )
+      : wrapProviderWithHealthLogging(
+          "mock-market-data",
+          new MockMarketDataProvider(),
+        );
+
+  const narrative =
+    narrativeMode === "real"
+      ? wrapProviderWithHealthLogging(
+          "real-narrative-alphavantage",
+          new RealNarrativeProvider({ client: sharedClient }),
+        )
+      : wrapProviderWithHealthLogging(
+          "mock-narrative",
+          new MockNarrativeProvider(),
+        );
+
   return {
-    marketData: wrapProviderWithHealthLogging(
-      "mock-market-data",
-      new MockMarketDataProvider(),
-    ),
+    marketData,
     stockToken: wrapProviderWithHealthLogging(
       "mock-stock-token",
       new MockStockTokenProvider(),
     ),
-    narrative: wrapProviderWithHealthLogging(
-      "mock-narrative",
-      new MockNarrativeProvider(),
-    ),
+    narrative,
     social: wrapProviderWithHealthLogging(
       "mock-social",
       new MockSocialProvider(),

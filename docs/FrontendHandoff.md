@@ -167,3 +167,92 @@ When continuing work on JEVO, here are the prioritized next steps:
 ---
 
 *Handoff written and verified on Sep 26, 2026.*
+
+---
+
+## 6. Current Runtime Integration (canonical partial state)
+
+The web client reads worker state when `NEXT_PUBLIC_JEVO_DEMO_MODE=false`. The
+verified local runtime configuration is:
+
+```text
+NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1
+NEXT_PUBLIC_JEVO_DEMO_MODE=false
+JEV_MODE=real
+PROVIDER_MODE=mock
+```
+
+The current data path is:
+
+```text
+mock market provider -> BullMQ cycle -> DecisionEngine + RealJevProvider
+-> Postgres -> worker REST/SSE -> Zod schemas/adapters
+-> TanStack Query -> AppShell and route views
+```
+
+Postgres, Redis, BullMQ, REST, SSE, ranking, memory, and the real JEV decision
+path are live runtime pieces. Market, narrative/news, social, and stock-token
+inputs are still mock provider inputs until `PROVIDER_MODE=real` sources are
+selected and verified. `RealJevProvider` uses `typesafe-ai/jev` through AI SDK
+`experimental_evaluate`; `AI_GATEWAY_API_KEY` stays server-side. It applies a
+bounded timeout/retry policy, validates structured responses, and does not
+fall back to `MockJevProvider` in `JEV_MODE=real`. Only structured decisions,
+scores, confidence, evidence, provider/model metadata, timestamps, and
+observable events are persisted; hidden chain-of-thought is never stored or
+rendered.
+
+### Partial-state contract
+
+Pairing and launch are optional outputs of a cycle. Opportunity Rank, the
+Opportunity Field, stock detail, decision history, agent status, and memory
+render whenever canonical opportunities exist even if `pairings=[]` and
+`launches=[]`. Pairing and launch routes show their own truthful empty state;
+they never block the rest of the workspace and are never filled from fixtures.
+An asset-level JEV/provider failure emits an observable provider-failure event,
+leaves that asset unavailable for the cycle, and allows other assets to
+continue without fabricated ranking input.
+
+### Route ownership
+
+`/` and `/app` compose agent status, opportunities, memory/cycles, pairings,
+and launches from REST/SSE. `/stock/[symbol]` owns canonical opportunity,
+decision, signal, trace, and memory data for that symbol. `/pairing` and
+`/pairing/[slug]` own pairing data and may be empty. `/launch` and
+`/launch/[slug]` own launch data and may be empty. `/memory` owns the memory
+ledger independently. `/admin` remains a direct operator route; its existing
+panels/mutations are outside the public sidebar and were not redesigned.
+Production routes do not request `/api/fixture/*`; fixtures are limited to
+explicit demo mode.
+
+### Canonical missing-value rules
+
+Unknown worker values are represented as `null`/`UNAVAILABLE` and rendered as
+an existing truthful unavailable state or `—`. The worker does not invent
+cycle counters, scheduler deadlines, network metadata, launch stages,
+contracts, wallet addresses, activity timestamps, or fallback narrative
+metrics. Opaque persisted cycle identifiers remain opaque and are not
+converted into synthetic numeric counters.
+
+### Remaining work (priority order)
+
+1. Select and verify real market/provider sources for `PROVIDER_MODE=real`.
+2. Add verified narrative/news/social sources and canonical Stock Token data.
+3. Run a full real-data cycle and compare persistence, REST, SSE, and UI.
+4. Harden production observability and operational runbooks.
+5. Implement agent wallet/contracts on testnet only after the read path is
+   stable; mainnet execution remains out of scope.
+
+### Do not regress
+
+- Do not add production fixture fallback or realistic-looking defaults.
+- Do not make pairing or launch required for opportunity rendering.
+- Do not expose hidden model reasoning or API secrets.
+- Do not redesign the visual system without an explicit request.
+- Do not add autonomous mainnet execution.
+
+## NEXT AGENT TASK
+
+The next agent should begin by auditing and selecting the real provider
+sources required for `PROVIDER_MODE=real`.
+
+Do NOT start blockchain work yet.
