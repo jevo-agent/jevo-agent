@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { formatClock, formatCycle } from "@/lib/format";
+import { groupMemoryRecords, type GroupedAuditEntry } from "@/lib/memory/grouping";
 import type { AgentCycle, AgentRuntime, MemoryComparison, MemoryRecord } from "@/types/agent";
 import type { Stock } from "@/types/stock";
 
@@ -12,89 +13,6 @@ interface MemoryViewProps {
   cycles: AgentCycle[];
   memory: MemoryRecord[];
   comparison: MemoryComparison;
-}
-
-interface GroupedAuditEntry {
-  id: string;
-  isChange: boolean;
-  decision: string;
-  rank: number | null;
-  score: number | null;
-  fromRank: number | null;
-  toRank: number | null;
-  latestTimestamp: string;
-  earliestTimestamp: string;
-  count: number;
-  durationMinutes: number;
-  summary: string;
-  observedDelta: string | null;
-  records: MemoryRecord[];
-}
-
-function parseRankAndScore(rec: MemoryRecord) {
-  const currentRankMatch = rec.currentState.match(/rank:\s*(\d+)/i) || rec.summary.match(/ranked\s*#0?(\d+)/i);
-  const currentScoreMatch = rec.currentState.match(/score:\s*([\d.]+)/i) || rec.summary.match(/score\s*([\d.]+)/i);
-  const prevRankMatch = rec.previousState.match(/rank:\s*(\d+)/i);
-  const prevScoreMatch = rec.previousState.match(/score:\s*([\d.]+)/i);
-
-  const currentRank = currentRankMatch ? parseInt(currentRankMatch[1], 10) : null;
-  const previousRank = prevRankMatch ? parseInt(prevRankMatch[1], 10) : null;
-  const currentScore = currentScoreMatch ? parseFloat(currentScoreMatch[1]) : null;
-  const previousScore = prevScoreMatch ? parseFloat(prevScoreMatch[1]) : null;
-
-  return { currentRank, previousRank, currentScore, previousScore };
-}
-
-function groupMemoryRecords(records: MemoryRecord[]): GroupedAuditEntry[] {
-  if (!records || records.length === 0) return [];
-
-  const groups: GroupedAuditEntry[] = [];
-
-  for (const rec of records) {
-    const { currentRank, previousRank, currentScore } = parseRankAndScore(rec);
-    const isChange = Boolean(
-      previousRank !== null &&
-      currentRank !== null &&
-      previousRank !== currentRank
-    );
-
-    const last = groups[groups.length - 1];
-    const canGroupWithLast =
-      last &&
-      !isChange &&
-      !last.isChange &&
-      last.decision.toUpperCase() === rec.decision.toUpperCase() &&
-      last.rank === currentRank &&
-      (last.score === null || currentScore === null || Math.abs(last.score - currentScore) < 0.05);
-
-    if (canGroupWithLast) {
-      last.count += 1;
-      last.earliestTimestamp = rec.timestamp;
-      const latestTime = new Date(last.latestTimestamp).getTime();
-      const earliestTime = new Date(rec.timestamp).getTime();
-      last.durationMinutes = Math.max(1, Math.round(Math.abs(latestTime - earliestTime) / 60000));
-      last.records.push(rec);
-    } else {
-      groups.push({
-        id: rec.id,
-        isChange,
-        decision: rec.decision,
-        rank: currentRank,
-        score: currentScore,
-        fromRank: previousRank,
-        toRank: currentRank,
-        latestTimestamp: rec.timestamp,
-        earliestTimestamp: rec.timestamp,
-        count: 1,
-        durationMinutes: 1,
-        summary: rec.summary,
-        observedDelta: isChange && previousRank && currentRank ? `#${String(previousRank).padStart(2, "0")} → #${String(currentRank).padStart(2, "0")}` : null,
-        records: [rec],
-      });
-    }
-  }
-
-  return groups;
 }
 
 function pointX(index: number, length: number) {
@@ -111,6 +29,9 @@ function rankY(rank: number) {
 
 export function MemoryView({ asset, agent, cycles, memory, comparison }: MemoryViewProps) {
   const [inspectedIndex, setInspectedIndex] = useState<number | null>(null);
+  const [expandedGroupIds, setExpandedGroupIds] = useState<Set<string>>(new Set());
+  const [highlightedGroupId, setHighlightedGroupId] = useState<string | null>(null);
+  const clearTimer = useRef<number | null>(null);
 
   const rankPoints = useMemo(() => {
     return asset.rankHistory.map((entry, index) => `${pointX(index, asset.rankHistory.length)},${rankY(entry.rank)}`).join(" ");
@@ -120,7 +41,7 @@ export function MemoryView({ asset, agent, cycles, memory, comparison }: MemoryV
     return asset.scoreHistory.map((entry, index) => `${pointX(index, asset.scoreHistory.length)},${scoreY(entry.score)}`).join(" ");
   }, [asset.scoreHistory]);
 
-  // Group consecutive identical records to eliminate wall of repetition
+  // Group consecutive identical records using the reusable utility
   const auditGroups = useMemo(() => {
     return groupMemoryRecords(memory);
   }, [memory]);
@@ -177,6 +98,50 @@ export function MemoryView({ asset, agent, cycles, memory, comparison }: MemoryV
   const rankEntry = comparison.entries.find((entry) => entry.label.toLowerCase().includes("rank"));
   const narrativeEntry = comparison.entries.find((entry) => entry.label.toLowerCase().includes("narrative"));
   const pairEntry = comparison.entries.find((entry) => entry.label.toLowerCase().includes("pair score"));
+
+  // Toggle expand / collapse for grouped cards
+  const toggleGroupExpand = (groupId: string) => {
+    setExpandedGroupIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupId)) {
+        next.delete(groupId);
+      } else {
+        next.add(groupId);
+      }
+      return next;
+    });
+  };
+
+  // Jump from timeline milestone node to decisions log entry
+  const handleMilestoneClick = (timestamp: string, milestoneIndex: number) => {
+    setInspectedIndex(milestoneIndex);
+
+    // Find corresponding audit group
+    const targetTime = new Date(timestamp).getTime();
+    const targetGroup = auditGroups.find((g) => {
+      const start = new Date(g.earliestTimestamp).getTime();
+      const end = new Date(g.latestTimestamp).getTime();
+      const min = Math.min(start, end);
+      const max = Math.max(start, end);
+      return targetTime >= min && targetTime <= max;
+    }) ?? auditGroups[0];
+
+    if (targetGroup) {
+      setHighlightedGroupId(targetGroup.id);
+      // Auto-expand group to allow viewing the raw items
+      setExpandedGroupIds((prev) => new Set(prev).add(targetGroup.id));
+
+      const cardEl = document.getElementById(`mlog-card-${targetGroup.id}`);
+      if (cardEl) {
+        cardEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+
+      if (clearTimer.current) window.clearTimeout(clearTimer.current);
+      clearTimer.current = window.setTimeout(() => {
+        setHighlightedGroupId(null);
+      }, 3500);
+    }
+  };
 
   return (
     <section className="app-reference-view memory-view-refined">
@@ -270,10 +235,10 @@ export function MemoryView({ asset, agent, cycles, memory, comparison }: MemoryV
                     className={`mem-pt-group ${isSelected ? "is-selected" : ""} ${isLatest ? "is-latest" : ""}`}
                     onMouseEnter={() => setInspectedIndex(index)}
                     onMouseLeave={() => setInspectedIndex(null)}
-                    onClick={() => setInspectedIndex(index)}
+                    onClick={() => handleMilestoneClick(entry.timestamp, index)}
                     tabIndex={0}
                     role="button"
-                    aria-label={`Cycle at ${formatClock(entry.timestamp)}, rank #${entry.rank}, score ${asset.scoreHistory[index]?.score ?? asset.opportunityScore}`}
+                    aria-label={`Cycle at ${formatClock(entry.timestamp)}, rank #${entry.rank}, score ${asset.scoreHistory[index]?.score ?? asset.opportunityScore}. Activate to jump to log.`}
                   >
                     {isLatest && <circle className="mem-pt-halo" cx={cx} cy={cy} r="10" />}
                     <circle
@@ -288,9 +253,15 @@ export function MemoryView({ asset, agent, cycles, memory, comparison }: MemoryV
             </svg>
           </div>
 
-          {/* Consolidated Timeline Bar (Replaces 20-box Wall of Repetition) */}
+          {/* Consolidated Timeline Bar with Interactive Milestone Anchors */}
           <div className="mem-timeline-bar" role="region" aria-label="Consolidated cycle timeline">
-            <div className="mem-tl-anchor mem-tl-anchor--start">
+            <div
+              className="mem-tl-anchor mem-tl-anchor--start is-clickable"
+              onClick={() => earliestTimestamp && handleMilestoneClick(earliestTimestamp, 0)}
+              role="button"
+              tabIndex={0}
+              title="Click to view initial audit cycle in log"
+            >
               <span className="mem-tl-label">WINDOW START</span>
               <span className="mem-tl-time">{formatClock(earliestTimestamp).slice(0, 5)} UTC</span>
               <span className="mem-tl-stat">Rank #{String(asset.rankHistory[0]?.rank ?? asset.currentRank).padStart(2, "0")} @ {(asset.scoreHistory[0]?.score ?? asset.opportunityScore).toFixed(1)}</span>
@@ -298,13 +269,19 @@ export function MemoryView({ asset, agent, cycles, memory, comparison }: MemoryV
 
             <div className="mem-tl-track">
               {isSteadyState ? (
-                <div className="mem-tl-track-steady">
+                <div
+                  className="mem-tl-track-steady is-clickable"
+                  onClick={() => latestTimestamp && handleMilestoneClick(latestTimestamp, asset.rankHistory.length - 1)}
+                  role="button"
+                  tabIndex={0}
+                  title="Click to highlight consolidation entry in log"
+                >
                   <div className="mem-tl-rail-line" />
                   <div className="mem-tl-steady-badge">
                     <span className="dot" aria-hidden="true" />
                     <b>Unchanged for {totalDurationMinutes}m</b> · {asset.rankHistory.length} cycles without drift
                   </div>
-                  <span className="mem-tl-sub">Skip-gate active · Signals below delta threshold</span>
+                  <span className="mem-tl-sub">Skip-gate active · Click to inspect audit group</span>
                 </div>
               ) : (
                 <div className="mem-tl-track-transitions">
@@ -314,7 +291,10 @@ export function MemoryView({ asset, agent, cycles, memory, comparison }: MemoryV
                       <div
                         key={m.index}
                         className={`mem-tl-node ${m.isChange ? "is-change" : ""}`}
-                        onClick={() => setInspectedIndex(m.index)}
+                        onClick={() => handleMilestoneClick(m.timestamp, m.index)}
+                        role="button"
+                        tabIndex={0}
+                        title={`Click to jump to ${m.isChange ? "transition" : "snapshot"} in decisions log`}
                       >
                         <span className="mem-tl-node-tag">
                           {m.isChange ? "▲ Shift" : idx === 0 ? "Start" : "Latest"}
@@ -328,7 +308,13 @@ export function MemoryView({ asset, agent, cycles, memory, comparison }: MemoryV
               )}
             </div>
 
-            <div className="mem-tl-anchor mem-tl-anchor--latest">
+            <div
+              className="mem-tl-anchor mem-tl-anchor--latest is-clickable"
+              onClick={() => latestTimestamp && handleMilestoneClick(latestTimestamp, asset.rankHistory.length - 1)}
+              role="button"
+              tabIndex={0}
+              title="Click to view latest active cycle in log"
+            >
               <span className="mem-tl-label">CURRENT STATE</span>
               <span className="mem-tl-time">{formatClock(latestTimestamp).slice(0, 5)} UTC</span>
               <span className="mem-tl-stat mem-tl-stat--active">
@@ -338,7 +324,7 @@ export function MemoryView({ asset, agent, cycles, memory, comparison }: MemoryV
           </div>
         </div>
 
-        {/* Decisions Audit Trail: Grouped & Non-repetitive */}
+        {/* Decisions Audit Trail: Grouped, Expandable, and Non-repetitive */}
         <div className="mem-decisions-col">
           <div className="mlog-head">
             <div className="mlog-head-left">
@@ -355,10 +341,17 @@ export function MemoryView({ asset, agent, cycles, memory, comparison }: MemoryV
               <li className="mlog-empty">No memory events recorded for {asset.symbol}.</li>
             ) : (
               auditGroups.map((group) => {
+                const isExpanded = expandedGroupIds.has(group.id);
+                const isHighlighted = highlightedGroupId === group.id;
+
                 if (group.isChange) {
                   // High-priority highlight for moments of change
                   return (
-                    <li key={group.id} className="mlog-card mlog-card--change">
+                    <li
+                      id={`mlog-card-${group.id}`}
+                      key={group.id}
+                      className={`mlog-card mlog-card--change${isHighlighted ? " is-target-highlight" : ""}`}
+                    >
                       <div className="mlog-card-top">
                         <span className="mlog-time-badge">
                           {formatClock(group.latestTimestamp).slice(0, 5)} UTC
@@ -382,7 +375,11 @@ export function MemoryView({ asset, agent, cycles, memory, comparison }: MemoryV
                 // Consolidated representation for steady-state intervals
                 const isGrouped = group.count > 1;
                 return (
-                  <li key={group.id} className="mlog-card mlog-card--steady">
+                  <li
+                    id={`mlog-card-${group.id}`}
+                    key={group.id}
+                    className={`mlog-card mlog-card--steady${isHighlighted ? " is-target-highlight" : ""}`}
+                  >
                     <div className="mlog-card-top">
                       <span className="mlog-time-badge">
                         {isGrouped
@@ -394,6 +391,7 @@ export function MemoryView({ asset, agent, cycles, memory, comparison }: MemoryV
                       </span>
                       <span className="mlog-decision">{group.decision}</span>
                     </div>
+
                     <div className="mlog-card-body">
                       <p className="mlog-headline">
                         Unchanged for {group.durationMinutes}m, rank #{String(group.rank ?? asset.currentRank).padStart(2, "0")} @ {(group.score ?? asset.opportunityScore).toFixed(1)}
@@ -401,6 +399,49 @@ export function MemoryView({ asset, agent, cycles, memory, comparison }: MemoryV
                       <p className="mlog-reason-sub">
                         Skip-gate active: market & social signals remained steady (delta &lt; 0.001). Carried forward prior canonical evaluation.
                       </p>
+
+                      {/* Interactive Expand / Collapse for full audit access */}
+                      {isGrouped && (
+                        <div className="mlog-expand-container">
+                          <button
+                            type="button"
+                            className="mlog-expand-btn"
+                            aria-expanded={isExpanded}
+                            onClick={() => toggleGroupExpand(group.id)}
+                          >
+                            {isExpanded ? "▲ Collapse raw cycle log" : `▼ Audit all ${group.count} individual cycles`}
+                          </button>
+
+                          {isExpanded && (
+                            <div className="mlog-raw-table-wrap">
+                              <table className="mlog-raw-table">
+                                <thead>
+                                  <tr>
+                                    <th>UTC</th>
+                                    <th>Rank</th>
+                                    <th>Score</th>
+                                    <th>Decision</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {group.records.map((r) => {
+                                    const parsed = r.currentState.match(/score:\s*([\d.]+)/i);
+                                    const s = parsed ? parsed[1] : (group.score?.toFixed(1) ?? "—");
+                                    return (
+                                      <tr key={r.id}>
+                                        <td>{formatClock(r.timestamp).slice(0, 8)}</td>
+                                        <td>#{String(group.rank ?? asset.currentRank).padStart(2, "0")}</td>
+                                        <td>{s}</td>
+                                        <td>{r.decision}</td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </li>
                 );

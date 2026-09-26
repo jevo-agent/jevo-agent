@@ -21,7 +21,8 @@ export const envSchema = z.object({
   MARKET_DATA_MODE: z.enum(["mock", "real"]).default("mock"),
   NARRATIVE_MODE: z.enum(["mock", "real"]).default("mock"),
   ALPHA_VANTAGE_API_KEY: z.string().optional(),
-  ALPHA_VANTAGE_CACHE_TTL_MS: z.coerce.number().int().positive().default(6 * 60 * 60 * 1000),
+  ALPHA_VANTAGE_CACHE_TTL_MS: z.coerce.number().int().positive().default(22 * 60 * 60 * 1000),
+  ALPHA_VANTAGE_MAX_DAILY_REQUESTS: z.coerce.number().int().positive().default(25),
   ADMIN_API_TOKENS: z.string().optional(),
   NEXT_PUBLIC_APP_URL: z.string().optional(),
 });

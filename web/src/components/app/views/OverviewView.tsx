@@ -754,6 +754,112 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
+interface LabelPlacement {
+  symbol: string;
+  labelX: number;
+  labelY: number;
+  anchor: "start" | "end" | "middle";
+  hasLeader: boolean;
+  leaderX: number;
+  leaderY: number;
+}
+
+function computeLabelPlacements(
+  positions: Array<{ x: number; y: number; asset: Stock }>,
+  plot: { left: number; right: number; top: number; bottom: number }
+): Map<string, LabelPlacement> {
+  const result = new Map<string, LabelPlacement>();
+
+  // Candidate slots relative to node (x, y): [dx, dy, anchor]
+  const candidateSlots: Array<[number, number, "start" | "end" | "middle"]> = [
+    [16, -3, "start"],     // 0: Right-middle (standard)
+    [-16, -3, "end"],      // 1: Left-middle
+    [16, 20, "start"],     // 2: Bottom-Right
+    [-16, 20, "end"],      // 3: Bottom-Left
+    [16, -24, "start"],    // 4: Top-Right
+    [-16, -24, "end"],     // 5: Top-Left
+    [0, -28, "middle"],    // 6: Top-Center
+    [0, 26, "middle"],     // 7: Bottom-Center
+    [26, 4, "start"],      // 8: Far-Right
+    [-26, 4, "end"],       // 9: Far-Left
+  ];
+
+  const placedBoxes: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
+
+  // Sort by x desc, then y asc to prioritize higher opportunity assets
+  const sorted = [...positions].sort((a, b) => b.x - a.x || a.y - b.y);
+
+  for (const pos of sorted) {
+    let bestSlot = candidateSlots[0];
+    let minPenalty = Infinity;
+
+    for (const slot of candidateSlots) {
+      const [dx, dy, anchor] = slot;
+      const lx = pos.x + dx;
+      const ly = pos.y + dy;
+
+      const w = 68;
+      const h = 26;
+      const x1 = anchor === "start" ? lx : anchor === "end" ? lx - w : lx - w / 2;
+      const x2 = x1 + w;
+      const y1 = ly - 12;
+      const y2 = y1 + h;
+
+      let penalty = 0;
+
+      // Plot boundary penalty
+      if (x1 < plot.left + 4) penalty += (plot.left + 4 - x1) * 10;
+      if (x2 > plot.right - 4) penalty += (x2 - (plot.right - 4)) * 10;
+      if (y1 < plot.top + 8) penalty += (plot.top + 8 - y1) * 10;
+      if (y2 > plot.bottom - 8) penalty += (y2 - (plot.bottom - 8)) * 10;
+
+      // Overlap penalty with already placed labels
+      for (const box of placedBoxes) {
+        const overlapW = Math.max(0, Math.min(x2, box.x2) - Math.max(x1, box.x1));
+        const overlapH = Math.max(0, Math.min(y2, box.y2) - Math.max(y1, box.y1));
+        if (overlapW > 0 && overlapH > 0) {
+          penalty += overlapW * overlapH * 25;
+        }
+      }
+
+      // Proximity penalty (favor standard close slots)
+      penalty += Math.sqrt(dx * dx + dy * dy);
+
+      if (penalty < minPenalty) {
+        minPenalty = penalty;
+        bestSlot = slot;
+        if (penalty === 0) break;
+      }
+    }
+
+    const [dx, dy, anchor] = bestSlot;
+    const labelX = pos.x + dx;
+    const labelY = pos.y + dy;
+    const w = 68;
+    const h = 26;
+    const x1 = anchor === "start" ? labelX : anchor === "end" ? labelX - w : labelX - w / 2;
+    const y1 = labelY - 12;
+    placedBoxes.push({ x1, y1, x2: x1 + w, y2: y1 + h });
+
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const hasLeader = dist > 20;
+    const leaderX = anchor === "start" ? labelX - 2 : anchor === "end" ? labelX + 2 : labelX;
+    const leaderY = labelY + 2;
+
+    result.set(pos.asset.symbol, {
+      symbol: pos.asset.symbol,
+      labelX,
+      labelY,
+      anchor,
+      hasLeader,
+      leaderX,
+      leaderY,
+    });
+  }
+
+  return result;
+}
+
 function OpportunityField({
   variant,
   assets,
@@ -848,6 +954,10 @@ function OpportunityField({
   const inspectedAsset = assets.find((asset) => asset.symbol === activeSymbol) ?? selectedAsset;
   const inspectedPairing = pairings?.find((pairing) => pairing.stockSymbol === inspectedAsset.symbol) ?? selectedPairing;
   const activePosition = positions.find((p) => p.asset.symbol === activeSymbol);
+
+  const labelPlacements = useMemo(() => {
+    return computeLabelPlacements(positions, plot);
+  }, [positions, plot.left, plot.right, plot.top, plot.bottom]);
 
   const selectFieldAsset = (symbol: string) => {
     onHover(null);
@@ -1209,10 +1319,10 @@ function OpportunityField({
             {positions.map((position) => {
               const isSelected = selectedAsset.symbol === position.asset.symbol;
               const isActive = activeSymbol === position.asset.symbol;
-              const labelOnLeft = position.x > plot.right - 130;
-              const labelBelow = position.y < plot.top + 64;
-              const labelX = position.x + (labelOnLeft ? -16 : 16);
-              const labelY = position.y + (labelBelow ? 22 : -3);
+              const placement = labelPlacements.get(position.asset.symbol);
+              const labelAnchor = placement?.anchor ?? (position.x > plot.right - 130 ? "end" : "start");
+              const labelX = placement?.labelX ?? (position.x + (labelAnchor === "end" ? -16 : 16));
+              const labelY = placement?.labelY ?? (position.y - 3);
 
               return (
                 <g
@@ -1245,6 +1355,17 @@ function OpportunityField({
                     <polyline className="field-trail" points={position.trail} />
                   )}
 
+                  {/* Collision-avoidance leader line connecting node to offset label */}
+                  {placement?.hasLeader && (
+                    <line
+                      x1={position.x}
+                      y1={position.y}
+                      x2={placement.leaderX}
+                      y2={placement.leaderY}
+                      className="field-label-leader"
+                    />
+                  )}
+
                   {/* Precision Crosshair Ticks */}
                   <g className="field-crosshairs" aria-hidden="true">
                     <line x1={position.x - 7} y1={position.y} x2={position.x + 7} y2={position.y} />
@@ -1272,7 +1393,7 @@ function OpportunityField({
                   {/* Asset Symbol */}
                   <text
                     className="field-label"
-                    textAnchor={labelOnLeft ? "end" : "start"}
+                    textAnchor={labelAnchor}
                     x={labelX}
                     y={labelY}
                   >
@@ -1282,7 +1403,7 @@ function OpportunityField({
                   {/* Value / Rank / Score */}
                   <text
                     className="field-value"
-                    textAnchor={labelOnLeft ? "end" : "start"}
+                    textAnchor={labelAnchor}
                     x={labelX}
                     y={labelY + 13}
                   >

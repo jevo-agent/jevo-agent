@@ -95,6 +95,34 @@ describe("AlphaVantage Providers (BACKEND 12 + 13)", () => {
     expect(client.hasCached("quote:NVDA")).toBe(true);
   });
 
+  it("AlphaVantageClient enforces daily request governor, halting outbound fetch and falling back to cache when limit reached", async () => {
+    let callCount = 0;
+    // Set maxDailyRequests to 2 for this test instance, with 0 TTL to simulate repeated expired fetches
+    const client = new AlphaVantageClient({
+      apiKey: "test_key",
+      cacheTtlMs: 0,
+      maxDailyRequests: 2,
+    });
+    (client as unknown as { fetchWithPacing: (url: string) => Promise<unknown> }).fetchWithPacing = async () => {
+      callCount++;
+      return sampleQuote;
+    };
+
+    // Request 1: allowed
+    await client.getGlobalQuote("NVDA");
+    expect(callCount).toBe(1);
+
+    // Request 2: allowed
+    await client.getGlobalQuote("NVDA");
+    expect(callCount).toBe(2);
+
+    // Request 3: daily limit reached (2/2) -> Governor halts network call and falls back to cached data
+    const quote3 = await client.getGlobalQuote("NVDA");
+    expect(callCount).toBe(2); // Network was NOT called
+    expect(quote3["05. price"]).toBe("225.0700"); // Returned cached data safely
+    expect(client.getDailyRequestCount()).toBe(2);
+  });
+
   it("createProvidersRegistry switches marketData and narrative while preserving mock social and stockToken", () => {
     const registryMock = createProvidersRegistry({ marketDataMode: "mock", narrativeMode: "mock" });
     expect(registryMock.marketData).toBeDefined();

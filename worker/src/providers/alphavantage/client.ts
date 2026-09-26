@@ -40,19 +40,30 @@ interface CacheEntry<T> {
   expiresAt: number;
 }
 
+export interface AlphaVantageClientOptions {
+  apiKey: string;
+  cacheTtlMs?: number;
+  maxDailyRequests?: number;
+}
+
 export class AlphaVantageClient {
   private readonly apiKey: string;
   private readonly baseUrl: string = "https://www.alphavantage.co/query";
   private readonly cacheTtlMs: number;
   private readonly minIntervalMs: number = 1250; // Rate limit: max 1 req/sec on free tier
+  private readonly maxDailyRequests: number;
+  private dailyRequestCount: number = 0;
+  private dailyWindowStart: number = Date.now();
   private lastRequestTime: number = 0;
   private requestQueue: Promise<void> = Promise.resolve();
 
   private readonly cache = new Map<string, CacheEntry<unknown>>();
 
-  constructor(options: { apiKey: string; cacheTtlMs?: number }) {
+  constructor(options: AlphaVantageClientOptions) {
     this.apiKey = options.apiKey.trim();
-    this.cacheTtlMs = options.cacheTtlMs ?? 6 * 60 * 60 * 1000; // Default 6 hours
+    // Default TTL: 22 hours to match daily EOD cadence and conserve 25 req/day quota
+    this.cacheTtlMs = options.cacheTtlMs ?? 22 * 60 * 60 * 1000;
+    this.maxDailyRequests = options.maxDailyRequests ?? 25;
   }
 
   private async acquireRateLimitSlot(): Promise<void> {
@@ -71,6 +82,25 @@ export class AlphaVantageClient {
     }
     this.lastRequestTime = Date.now();
     releaseSlot!();
+  }
+
+  private tryConsumeDailyQuota(): boolean {
+    const now = Date.now();
+    if (now - this.dailyWindowStart >= 24 * 60 * 60 * 1000) {
+      this.dailyRequestCount = 0;
+      this.dailyWindowStart = now;
+    }
+
+    if (this.dailyRequestCount >= this.maxDailyRequests) {
+      logger.warn(
+        { count: this.dailyRequestCount, max: this.maxDailyRequests },
+        "Alpha Vantage daily request quota reached. Refusing outbound call and falling back to cached state.",
+      );
+      return false;
+    }
+
+    this.dailyRequestCount++;
+    return true;
   }
 
   private async fetchWithPacing(url: string): Promise<Record<string, unknown>> {
@@ -101,6 +131,14 @@ export class AlphaVantageClient {
     const cached = this.cache.get(cacheKey) as CacheEntry<AlphaVantageRawQuote> | undefined;
     if (cached && Date.now() < cached.expiresAt) {
       return cached.data;
+    }
+
+    if (!this.tryConsumeDailyQuota()) {
+      if (cached) {
+        logger.warn({ symbol: uppercaseSymbol }, "Daily quota reached: returning stale cached quote");
+        return cached.data;
+      }
+      return {};
     }
 
     const url = `${this.baseUrl}?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(uppercaseSymbol)}&apikey=${encodeURIComponent(this.apiKey)}`;
@@ -142,6 +180,14 @@ export class AlphaVantageClient {
       return cached.data;
     }
 
+    if (!this.tryConsumeDailyQuota()) {
+      if (cached) {
+        logger.warn({ symbol: uppercaseSymbol }, "Daily quota reached: returning stale cached news");
+        return cached.data;
+      }
+      return { feed: [] };
+    }
+
     const url = `${this.baseUrl}?function=NEWS_SENTIMENT&tickers=${encodeURIComponent(uppercaseSymbol)}&apikey=${encodeURIComponent(this.apiKey)}`;
     try {
       const json = await this.fetchWithPacing(url);
@@ -172,6 +218,15 @@ export class AlphaVantageClient {
       }
       throw err;
     }
+  }
+
+  getDailyRequestCount(): number {
+    return this.dailyRequestCount;
+  }
+
+  resetDailyQuota(): void {
+    this.dailyRequestCount = 0;
+    this.dailyWindowStart = Date.now();
   }
 
   /** Exposes cache inspection for testing */

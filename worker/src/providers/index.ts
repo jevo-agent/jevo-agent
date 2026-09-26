@@ -46,6 +46,7 @@ export function createProvidersRegistry(
       sharedClient = new AlphaVantageClient({
         apiKey,
         cacheTtlMs: env.ALPHA_VANTAGE_CACHE_TTL_MS,
+        maxDailyRequests: env.ALPHA_VANTAGE_MAX_DAILY_REQUESTS,
       });
     }
   }
