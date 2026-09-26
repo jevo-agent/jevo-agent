@@ -85,9 +85,9 @@ Jevo/
 - **Location**: `web/src/components/app/views/OverviewView.tsx` & `web/src/app/globals.css`
 - **Features Implemented**:
   1. **Quantitative Scales & Tick Marks**:
-     - Both X (Pairability Score: 0–100) and Y (Narrative Strength: 0–100) feature visible numerical scale labels at 5-point intervals (`70, 75, 80, 85, 90, 95, 100`).
+     - Both X (Opportunity Score: 0–100) and Y (Narrative Momentum: 0–100) feature visible numerical scale labels at 5-point intervals (`70, 75, 80, 85, 90, 95, 100`).
      - Tick marks with styling `.field-tick` and text `.field-scale-text`.
-     - Explicit directional axis titles: `PAIRABILITY SCORE →` and `NARRATIVE STRENGTH ↑`.
+     - Explicit directional axis titles: `OPPORTUNITY SCORE →` and `NARRATIVE MOMENTUM ↑`.
   2. **Four Market Quadrants**:
      - `Q1: EXPEDITE (PAIRABLE & HIGH NARRATIVE)` — highlighted top-right zone with teal tint.
      - `Q2: VOLATILITY / MEME` — top-left quadrant (e.g., GME).
@@ -97,16 +97,26 @@ Jevo/
      - Glowing curved threshold curve indicating `SCORE ≥ 90.0` eligibility boundary, rendered dynamically relative to real domain bounds.
   4. **Dynamic Canonical Coordinate Derivation (`getAssetCoordinates`)**:
      - Coordinates derived dynamically from the canonical data source (no hardcoded symbol coordinates):
-       - **Sumbu X (Pairability / Opportunity Score)**: Reads the exact `opportunityScore` from the same `/opportunities` data source driving the Opportunity Rank table. E.g. `NVDA`: 96.8, `TSLA`: 94.2, `PLTR`: 91.7, `AAPL`: 89.4, `GME`: 87.9, `AMD`: 82.6, `COIN`: 79.8.
-       - **Sumbu Y (Narrative Strength)**: Reads the real `narrativeMomentum` joined directly from `opportunity_scores` in `/opportunities` (and `/stocks/:symbol`). E.g. `NVDA`: 98.0, `TSLA`: 93.0, `PLTR`: 91.0, `GME`: 89.0, `AMD`: 88.0, `AAPL`: 86.0, `COIN`: 90.0.
+       - **Sumbu X (Opportunity Score)**: Reads the exact `opportunityScore` from the same `/opportunities` data source driving the Opportunity Rank table. E.g. `NVDA`: 89.1, `GME`: 86.7, `TSLA`: 86.4, `COIN`: 85.3, `PLTR`: 84.9, `AMD`: 81.2, `AAPL`: 79.0.
+       - **Sumbu Y (Narrative Momentum)**: Reads the raw `narrativeMomentum` dimension directly from `score.narrativeMomentum` in `/opportunities` (and `/stocks/:symbol`). E.g. `NVDA`: 98.0, `TSLA`: 93.0, `PLTR`: 91.0, `COIN`: 90.0, `GME`: 89.0, `AMD`: 88.0, `AAPL`: 86.0.
      - Dynamic Cartesian domain bounds (`minX`, `maxX`, `minY`, `maxY`) scale naturally with asset distribution.
   5. **Dynamic Crosshair Projections**:
      - Dashed projection lines to X and Y axes when an asset is hovered or selected.
-     - Interactive badge pills showing exact coordinate values (e.g. `[ X: 96.8 ]`, `[ Y: 98.0 ]`).
+     - Interactive badge pills showing exact coordinate values (e.g. `[ X: 89.1 ]`, `[ Y: 98.0 ]`).
   6. **Active State Transition Vector**:
-     - Historical progression indicator for the active node (`PREV #04 (93.7)` → vector line → `JEV EVAL: PROMOTE (94% CONF)` badge with Jevo logo).
+     - Historical progression indicator for the active node (`PREV #04 (89.1)` → vector line → `JEV EVAL: PROMOTE (94% CONF)` badge with Jevo logo).
   7. **24-Cycle Telemetry Trajectory Mini-Chart**:
-     - A dedicated telemetry panel below the 2D field rendering SVG historical score progression over the last 24 cycles (`84.2 → 87.1 → 90.4 → 93.7 → 96.8`) with line and data point tags.
+     - A dedicated telemetry panel below the 2D field rendering SVG historical score progression over the last 24 cycles (`84.2 → 87.1 → 90.4 → 89.1`) with line and data point tags.
+
+### D. Decoupled Section Gates & Granular Empty States
+- **Location**: `web/src/lib/api/adapters.ts`, `OverviewView.tsx`, `LaunchView.tsx`, `PairingsView.tsx`
+- **Mechanism**:
+  - Eliminated the full-page blocker `if (!featuredAsset || !featuredPairing || !launch) return null;`.
+  - Full-page blocker only triggers if `opportunities` fails or returns empty array.
+  - If backend returns opportunities but pairings or launches are currently unpopulated (`[]`), each subsystem displays a clean section-level empty state:
+    - **Section 05 (Pairings)**: Shows *"Belum ada pairing yang diusulkan"* when `pairings.length === 0`.
+    - **Section 06 (Launch Readiness)**: Shows *"STANDBY / Belum ada launch aktif"* when `launch` is null.
+    - Standalone `/launch` and `/pairing` pages render dedicated reference-view empty states gracefully.
 
 ---
 
