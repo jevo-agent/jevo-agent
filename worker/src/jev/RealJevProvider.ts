@@ -1,4 +1,5 @@
 import { experimental_evaluate as evaluate } from "ai";
+import { z } from "zod";
 import { env } from "../config/env";
 import type {
   ChoiceInput,
@@ -13,6 +14,8 @@ const JEV_MODEL = "typesafe-ai/jev" as const;
 const DEFAULT_TIMEOUT_MS = env.JEV_REQUEST_TIMEOUT_MS;
 const DEFAULT_MAX_RETRIES = 1;
 
+// TypeSafe's JEV evaluation endpoint accepts at most ten ordered score levels.
+// Keep the rubric explicit and map the final level to the full 0–100 domain.
 const SCORE_LEVELS = [
   "0 / no evidence",
   "10 / minimal",
@@ -23,9 +26,9 @@ const SCORE_LEVELS = [
   "60 / moderate",
   "70 / above average",
   "80 / strong",
-  "90 / very strong",
   "100 / exceptional",
 ] as const;
+const SCORE_VALUES = [0, 10, 20, 30, 40, 50, 60, 70, 80, 100] as const;
 
 export type RealJevProviderErrorCode =
   | "CONFIGURATION"
@@ -79,7 +82,16 @@ function normalizeConfidence(value: number): number {
 function errorStatus(error: unknown): number | undefined {
   const record = asRecord(error);
   const cause = asRecord(record?.cause);
-  return finiteNumber(record?.status) ?? finiteNumber(record?.statusCode) ?? finiteNumber(cause?.status) ?? undefined;
+  const response = asRecord(record?.response);
+  const causeResponse = asRecord(cause?.response);
+  return finiteNumber(record?.status)
+    ?? finiteNumber(record?.statusCode)
+    ?? finiteNumber(response?.status)
+    ?? finiteNumber(response?.statusCode)
+    ?? finiteNumber(cause?.status)
+    ?? finiteNumber(cause?.statusCode)
+    ?? finiteNumber(causeResponse?.status)
+    ?? undefined;
 }
 
 function classifyError(error: unknown, signal?: AbortSignal): RealJevProviderError {
@@ -97,7 +109,19 @@ function classifyError(error: unknown, signal?: AbortSignal): RealJevProviderErr
       status,
     });
   }
-  if (status === 408 || status === 425 || status === 429 || (status !== undefined && status >= 500)) {
+  if (status === 400) {
+    return new RealJevProviderError("INVALID_RESPONSE", "Jev Gateway rejected the evaluation request", false, {
+      cause: error,
+      status,
+    });
+  }
+  if (status === 429) {
+    return new RealJevProviderError("RATE_LIMITED", "Jev Gateway rate limit reached", true, {
+      cause: error,
+      status,
+    });
+  }
+  if (status === 408 || status === 425 || (status !== undefined && status >= 500)) {
     return new RealJevProviderError("TRANSIENT", "Jev Gateway returned a transient transport error", true, {
       cause: error,
       status,
@@ -120,6 +144,11 @@ function confidenceFromResult(result: EvaluationResult, questionId: string, answ
   if (metadataConfidence !== null) return normalizeConfidence(metadataConfidence);
 
   const answerRecord = asRecord(answer);
+  const probability = finiteNumber(answerRecord?.probability);
+  if (probability !== null) {
+    return normalizeConfidence(1 - Math.abs(0.5 - probability) * 2);
+  }
+
   const probabilities = asRecord(answerRecord?.probabilities);
   const selectedChoice = typeof answerRecord?.choice === "string" ? answerRecord.choice : null;
   const selectedProbability = selectedChoice ? finiteNumber(probabilities?.[selectedChoice]) : null;
@@ -132,7 +161,27 @@ function confidenceFromResult(result: EvaluationResult, questionId: string, answ
   );
 }
 
-function answerFor(result: EvaluationResult, questionId: string): unknown {
+const choiceAnswerSchema = z.object({
+  type: z.literal("choice"),
+  choice: z.string().min(1),
+  probabilities: z.record(z.string(), z.number().finite()).optional(),
+}).passthrough();
+
+const scoreAnswerSchema = z.object({
+  type: z.literal("score"),
+  score: z.number().finite(),
+}).passthrough();
+
+const booleanAnswerSchema = z.object({
+  type: z.literal("boolean"),
+  probability: z.number().finite(),
+}).passthrough();
+
+function answerFor(
+  result: EvaluationResult,
+  questionId: string,
+  expectedType: "choice" | "score" | "boolean",
+): Record<string, unknown> {
   const answers = asRecord(result.answers);
   const answer = answers?.[questionId];
   if (!answer) {
@@ -142,7 +191,21 @@ function answerFor(result: EvaluationResult, questionId: string): unknown {
       false,
     );
   }
-  return answer;
+  const schema =
+    expectedType === "choice"
+      ? choiceAnswerSchema
+      : expectedType === "score"
+        ? scoreAnswerSchema
+        : booleanAnswerSchema;
+  const parsed = schema.safeParse(answer);
+  if (!parsed.success) {
+    throw new RealJevProviderError(
+      "INVALID_RESPONSE",
+      `Jev response included an invalid ${expectedType} answer for ${questionId}`,
+      false,
+    );
+  }
+  return parsed.data;
 }
 
 function scoreFromAnswer(answer: unknown, questionId: string): number {
@@ -154,7 +217,11 @@ function scoreFromAnswer(answer: unknown, questionId: string): number {
       false,
     );
   }
-  return Math.round((score / (SCORE_LEVELS.length - 1)) * 100);
+  const lowerIndex = Math.floor(score);
+  const upperIndex = Math.min(SCORE_VALUES.length - 1, lowerIndex + 1);
+  const fraction = score - lowerIndex;
+  const mapped = SCORE_VALUES[lowerIndex] + (SCORE_VALUES[upperIndex] - SCORE_VALUES[lowerIndex]) * fraction;
+  return Math.round(mapped);
 }
 
 function choiceFromAnswer<T extends string>(answer: unknown, input: ChoiceInput<T>): T {
@@ -201,7 +268,7 @@ export class RealJevProvider implements JevProvider {
         },
       },
     });
-    const answer = answerFor(result, "decision");
+    const answer = answerFor(result, "decision", "choice");
     const choice = choiceFromAnswer(answer, input);
     return {
       choice,
@@ -222,7 +289,7 @@ export class RealJevProvider implements JevProvider {
     const scores: Record<string, number> = {};
     const confidences: number[] = [];
     for (const dimension of input.dimensions) {
-      const answer = answerFor(result, dimension);
+      const answer = answerFor(result, dimension, "score");
       scores[dimension] = scoreFromAnswer(answer, dimension);
       confidences.push(confidenceFromResult(result, dimension, answer));
     }
@@ -235,12 +302,31 @@ export class RealJevProvider implements JevProvider {
     };
   }
 
-  async evaluateNoul(_input: NoulInput): Promise<never> {
-    throw new RealJevProviderError(
-      "UNSUPPORTED",
-      "evaluateNoul is not part of the verified Vercel AI Gateway evaluation contract",
-      false,
-    );
+  async evaluateNoul(input: NoulInput): Promise<NoulResult> {
+    const question =
+      typeof input.context.question === "string"
+        ? input.context.question
+        : "Evaluate condition";
+    const result = await this.call({
+      state: input.context,
+      questions: {
+        noul: {
+          type: "boolean",
+          instructions: question,
+        },
+      },
+    });
+    const answer = answerFor(result, "noul", "boolean");
+    const probability = finiteNumber(answer.probability) ?? 0;
+    const confidence = confidenceFromResult(result, "noul", answer);
+    return {
+      raw: {
+        probability,
+        confidence,
+        answer,
+        providerMetadata: result.providerMetadata,
+      },
+    };
   }
 
   private async call<const QUESTIONS extends Record<string, unknown>>(

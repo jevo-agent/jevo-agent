@@ -9,15 +9,36 @@ async function testJev() {
   try {
     const result = await experimental_evaluate({
       model: "typesafe-ai/jev",
-      state: "test",
+      state: "NVDA reached new all-time high with strong AI inference demand.",
       questions: {
-        test: {
+        testChoice: {
           type: "choice",
-          instructions: "Select the best option",
+          instructions: "Select the best directional stance",
           criteria: {
-            a: "Option A",
-            b: "Option B",
+            PROMOTE: "Strong narrative and fundamentals",
+            HOLD: "Neutral momentum",
+            DEMOTE: "Deteriorating conditions",
           },
+        },
+        testScore: {
+          type: "score",
+          instructions: "Rate narrative momentum from 1 to 10",
+          criteria: [
+            "1 / minimal",
+            "2 / very low",
+            "3 / low",
+            "4 / below avg",
+            "5 / neutral",
+            "6 / moderate",
+            "7 / above avg",
+            "8 / strong",
+            "9 / very strong",
+            "10 / exceptional",
+          ],
+        },
+        testBoolean: {
+          type: "boolean",
+          instructions: "Is this asset currently exhibiting meme/cultural breakout characteristics?",
         },
       },
     });

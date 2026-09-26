@@ -39,7 +39,7 @@ describe("RealJevProvider", () => {
     ).resolves.toEqual({ choice: "PROMOTE", confidence: 94, signals: [] });
     await expect(
       provider.evaluateScore({ context: { symbol: "NVDA" }, dimensions: ["narrativeMomentum", "culturalRelevance"] }),
-    ).resolves.toEqual({ scores: { narrativeMomentum: 90, culturalRelevance: 80 }, confidence: 89 });
+    ).resolves.toEqual({ scores: { narrativeMomentum: 100, culturalRelevance: 80 }, confidence: 89 });
   });
 
   it("rejects malformed typed answers without fabricating a decision", async () => {
@@ -92,10 +92,16 @@ describe("RealJevProvider", () => {
     ).rejects.toMatchObject({ code: "UNAUTHORIZED", retryable: false, status: 401 });
   });
 
-  it("does not serialize credentials or support the unverified Noul method", async () => {
-    const provider = new RealJevProvider();
+  it("does not serialize credentials and maps evaluateNoul to boolean question", async () => {
+    const provider = new RealJevProvider({
+      evaluateFn: (async () => ({
+        answers: { noul: { type: "boolean", probability: 0.23 } },
+        providerMetadata: { typesafe: { confidence: { noul: 0.85 } } },
+      })) as never,
+    });
     expect(JSON.stringify(provider)).not.toContain("AI_GATEWAY_API_KEY");
-    await expect(provider.evaluateNoul({ context: { symbol: "NVDA" } })).rejects.toBeInstanceOf(RealJevProviderError);
+    const res = await provider.evaluateNoul({ context: { symbol: "NVDA" } });
+    expect(res.raw.probability).toBe(0.23);
+    expect(res.raw.confidence).toBe(85);
   });
 });
-
