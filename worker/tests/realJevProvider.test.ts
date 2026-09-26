@@ -39,7 +39,7 @@ describe("RealJevProvider", () => {
     ).resolves.toEqual({ choice: "PROMOTE", confidence: 94, signals: [] });
     await expect(
       provider.evaluateScore({ context: { symbol: "NVDA" }, dimensions: ["narrativeMomentum", "culturalRelevance"] }),
-    ).resolves.toEqual({ scores: { narrativeMomentum: 100, culturalRelevance: 80 }, confidence: 89 });
+    ).resolves.toEqual({ scores: { narrativeMomentum: 89, culturalRelevance: 78 }, confidence: 89 });
   });
 
   it("rejects malformed typed answers without fabricating a decision", async () => {

@@ -14,21 +14,19 @@ const JEV_MODEL = "typesafe-ai/jev" as const;
 const DEFAULT_TIMEOUT_MS = env.JEV_REQUEST_TIMEOUT_MS;
 const DEFAULT_MAX_RETRIES = 1;
 
-// TypeSafe's JEV evaluation endpoint accepts at most ten ordered score levels.
-// Keep the rubric explicit and map the final level to the full 0–100 domain.
+// TypeSafe's JEV evaluation endpoint accepts at most ten ordered score levels (scale 1 to 10).
 const SCORE_LEVELS = [
-  "0 / no evidence",
-  "10 / minimal",
-  "20 / very low",
-  "30 / low",
-  "40 / below average",
-  "50 / neutral",
-  "60 / moderate",
-  "70 / above average",
-  "80 / strong",
-  "100 / exceptional",
+  "1 / minimal",
+  "2 / very low",
+  "3 / low",
+  "4 / below average",
+  "5 / neutral",
+  "6 / moderate",
+  "7 / above average",
+  "8 / strong",
+  "9 / very strong",
+  "10 / exceptional",
 ] as const;
-const SCORE_VALUES = [0, 10, 20, 30, 40, 50, 60, 70, 80, 100] as const;
 
 export type RealJevProviderErrorCode =
   | "CONFIGURATION"
@@ -209,19 +207,19 @@ function answerFor(
 }
 
 function scoreFromAnswer(answer: unknown, questionId: string): number {
-  const score = finiteNumber(asRecord(answer)?.score);
-  if (score === null || score < 0 || score > SCORE_LEVELS.length - 1) {
+  const raw = finiteNumber(asRecord(answer)?.score);
+  if (raw === null || raw < 0) {
     throw new RealJevProviderError(
       "INVALID_RESPONSE",
       `Jev response included an invalid score for ${questionId}`,
       false,
     );
   }
-  const lowerIndex = Math.floor(score);
-  const upperIndex = Math.min(SCORE_VALUES.length - 1, lowerIndex + 1);
-  const fraction = score - lowerIndex;
-  const mapped = SCORE_VALUES[lowerIndex] + (SCORE_VALUES[upperIndex] - SCORE_VALUES[lowerIndex]) * fraction;
-  return Math.round(mapped);
+
+  // Rescale raw score from Jev (1-10 scale) to 0-100 before returning to pipeline.
+  // Formula: ((score - 1) / 9) * 100, clamped to [0, 100].
+  const rescaled = ((raw - 1) / 9) * 100;
+  return Math.min(100, Math.max(0, Math.round(rescaled)));
 }
 
 function choiceFromAnswer<T extends string>(answer: unknown, input: ChoiceInput<T>): T {

@@ -854,6 +854,22 @@ Eleven tasks, each meant to be one Codex/AGY prompt, each landable and reviewabl
 - Tests: each action against a seeded DB; an unauthenticated request to any admin route is rejected.
 - Stop when: every action above is callable, authenticated, persisted, and produces both the state change and its audit event.
 
+**BACKEND 11 — Real Jev Adapter (Vercel AI Gateway)**
+
+- Goal: Production-ready `RealJevProvider` communicating with TypeSafe Jev via Vercel AI Gateway (`typesafe-ai/jev`) using the official `@ai-sdk/provider` / `experimental_evaluate` protocol.
+- Files: `worker/src/jev/RealJevProvider.ts`, `worker/src/jev/JevProvider.ts`, `worker/tests/realJevProvider.test.ts`
+- Depends on: BACKEND 03, BACKEND 05, BACKEND 10
+- Do:
+  - Connect to Vercel AI Gateway model `typesafe-ai/jev` with `AI_GATEWAY_API_KEY`.
+  - Cap `SCORE_LEVELS` criteria rubric at exactly 10 levels (`1` through `10`) to satisfy TypeSafe constraint (`400: TypeSafe Score questions support at most 10 levels`).
+  - Rescale raw 1–10 scores from Jev to 0–100 scale using `((raw - 1) / 9) * 100`, clamped to `[0, 100]`, inside `scoreFromAnswer()` before returning to `DecisionEngine`.
+  - Isolate `boolean` <-> `noul` primitive mapping strictly inside the adapter (`questions.noul.type = "boolean"`).
+  - Extract confidence from `providerMetadata.typesafe.confidence.<key>` (scaled 0–1 to 0–100).
+  - Keep `JEV_MODE=mock` as default in `.env` / `.env.example`, switching to `real` when configured.
+  - Implement bounded retry and timeout controls (`AbortSignal.timeout`) without retrying 401s or terminal errors.
+- Tests: `tests/realJevProvider.test.ts` unit tests verifying choice mapping, score rescaling, boolean/noul abstraction, error handling, and credential safety; full suite passing 88 tests.
+- Stop when: `RealJevProvider` successfully evaluates choices, scores, and nouls against mock and live gateway tests, and all unit/integration tests pass.
+
 ## 21. Deferred Blockchain Phase
 
 None of BACKEND 00–10 touches `contracts/`, signs anything, or calls Pons. `launch_candidates.transactionStatus` has exactly one possible value this phase — `"not_submitted"` — by the type itself, not by convention.
