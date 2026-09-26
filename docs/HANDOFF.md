@@ -139,7 +139,93 @@ bun dev
 
 ---
 
-## 6. Roadmap Status
+## 3. BACKEND 12 & 13 (narrative half) — Real Alpha Vantage Providers
+
+### Implementation Summary
+- **Files**:
+  - `worker/src/providers/alphavantage/client.ts`: Shared HTTP client with request pacing (1.25s interval) and in-memory TTL caching.
+  - `worker/src/providers/alphavantage/RealMarketDataProvider.ts`: Maps `GLOBAL_QUOTE` to `MarketSnapshot`.
+  - `worker/src/providers/alphavantage/RealNarrativeProvider.ts`: Maps `NEWS_SENTIMENT` to `SignalObservation` (`kind: "NEWS"`).
+  - `worker/src/providers/index.ts`: Factory toggling via `MARKET_DATA_MODE` and `NARRATIVE_MODE`.
+  - `worker/tests/alphaVantage.test.ts`: Unit tests, cache verification, and live smoke test.
+- **Key Environment Variables**:
+  - `MARKET_DATA_MODE`: Set to `"mock"` by default. Set to `"real"` to fetch live quotes via Alpha Vantage.
+  - `NARRATIVE_MODE`: Set to `"mock"` by default. Set to `"real"` to fetch live news/sentiment via Alpha Vantage.
+  - `ALPHA_VANTAGE_API_KEY`: Required when `MARKET_DATA_MODE=real` or `NARRATIVE_MODE=real`.
+  - `ALPHA_VANTAGE_CACHE_TTL_MS`: In-memory cache TTL (default `21600000` ms = 6 hours).
+
+### Quota Cadence & Rate Limiting Strategy
+1. **Free Tier Budget (25 req/day)**:
+   - 7 tracked assets (`NVDA`, `TSLA`, `PLTR`, `AAPL`, `GME`, `AMD`, `COIN`).
+   - 1 full sweep = 7 market quote requests + 7 narrative news requests = 14 requests total.
+   - Leaves 11 requests of headroom for test runs and manual scans.
+2. **Burst Limit Protection (1 req/sec)**:
+   - Alpha Vantage enforces a strict 1 request per second burst limit.
+   - `AlphaVantageClient` implements an asynchronous mutex queue with a minimum 1.25s delay between outbound calls.
+3. **Zero-Latency Agent Cycles (60s DELTA)**:
+   - 60-second DELTA cycles read from the TTL cache in < 1ms, completely eliminating redundant outbound API calls.
+
+---
+
+## 4. Launch Progression Auto-Advance
+
+- **File**: `worker/src/jobs/launchProgression.ts` & `worker/src/jobs/scheduler.ts`
+- **Cadence**: BullMQ job running every 60 seconds (`launch-progression-recurring`).
+- **Logic**:
+  - Checks `launch_cycles` for checkpoints with `status = 'PENDING'` whose `targetTime` has passed.
+  - Progression order: `T-24H` (completed upon scheduling) → `T-18H` → `T-12H` → `T-06H` → `T-01H` → `T-00`.
+  - Advances stages strictly sequentially (one checkpoint at a time per cycle).
+  - Uses atomic single-query SQL updates (`WHERE status = 'PENDING'`) to guarantee safety against concurrent workers.
+
+---
+
+## 5. Frontend Decoupled Gates & Opportunity Field
+
+- **Files**: `web/src/components/app/views/OverviewView.tsx`, `web/src/lib/api/adapters.ts`
+- **Decoupled Section Rendering**:
+  - The Overview page no longer requires all subsystems (`opportunities`, `pairings`, and `launches`) to be populated simultaneously.
+  - Section 01–04 (Opportunity Rank & Cartesian Field) render immediately once `/api/v1/opportunities` returns data.
+  - Section 05 (Pairings) displays a dedicated empty state (*"Belum ada pairing yang diusulkan"*) if the array is empty.
+  - Section 06 (Launch Readiness) displays a dedicated empty state (*"STANDBY / Belum ada launch aktif"*) if no launch is active.
+- **Cartesian Field Coordinates**:
+  - **Sumbu X**: `opportunityScore` (0–100) — aligns exactly with the Opportunity Rank table values (`NVDA 89.1`, `GME 86.7`, `TSLA 86.4`, `COIN 85.3`, `PLTR 84.9`, `AMD 81.2`, `AAPL 79.0`).
+  - **Sumbu Y**: `narrativeMomentum` (0–100) — qualitative momentum dimension evaluated by Jev (`NVDA 98`, `TSLA 93`, `PLTR 91`, `COIN 90`, `GME 89`, `AMD 88`, `AAPL 86`).
+  - Axis labels: `OPPORTUNITY SCORE →` and `NARRATIVE MOMENTUM ↑`.
+
+---
+
+## 6. Verification Commands
+
+### Worker Test Suite
+```bash
+cd worker
+bun test
+```
+
+### Type Checking & Build
+```bash
+# Type check worker:
+bun --filter worker typecheck
+
+# Lint & build web frontend:
+bun --filter web lint
+bun --filter web build
+```
+
+### Running Locally
+```bash
+# Terminal 1: Worker (API + Queue Daemon)
+cd worker
+bun src/index.ts
+
+# Terminal 2: Web Frontend
+cd web
+bun dev
+```
+
+---
+
+## 7. Roadmap Status
 
 | Milestone | Description | Status |
 |---|---|---|
@@ -156,4 +242,7 @@ bun dev
 | BACKEND 10 | Admin API & Policy Check Controls | Completed |
 | Launch Flow | Auto-progression for T-24H..T-00 Checkpoints | Completed |
 | BACKEND 11 | Real Jev Adapter via Vercel AI Gateway | Completed |
+| BACKEND 12 | Real Market Data Provider via Alpha Vantage | Completed |
+| BACKEND 13 | Real Narrative Provider (News half) via Alpha Vantage | Completed |
+| BACKEND 14 | Stock Token Canonical Registry Sync | Scheduled |
 | Deferred | Blockchain Phase (Solidity, Pons, Signing) | Scheduled for Phase 2 |
