@@ -5622,9 +5622,66 @@ a, button { touch-action: manipulation; }
   color: var(--muted);
 }
 
-/* Launch Standby Styles */
+/* Launch Standby & Stage Descriptions (White + Teal Palette) */
 .jevo-app .lstage--standby {
-  opacity: 0.7;
+  opacity: 0.95;
+}
+
+.jevo-app .lstage--standby .st {
+  color: rgb(2 198 165 / 50%);
+}
+
+.jevo-app .lstage--standby h4 {
+  color: var(--text);
+}
+
+/* Stage descriptions: muted teal for standby/pending, vibrant teal for active, clean text-2 for done */
+.jevo-app .lstage p {
+  color: rgb(2 198 165 / 65%);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.jevo-app .lstage--standby p {
+  color: rgb(2 198 165 / 65%);
+}
+
+.jevo-app .lstage.now p {
+  color: var(--accent);
+}
+
+.jevo-app .lstage.done p {
+  color: var(--text-2);
+}
+
+/* Launch sequence list styling */
+.jevo-app .lcycle-standby {
+  color: rgb(2 198 165 / 65%);
+}
+
+.jevo-app .lcycle-standby span:first-child {
+  color: rgb(2 198 165 / 50%);
+  font-family: var(--mono);
+}
+
+.jevo-app .lcycle-standby span:nth-child(2) {
+  color: rgb(2 198 165 / 75%);
+}
+
+.jevo-app .lcycle-standby .s {
+  color: rgb(2 198 165 / 45%);
+}
+
+.jevo-app .lcycle li:not(.now):not(.done) span:nth-child(2) {
+  color: rgb(2 198 165 / 70%);
+}
+
+.jevo-app .lcycle li.now span:nth-child(2) {
+  color: var(--text);
+}
+
+.jevo-app .lcycle li.done span:nth-child(2) {
+  color: var(--text-2);
 }
 
 .jevo-app .launch-standby-readout {
@@ -5697,7 +5754,7 @@ a, button { touch-action: manipulation; }
 
 .jevo-app .policy-card--standby p {
   margin: 0;
-  color: var(--muted);
+  color: rgb(2 198 165 / 60%);
   font-size: 11px;
   line-height: 1.45;
 }

@@ -82,7 +82,7 @@ export function LaunchView({ launch, pairing, agent }: LaunchViewProps) {
                 <li key={stage.id} className="lcycle-standby">
                   <span>{stage.point}</span>
                   <span>{stage.desc}</span>
-                  <span className="s" style={{ color: "var(--dim)" }}>STANDBY</span>
+                  <span className="s">STANDBY</span>
                 </li>
               ))}
             </ol>
