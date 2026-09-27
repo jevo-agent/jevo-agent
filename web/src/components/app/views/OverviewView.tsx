@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type Keyboard
 import { formatClock, formatCountdown, formatCycle } from "@/lib/format";
 import { useOpportunities } from "@/lib/api/hooks";
 import { adaptOpportunity, type OpportunityApi } from "@/lib/api/adapters";
+import type { DomainStatus } from "@/components/app/types";
 import type { AgentEvent, AgentRuntime, MemoryRecord } from "@/types/agent";
 import type { Launch } from "@/types/launch";
 import type { Pairing } from "@/types/pairing";
@@ -20,6 +21,7 @@ interface OverviewViewProps {
   launch?: Launch | null;
   memory: MemoryRecord[];
   featuredPairing?: Pairing | null;
+  domainStatus?: DomainStatus;
 }
 
 type DecisionFilter = "all" | "PROMOTE" | "DEMOTE";
@@ -45,6 +47,7 @@ export function OverviewView({
   launch,
   memory,
   featuredPairing,
+  domainStatus,
 }: OverviewViewProps) {
   const [query, setQuery] = useState("");
   const [decision, setDecision] = useState<DecisionFilter>("all");
@@ -350,7 +353,7 @@ export function OverviewView({
             <span className="label">03 / Opportunity space</span>
             <h2 id="market-map-title">JEV OPPORTUNITY FIELD</h2>
           </div>
-          <span className="label">X / PAIRABILITY · Y / NARRATIVE</span>
+          <span className="label">X / MEME COMPATIBILITY · Y / NARRATIVE STRENGTH</span>
         </div>
         <OpportunityField
           variant="expanded"
@@ -391,7 +394,21 @@ export function OverviewView({
             Open pairing workspace ↗
           </Link>
         </div>
-        {pairings.length === 0 ? (
+        {domainStatus?.pairings === "error" ? (
+          <div className="app-pairing-focus empty-state">
+            <div className="kicker">
+              <span className="label">Pairing candidate / Intelligence</span>
+              <span className="label" style={{ color: "var(--accent)" }}>QUERY UNAVAILABLE</span>
+            </div>
+            <h3>Pairing query service unavailable</h3>
+            <p className="side-copy">
+              The pairing query service could not be reached. Active pairing telemetry will resume once the service responds.
+            </p>
+            <Link className="side-cta" href="/pairing">
+              Inspect pairing workspace →
+            </Link>
+          </div>
+        ) : pairings.length === 0 ? (
           <div className="app-pairing-focus empty-state">
             <div className="kicker">
               <span className="label">Pairing candidate / Intelligence</span>
@@ -454,7 +471,7 @@ export function OverviewView({
             Open launch workspace ↗
           </Link>
         </div>
-        <LaunchSummary launch={launch} pairing={featuredPairing} passedChecks={passedChecks} />
+        <LaunchSummary launch={launch} pairing={featuredPairing} passedChecks={passedChecks} isError={domainStatus?.launches === "error"} />
       </section>
 
       {/* 07. AGENT MEMORY */}
@@ -753,19 +770,38 @@ function RankPanel({
    SIGNAL NORMALIZATION & OPPORTUNITY FIELD
    ========================================================================== */
 
-type AssetCoordinates = { opportunity: number; narrative: number };
+type AssetCoordinates = { memeCompatibility: number; narrativeStrength: number };
+
+const PLOT = { left: 92, right: 848, top: 48, bottom: 418 } as const;
 
 function getAssetCoordinates(
   asset: Stock,
   oppsMap?: Map<string, OpportunityApi>,
 ): AssetCoordinates | null {
   const opp = oppsMap?.get(asset.symbol);
-  const narrative = opp?.score?.narrativeMomentum;
-  const opportunity = asset.opportunityScore;
-  if (typeof opportunity !== "number" || typeof narrative !== "number") return null;
+  const latestHistoryPoint = asset.scoreHistory[asset.scoreHistory.length - 1];
+
+  const memeCompatibility =
+    typeof opp?.score?.pairCompatibility === "number"
+      ? opp.score.pairCompatibility
+      : typeof opp?.score?.memeCompatibility === "number"
+        ? opp.score.memeCompatibility
+        : typeof latestHistoryPoint?.pairability === "number"
+          ? latestHistoryPoint.pairability
+          : null;
+
+  const narrativeStrength =
+    typeof opp?.score?.narrativeMomentum === "number"
+      ? opp.score.narrativeMomentum
+      : typeof latestHistoryPoint?.narrative === "number"
+        ? latestHistoryPoint.narrative
+        : null;
+
+  if (memeCompatibility === null || narrativeStrength === null) return null;
+
   return {
-    opportunity,
-    narrative,
+    memeCompatibility,
+    narrativeStrength,
   };
 }
 
@@ -909,35 +945,31 @@ function OpportunityField({
   const fieldRef = useRef<HTMLDivElement>(null);
   const [entered, setEntered] = useState(false);
 
-  // Normalization boundaries:
-  // Coordinate frame is 920 x 480
-  const plot = { left: 92, right: 848, top: 48, bottom: 418 };
-
   const signalPoints = assets.flatMap((asset) => {
     const coords = getAssetCoordinates(asset, oppsMap);
     if (!coords) return [];
     return {
       asset,
-      opportunity: coords.opportunity,
-      narrative: coords.narrative,
+      memeCompatibility: coords.memeCompatibility,
+      narrativeStrength: coords.narrativeStrength,
     };
   });
 
   const unavailableSymbols = assets.filter((asset) => !getAssetCoordinates(asset, oppsMap)).map((asset) => asset.symbol);
 
   // Dynamic domain relative to real score distribution (e.g. ~75 to 100)
-  const allOpportunity = signalPoints.map((p) => p.opportunity);
-  const allNarrative = signalPoints.map((p) => p.narrative);
+  const allMeme = signalPoints.map((p) => p.memeCompatibility);
+  const allNarrative = signalPoints.map((p) => p.narrativeStrength);
 
-  const minX = allOpportunity.length > 0 ? Math.max(0, Math.floor((Math.min(...allOpportunity) - 2) / 5) * 5) : 0;
+  const minX = allMeme.length > 0 ? Math.max(0, Math.floor((Math.min(...allMeme) - 2) / 5) * 5) : 0;
   const maxX = 100;
   const minY = allNarrative.length > 0 ? Math.max(0, Math.floor((Math.min(...allNarrative) - 2) / 5) * 5) : 0;
   const maxY = 100;
 
   const scaleX = (val: number) =>
-    plot.left + ((clamp(val, minX, maxX) - minX) / (maxX - minX)) * (plot.right - plot.left);
+    PLOT.left + ((clamp(val, minX, maxX) - minX) / (maxX - minX)) * (PLOT.right - PLOT.left);
   const scaleY = (val: number) =>
-    plot.bottom - ((clamp(val, minY, maxY) - minY) / (maxY - minY)) * (plot.bottom - plot.top);
+    PLOT.bottom - ((clamp(val, minY, maxY) - minY) / (maxY - minY)) * (PLOT.bottom - PLOT.top);
 
   const xTicks: number[] = [];
   for (let t = minX; t <= maxX; t += 5) xTicks.push(t);
@@ -945,21 +977,27 @@ function OpportunityField({
   const yTicks: number[] = [];
   for (let t = minY; t <= maxY; t += 5) yTicks.push(t);
 
-  const positions = signalPoints.map(({ asset, narrative, opportunity }) => {
-    const x = scaleX(opportunity);
-    const y = scaleY(narrative);
+  const positions = signalPoints.map(({ asset, memeCompatibility, narrativeStrength }) => {
+    const x = scaleX(memeCompatibility);
+    const y = scaleY(narrativeStrength);
 
-    // Historic trajectory projection derived deterministically
-    const anchors = asset.scoreHistory
-      .map((point) => ({ x: scaleX(point.score), y: scaleY(narrative) }));
+    // Historic trajectory projection derived deterministically from canonical dimensions
+    const anchors = asset.scoreHistory.flatMap((point) => {
+      const pX = point.pairability;
+      const pY = point.narrative;
+      if (typeof pX !== "number" || typeof pY !== "number") return [];
+      return [{ x: scaleX(pX), y: scaleY(pY) }];
+    });
     const currentAnchor = { x, y };
-    if (anchors.length === 0 || anchors[anchors.length - 1].x !== x || anchors[anchors.length - 1].y !== y) anchors.push(currentAnchor);
-    const previousAnchor = anchors.length > 1 ? anchors[0] : null;
+    if (anchors.length === 0 || anchors[anchors.length - 1].x !== x || anchors[anchors.length - 1].y !== y) {
+      anchors.push(currentAnchor);
+    }
+    const previousAnchor = anchors.length > 1 ? anchors[anchors.length - 2] : null;
 
     return {
       asset,
-      narrative,
-      opportunity,
+      memeCompatibility,
+      narrativeStrength,
       x,
       y,
       previousX: previousAnchor?.x ?? null,
@@ -974,9 +1012,7 @@ function OpportunityField({
   const inspectedPairing = pairings?.find((pairing) => pairing.stockSymbol === inspectedAsset.symbol) ?? selectedPairing;
   const activePosition = positions.find((p) => p.asset.symbol === activeSymbol);
 
-  const labelPlacements = useMemo(() => {
-    return computeLabelPlacements(positions, plot);
-  }, [positions, plot.left, plot.right, plot.top, plot.bottom]);
+  const labelPlacements = computeLabelPlacements(positions, PLOT);
 
   const selectFieldAsset = (symbol: string) => {
     onHover(null);
@@ -1046,7 +1082,7 @@ function OpportunityField({
             viewBox="0 0 920 480"
             preserveAspectRatio="none"
             role="group"
-            aria-label="JEV Opportunity Field mapping pairability and narrative strength"
+            aria-label="JEV Opportunity Field mapping meme compatibility and narrative strength"
           >
             {/* SVG Definitions */}
             <defs>
@@ -1066,12 +1102,12 @@ function OpportunityField({
 
             {/* Quadrant Background Zones */}
             <g className="field-quadrants" aria-hidden="true">
-              {/* Q1: High Pairability & High Narrative (Top Right) */}
+              {/* Q1: High Meme Compatibility & High Narrative (Top Right) */}
               <rect
                 x={scaleX(85)}
-                y={plot.top}
-                width={plot.right - scaleX(85)}
-                height={scaleY(85) - plot.top}
+                y={PLOT.top}
+                width={PLOT.right - scaleX(85)}
+                height={scaleY(85) - PLOT.top}
                 fill="rgb(2 198 165 / 2.5%)"
                 stroke="rgb(2 198 165 / 16%)"
                 strokeWidth="1"
@@ -1079,10 +1115,10 @@ function OpportunityField({
 
               {/* Q2: High Narrative / Volatility (Top Left) */}
               <rect
-                x={plot.left}
-                y={plot.top}
-                width={scaleX(85) - plot.left}
-                height={scaleY(85) - plot.top}
+                x={PLOT.left}
+                y={PLOT.top}
+                width={scaleX(85) - PLOT.left}
+                height={scaleY(85) - PLOT.top}
                 fill="rgb(245 158 11 / 2%)"
                 stroke="rgb(245 158 11 / 12%)"
                 strokeWidth="1"
@@ -1090,21 +1126,21 @@ function OpportunityField({
 
               {/* Q3: Low Conviction / Monitor (Bottom Left) */}
               <rect
-                x={plot.left}
+                x={PLOT.left}
                 y={scaleY(85)}
-                width={scaleX(85) - plot.left}
-                height={plot.bottom - scaleY(85)}
+                width={scaleX(85) - PLOT.left}
+                height={PLOT.bottom - scaleY(85)}
                 fill="rgb(255 255 255 / 0.8%)"
                 stroke="rgb(255 255 255 / 5%)"
                 strokeWidth="1"
               />
 
-              {/* Q4: Emerging Pairability (Bottom Right) */}
+              {/* Q4: Emerging Meme Compatibility (Bottom Right) */}
               <rect
                 x={scaleX(85)}
                 y={scaleY(85)}
-                width={plot.right - scaleX(85)}
-                height={plot.bottom - scaleY(85)}
+                width={PLOT.right - scaleX(85)}
+                height={PLOT.bottom - scaleY(85)}
                 fill="rgb(59 130 246 / 1.5%)"
                 stroke="rgb(59 130 246 / 9%)"
                 strokeWidth="1"
@@ -1113,16 +1149,16 @@ function OpportunityField({
 
             {/* Quadrant Classification Labels */}
             <g className="field-context" aria-hidden="true">
-              <text x={plot.left + 14} y={plot.top + 40} className="field-quadrant-badge">
+              <text x={PLOT.left + 14} y={PLOT.top + 40} className="field-quadrant-badge">
                 HIGH NARRATIVE
               </text>
-              <text x={plot.right - 14} y={plot.top + 40} textAnchor="end" className="field-quadrant-badge">
-                HIGH PAIRABILITY
+              <text x={PLOT.right - 14} y={PLOT.top + 40} textAnchor="end" className="field-quadrant-badge">
+                HIGH MEME COMPATIBILITY
               </text>
-              <text x={plot.left + 14} y={plot.bottom - 12} className="field-quadrant-badge">
+              <text x={PLOT.left + 14} y={PLOT.bottom - 12} className="field-quadrant-badge">
                 LOW CONVICTION
               </text>
-              <text x={plot.right - 14} y={plot.bottom - 12} textAnchor="end" className="field-quadrant-badge">
+              <text x={PLOT.right - 14} y={PLOT.bottom - 12} textAnchor="end" className="field-quadrant-badge">
                 EMERGING
               </text>
             </g>
@@ -1135,9 +1171,9 @@ function OpportunityField({
                 return (
                   <line
                     key={`h-${val}`}
-                    x1={plot.left}
+                    x1={PLOT.left}
                     y1={y}
-                    x2={plot.right}
+                    x2={PLOT.right}
                     y2={y}
                     className={isMid ? "field-grid-major" : "field-grid-minor"}
                   />
@@ -1150,9 +1186,9 @@ function OpportunityField({
                   <line
                     key={`v-${val}`}
                     x1={x}
-                    y1={plot.top}
+                    y1={PLOT.top}
                     x2={x}
-                    y2={plot.bottom}
+                    y2={PLOT.bottom}
                     className={isMid ? "field-grid-major" : "field-grid-minor"}
                   />
                 );
@@ -1162,16 +1198,16 @@ function OpportunityField({
             {/* Axes & Ticks with Numeric Scale Values */}
             <g className="field-axes" aria-hidden="true">
               {/* Baseline axes */}
-              <line className="field-axis" x1={plot.left} y1={plot.bottom} x2={plot.right} y2={plot.bottom} />
-              <line className="field-axis" x1={plot.left} y1={plot.top} x2={plot.left} y2={plot.bottom} />
+              <line className="field-axis" x1={PLOT.left} y1={PLOT.bottom} x2={PLOT.right} y2={PLOT.bottom} />
+              <line className="field-axis" x1={PLOT.left} y1={PLOT.top} x2={PLOT.left} y2={PLOT.bottom} />
 
               {/* X-Axis Ticks & Values */}
               {xTicks.map((val) => {
                 const x = scaleX(val);
                 return (
                   <g key={`xtick-${val}`}>
-                    <line x1={x} y1={plot.bottom} x2={x} y2={plot.bottom + 6} className="field-tick" />
-                    <text x={x} y={plot.bottom + 18} textAnchor="middle" className="field-scale-text">
+                    <line x1={x} y1={PLOT.bottom} x2={x} y2={PLOT.bottom + 6} className="field-tick" />
+                    <text x={x} y={PLOT.bottom + 18} textAnchor="middle" className="field-scale-text">
                       {val}
                     </text>
                   </g>
@@ -1183,8 +1219,8 @@ function OpportunityField({
                 const y = scaleY(val);
                 return (
                   <g key={`ytick-${val}`}>
-                    <line x1={plot.left - 6} y1={y} x2={plot.left} y2={y} className="field-tick" />
-                    <text x={plot.left - 10} y={y + 4} textAnchor="end" className="field-scale-text">
+                    <line x1={PLOT.left - 6} y1={y} x2={PLOT.left} y2={y} className="field-tick" />
+                    <text x={PLOT.left - 10} y={y + 4} textAnchor="end" className="field-scale-text">
                       {val}
                     </text>
                   </g>
@@ -1192,21 +1228,21 @@ function OpportunityField({
               })}
 
               {/* Horizontal axis headings keep the coordinate system legible. */}
-              <text x={plot.left + 14} y={plot.top + 17} className="field-axis-title">
-                NARRATIVE MOMENTUM ↑
+              <text x={PLOT.left + 14} y={PLOT.top + 17} className="field-axis-title">
+                NARRATIVE STRENGTH ↑
               </text>
-              <text x={plot.left + 14} y={plot.bottom + 38} textAnchor="start" className="field-axis-title">
-                OPPORTUNITY SCORE →
+              <text x={PLOT.left + 14} y={PLOT.bottom + 38} textAnchor="start" className="field-axis-title">
+                MEME COMPATIBILITY →
               </text>
             </g>
 
             {/* Continuous Motion: Ambient Radar Telemetry Scan Line */}
             <line
               className="field-scan-line"
-              x1={plot.left}
-              y1={plot.top}
-              x2={plot.left}
-              y2={plot.bottom}
+              x1={PLOT.left}
+              y1={PLOT.top}
+              x2={PLOT.left}
+              y2={PLOT.bottom}
               aria-hidden="true"
             />
 
@@ -1226,7 +1262,7 @@ function OpportunityField({
               <g className="field-active-projection" aria-hidden="true">
                 {/* Horizontal line to Y axis */}
                 <line
-                  x1={plot.left}
+                  x1={PLOT.left}
                   y1={activePosition.y}
                   x2={activePosition.x}
                   y2={activePosition.y}
@@ -1234,7 +1270,7 @@ function OpportunityField({
                 />
                 {/* Y-axis projected pill */}
                 <rect
-                  x={plot.left - 42}
+                  x={PLOT.left - 42}
                   y={activePosition.y - 8}
                   width="32"
                   height="16"
@@ -1242,12 +1278,12 @@ function OpportunityField({
                   className="field-axis-badge-bg"
                 />
                 <text
-                  x={plot.left - 26}
+                  x={PLOT.left - 26}
                   y={activePosition.y + 3.5}
                   textAnchor="middle"
                   className="field-axis-badge-text"
                 >
-                  {activePosition.narrative.toFixed(1)}
+                  {activePosition.narrativeStrength.toFixed(1)}
                 </text>
 
                 {/* Vertical line to X axis */}
@@ -1255,13 +1291,13 @@ function OpportunityField({
                   x1={activePosition.x}
                   y1={activePosition.y}
                   x2={activePosition.x}
-                  y2={plot.bottom}
+                  y2={PLOT.bottom}
                   className="field-projection-line"
                 />
                 {/* X-axis projected pill */}
                 <rect
                   x={activePosition.x - 16}
-                  y={plot.bottom + 6}
+                  y={PLOT.bottom + 6}
                   width="32"
                   height="16"
                   rx="2"
@@ -1269,11 +1305,11 @@ function OpportunityField({
                 />
                 <text
                   x={activePosition.x}
-                  y={plot.bottom + 17.5}
+                  y={PLOT.bottom + 17.5}
                   textAnchor="middle"
                   className="field-axis-badge-text"
                 >
-                  {activePosition.opportunity.toFixed(1)}
+                  {activePosition.memeCompatibility.toFixed(1)}
                 </text>
               </g>
             )}
@@ -1317,7 +1353,7 @@ function OpportunityField({
                 <g
                   // Keep the JEV gate in the quiet upper-left of the field so it
                   // identifies the system without colliding with asset labels.
-                  transform={`translate(${plot.left + 18}, ${plot.top + 62})`}
+                  transform={`translate(${PLOT.left + 18}, ${PLOT.top + 62})`}
                   className="field-jev-decision-marker"
                   aria-hidden="true"
                 >
@@ -1347,7 +1383,7 @@ function OpportunityField({
               const isSelected = selectedAsset.symbol === position.asset.symbol;
               const isActive = activeSymbol === position.asset.symbol;
               const placement = labelPlacements.get(position.asset.symbol);
-              const labelAnchor = placement?.anchor ?? (position.x > plot.right - 130 ? "end" : "start");
+              const labelAnchor = placement?.anchor ?? (position.x > PLOT.right - 130 ? "end" : "start");
               const labelX = placement?.labelX ?? (position.x + (labelAnchor === "end" ? -16 : 16));
               const labelY = placement?.labelY ?? (position.y - 3);
 
@@ -1603,8 +1639,8 @@ function DecisionInspector({
   oppsMap?: Map<string, OpportunityApi>;
 }) {
   const coords = getAssetCoordinates(asset, oppsMap);
-  const narrative = coords?.narrative ?? null;
-  const opportunity = coords?.opportunity ?? asset.opportunityScore;
+  const narrativeStrength = coords?.narrativeStrength ?? null;
+  const memeCompatibility = coords?.memeCompatibility ?? null;
   const formatCoordinate = (value: number | null) => (value === null ? "—" : value.toFixed(1));
   const launchApplies = launch && pairing ? pairing.slug === launch.selectedPairingSlug : false;
 
@@ -1666,15 +1702,15 @@ function DecisionInspector({
         </div>
       </div>
 
-      {/* 6. Narrative & Opportunity Signals */}
+      {/* 6. Narrative Strength & Meme Compatibility Signals */}
       <div className="decision-signals-grid">
         <div className="sig-item">
-          <span className="label">NARRATIVE MOMENTUM</span>
-          <strong className="sig-val">{formatCoordinate(narrative)}</strong>
+          <span className="label">NARRATIVE STRENGTH</span>
+          <strong className="sig-val">{formatCoordinate(narrativeStrength)}</strong>
         </div>
         <div className="sig-item">
-          <span className="label">OPPORTUNITY SCORE</span>
-          <strong className="sig-val">{formatCoordinate(opportunity)}</strong>
+          <span className="label">MEME COMPATIBILITY</span>
+          <strong className="sig-val">{formatCoordinate(memeCompatibility)}</strong>
         </div>
       </div>
 
@@ -1821,11 +1857,34 @@ function LaunchSummary({
   launch,
   pairing,
   passedChecks,
+  isError,
 }: {
   launch?: Launch | null;
   pairing?: Pairing | null;
   passedChecks: number;
+  isError?: boolean;
 }) {
+  if (isError) {
+    return (
+      <div className="app-launch-layout empty-state">
+        <div className="app-launch-readout">
+          <div className="kicker" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+            <span className="label">Autonomous launch / Phase 0</span>
+            <span className="label" style={{ color: "var(--accent)" }}>QUERY UNAVAILABLE</span>
+          </div>
+          <div className="clock-big" style={{ color: "rgb(2 198 165 / 45%)" }}>UNAVAILABLE</div>
+          <h3>Launch query service unavailable</h3>
+          <p className="side-copy" style={{ maxWidth: "60ch", lineHeight: "1.5" }}>
+            Launch readiness telemetry could not be retrieved from the backend API. Persistent staging checks will resume once the query endpoint responds.
+          </p>
+          <Link className="side-cta" href="/launch" style={{ marginTop: "8px" }}>
+            Open launch workspace →
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (!launch) {
     return (
       <div className="app-launch-layout empty-state">

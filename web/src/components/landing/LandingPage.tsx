@@ -48,6 +48,7 @@ export function LandingPage(data: LandingPageProps) {
         <LandingHero
           agent={data.agent}
           asset={data.featuredAsset}
+          assets={data.assets}
           pairing={data.featuredPairing}
           launch={data.launch}
         />
@@ -90,7 +91,7 @@ export function LandingPage(data: LandingPageProps) {
           memory={data.memory}
           agent={data.agent}
         />
-        <FinalSection />
+        <FinalSection asset={data.featuredAsset} />
         <LandingFooter agent={data.agent} />
       </main>
     </LandingScroll>
@@ -400,15 +401,15 @@ function LandingPipelineStandbySection({
               </div>
               <div className="fact">
                 <span className="label">Agent wallet</span>
-                <span className="v">JEVO Agent Wallet / scoped permissions</span>
+                <span className="v">Awaiting candidate / Scoped policy rules</span>
               </div>
               <div className="fact">
                 <span className="label">Guardian approval</span>
-                <span className="v">REQUIRED (Operator gate)</span>
+                <span className="v">Mandatory gate / Not scheduled</span>
               </div>
               <div className="fact">
                 <span className="label">Transaction</span>
-                <span className="v accent">Not submitted (Standby)</span>
+                <span className="v accent">No execution in standby</span>
               </div>
             </div>
 
@@ -447,11 +448,13 @@ function LandingPipelineStandbySection({
 function LandingHero({
   agent,
   asset,
+  assets,
   pairing,
   launch,
 }: {
   agent: AgentRuntime;
   asset: Stock;
+  assets?: Stock[];
   pairing: Pairing | null;
   launch: Launch | null;
 }) {
@@ -481,15 +484,15 @@ function LandingHero({
             <Link className="btn btn-primary" href="/app">
               Open app →
             </Link>
-            <Link className="btn" href="/stock/NVDA">
+            <Link className="btn" href={asset ? `/stock/${asset.symbol}` : "/app#opportunities"}>
               View current opportunity ↗
             </Link>
           </div>
           <p className="hero-copy-note">
-            State → Jev → Decision → Action <span>Phase 0 / simulated</span>
+            State → Jev → Decision → Action <span>Phase 0</span>
           </p>
         </div>
-        <DecisionPlane asset={asset} pairing={pairing} launch={launch} />
+        <DecisionPlane asset={asset} assets={assets} pairing={pairing} launch={launch} />
       </div>
       <div className="hero-status">
         <div className="wrap">
@@ -1685,7 +1688,7 @@ function MemorySection({
                           Unchanged for {group.durationMinutes}m, rank #{String(group.rank ?? asset.currentRank).padStart(2, "0")} @ {(group.score ?? asset.opportunityScore).toFixed(1)}
                         </p>
                         <p className="mlog-reason-sub">
-                          Skip-gate active: market & social signals remained steady (delta &lt; 0.001). Carried forward prior canonical evaluation.
+                          Steady evaluation: canonical rank and score remained consistent across consecutive cycle checks.
                         </p>
                       </div>
                     </li>
@@ -1702,7 +1705,7 @@ function MemorySection({
               {totalDurationMinutes}m audit
             </span>
             <p>
-              {cycleCount} continuous evaluation cycles monitored across active skip-gate window.
+              {cycleCount} continuous evaluation cycles monitored across active memory audit window.
             </p>
           </div>
           <div>
@@ -1710,7 +1713,7 @@ function MemorySection({
             <span className="big accent">{isSteadyState ? "0 rank drift" : "Observed transition"}</span>
             <p>
               {isSteadyState
-                ? "Signals remained within canonical deadband; skip-gate carried forward prior evaluation."
+                ? "Canonical rank and score remained steady across consecutive evaluation cycles."
                 : "Observable rank or score adjustments recorded in persistent memory log."}
             </p>
           </div>
@@ -1718,7 +1721,7 @@ function MemorySection({
             <span className="label">Jev decision</span>
             <span className="big accent">{asset.jevDecision}</span>
             <p>
-              Confidence {asset.confidence === null ? "0.65" : (asset.confidence / 100).toFixed(2)}. Stored with inputs and model version.
+              Confidence {asset.confidence === null ? "—" : (asset.confidence / 100).toFixed(2)}. Stored with inputs and model version.
             </p>
           </div>
           <div>
@@ -2254,7 +2257,7 @@ function DecisionHistoryChart({
                 <span className="dot" aria-hidden="true" />
                 <b>Unchanged for {totalDurationMinutes}m</b> · {points.length} cycles without drift
               </div>
-              <span className="mem-tl-sub">Skip-gate active · Steady state consolidated</span>
+              <span className="mem-tl-sub">Steady evaluation · Consecutive cycles consolidated</span>
             </div>
           ) : (
             <div className="mem-tl-track-transitions">
@@ -2299,7 +2302,7 @@ function DecisionHistoryChart({
   );
 }
 
-function FinalSection() {
+function FinalSection({ asset }: { asset?: Stock | null }) {
   return (
     <section className="cta cta-final">
       <div className="wrap">
@@ -2318,7 +2321,7 @@ function FinalSection() {
             <Link className="btn btn-primary" href="/app">
               Open app →
             </Link>
-            <Link className="btn" href="/stock/NVDA">
+            <Link className="btn" href={asset ? `/stock/${asset.symbol}` : "/app#opportunities"}>
               View current opportunity ↗
             </Link>
           </div>

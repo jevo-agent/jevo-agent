@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 
 import { formatClock, formatCycle } from "@/lib/format";
-import { groupMemoryRecords, type GroupedAuditEntry } from "@/lib/memory/grouping";
+import { groupMemoryRecords } from "@/lib/memory/grouping";
 import type { AgentCycle, AgentRuntime, MemoryComparison, MemoryRecord } from "@/types/agent";
 import type { Stock } from "@/types/stock";
 
@@ -281,7 +281,7 @@ export function MemoryView({ asset, agent, cycles, memory, comparison }: MemoryV
                     <span className="dot" aria-hidden="true" />
                     <b>Unchanged for {totalDurationMinutes}m</b> · {asset.rankHistory.length} cycles without drift
                   </div>
-                  <span className="mem-tl-sub">Skip-gate active · Click to inspect audit group</span>
+                  <span className="mem-tl-sub">Steady evaluation · Click to inspect audit group</span>
                 </div>
               ) : (
                 <div className="mem-tl-track-transitions">
@@ -397,7 +397,7 @@ export function MemoryView({ asset, agent, cycles, memory, comparison }: MemoryV
                         Unchanged for {group.durationMinutes}m, rank #{String(group.rank ?? asset.currentRank).padStart(2, "0")} @ {(group.score ?? asset.opportunityScore).toFixed(1)}
                       </p>
                       <p className="mlog-reason-sub">
-                        Skip-gate active: market & social signals remained steady (delta &lt; 0.001). Carried forward prior canonical evaluation.
+                        Steady evaluation: canonical rank and score remained consistent across consecutive cycle checks.
                       </p>
 
                       {/* Interactive Expand / Collapse for full audit access */}
@@ -469,7 +469,7 @@ export function MemoryView({ asset, agent, cycles, memory, comparison }: MemoryV
           </span>
           <p>
             {isSteadyState
-              ? "Skip-gate active: 0 material delta detected, carrying forward prior evaluation."
+              ? "Steady evaluation: 0 material delta detected across recorded evaluation cycles."
               : narrativeEntry ? "Worker-persisted evidence changed between cycles." : "Structured state delta recorded."}
           </p>
         </div>

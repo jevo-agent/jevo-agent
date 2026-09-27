@@ -3,7 +3,7 @@
 import { notFound } from "next/navigation";
 import { use, useMemo } from "react";
 
-import { AgentStatusBar } from "@/components/agent/AgentStatusBar";
+import { AppShell } from "@/components/app/AppShell";
 import { AlternativePairings } from "@/components/pairing/AlternativePairings";
 import { PairingDetailHeader } from "@/components/pairing/PairingDetailHeader";
 import { PairingFactorAnalysis } from "@/components/pairing/PairingFactorAnalysis";
@@ -40,24 +40,33 @@ export default function PairingDetailPage({ params }: PairingDetailPageProps) {
   if (!stock) notFound();
 
   return (
-    <>
-      <AgentStatusBar agentStatus={state.data.agent.status} jevStatus={state.data.agent.jevStatus} currentOperation={state.data.agent.currentOperation} lastDecisionAgeSeconds={state.data.agent.lastDecisionAgeSeconds} nextCycleInSeconds={state.data.agent.nextCycleInSeconds} networkLabel={state.data.agent.networkLabel} />
-      <PairingDetailHeader pairing={pairing} stock={stock} agent={state.data.agent} />
-      <main className="protocol-shell py-8 sm:py-10">
-        <div className="grid border border-[var(--jevo-line)] xl:grid-cols-[minmax(0,1fr)_23rem]">
-          <div className="min-w-0">
-            <PairingThesis pairing={pairing} />
-            <PairingFactorAnalysis pairing={pairing} />
-            <PairingFactorInspector pairing={pairing} stock={stock} agent={state.data.agent} />
-            <AlternativePairings pairing={pairing} />
-            <PairingHistory pairing={pairing} agent={state.data.agent} />
-          </div>
-          <aside aria-label="Pairing state and next action" className="border-t border-[var(--jevo-line)] bg-[rgb(13_16_13_/_72%)] xl:border-t-0 xl:border-l xl:sticky xl:top-14">
-            <PairingLifecycleDetail pairing={pairing} />
-            <PairingNextAction pairing={pairing} />
-          </aside>
+    <AppShell
+      {...state.data}
+      activeSection="pairings"
+      breadcrumb={
+        <div className="crumbs">
+          JEVO <span>/</span> PAIRING <span>/</span> <b>{pairing.stockSymbol} × {pairing.symbol}</b>
         </div>
-      </main>
-    </>
+      }
+    >
+      <div className="pairing-workspace">
+        <PairingDetailHeader pairing={pairing} stock={stock} agent={state.data.agent} />
+        <div className="pairing-workspace-content py-6 sm:py-8">
+          <div className="grid border border-[var(--jevo-line)] xl:grid-cols-[minmax(0,1fr)_23rem]">
+            <div className="min-w-0">
+              <PairingThesis pairing={pairing} />
+              <PairingFactorAnalysis pairing={pairing} />
+              <PairingFactorInspector pairing={pairing} stock={stock} agent={state.data.agent} />
+              <AlternativePairings pairing={pairing} />
+              <PairingHistory pairing={pairing} agent={state.data.agent} />
+            </div>
+            <aside aria-label="Pairing state and next action" className="border-t border-[var(--jevo-line)] bg-[rgb(13_16_13_/_72%)] xl:border-t-0 xl:border-l xl:sticky xl:top-14">
+              <PairingLifecycleDetail pairing={pairing} />
+              <PairingNextAction pairing={pairing} />
+            </aside>
+          </div>
+        </div>
+      </div>
+    </AppShell>
   );
 }

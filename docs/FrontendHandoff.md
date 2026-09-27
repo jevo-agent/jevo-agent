@@ -361,6 +361,23 @@ Four independent frontend enhancements and bugfixes were executed, verified, and
 
 ---
 
+## Phase 1 Final Canonical Cleanup (Milestone Completion)
+
+- **Opportunity Field Semantics**: Aligned with `docs/BRIEF.md` — X = Meme Compatibility (`pairCompatibility` / `memeCompatibility`), Y = Narrative Strength (`narrativeMomentum`). Unqualified/incomplete assets omitted from plot. Flat-data SVG rendering preserved.
+- **Production Hardcoded & Fabricated State**:
+  - `DecisionPlane.tsx`: Fixed static signal symbols (AAPL, AMD, COIN, GME, NVDA, PLTR, TSLA) removed; mapped dynamically to canonical assets. Decorative paths remain purely geometric without fabricated state.
+  - Landing navigation: Replaced hardcoded `/stock/NVDA` and `/pairing/nvda-gpu` with dynamic canonical routes.
+  - Landing memory confidence: Removed `"0.65"` fallback; renders `—` when missing.
+  - Memory grouping: Fixed duration calculation (no fabricated minimum `1m`), truthful steady evaluation copy.
+- **Network & Sidebar Context**: Replaced simulated strings (`Robinhood Chain / 4663 / Phase 0 / NOT CONNECTED`) with canonical runtime metadata (`agent.networkLabel ?? "—"`, Chain ID `—`, State `agent.networkLabel ? "ONLINE" : "STATUS UNAVAILABLE"`, product context `Robinhood Chain (Target) · Phase 0`).
+- **Pairing Summary Copy**: Confirmed canonical rule `Rank #01–#03 or Jev decision: PROMOTE` in both Overview and Landing.
+- **Launch Standby Cleanup**: Replaced runtime claims with protocol design facts (`Awaiting candidate / Scoped policy rules`, `Mandatory gate / Not scheduled`, `No execution in standby`).
+- **Query Error vs Empty State**: Introduced `DomainStatus` tracking per-domain query results (`pairings`, `launches`, `memory`, `cycles`), rendering truthful query error states instead of false empty states.
+- **Shared AppShell**: Wrapped dynamic slug detail routes (`/pairing/[slug]` and `/launch/[slug]`) inside `AppShell`, unifying sidebar, topbar breadcrumb, and status strip.
+- **Lint & Build Verification**: 0 ESLint errors/warnings (`bun --filter web lint`), 21/21 routes statically/dynamically generated (`bun --filter web build`).
+
+---
+
 ### Remaining work (priority order)
 
 1. Select and verify real market/provider sources for `PROVIDER_MODE=real`.

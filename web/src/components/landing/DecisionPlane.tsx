@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from "react";
 
 import type { Launch } from "@/types/launch";
 import type { Pairing } from "@/types/pairing";
@@ -13,25 +13,17 @@ const RESUME_MS = 5_000;
 type AssetSignal = { symbol: string; sourceY: number; rank?: number; score?: number; delta?: string };
 type Lock = { kind: "asset" | "pair" | "stage"; value: string } | null;
 
-const signals: AssetSignal[] = [
-  { symbol: "AAPL", sourceY: 82, rank: 4, score: 89.4, delta: "+1" },
-  { symbol: "AMD", sourceY: 150 },
-  { symbol: "COIN", sourceY: 218 },
-  { symbol: "GME", sourceY: 286, rank: 5, score: 87.9, delta: "+4" },
-  { symbol: "NVDA", sourceY: 354, rank: 1, score: 96.8, delta: "+3" },
-  { symbol: "PLTR", sourceY: 422, rank: 3, score: 91.7, delta: "−1" },
-  { symbol: "TSLA", sourceY: 490, rank: 2, score: 94.2, delta: "+1" },
-];
-
+const SOURCE_Y = [82, 150, 218, 286, 354, 422, 490] as const;
 const rankY: Record<number, number> = { 1: 162, 2: 226, 3: 290, 4: 354, 5: 418 };
 
 interface DecisionPlaneProps {
   asset: Stock;
+  assets?: Stock[];
   pairing?: Pairing | null;
   launch?: Launch | null;
 }
 
-export function DecisionPlane({ asset, pairing = null, launch = null }: DecisionPlaneProps) {
+export function DecisionPlane({ asset, assets, pairing = null, launch = null }: DecisionPlaneProps) {
   const [autoStage, setAutoStage] = useState(0);
   const [hoverAsset, setHoverAsset] = useState<string | null>(null);
   const [hoverPair, setHoverPair] = useState<string | null>(null);
@@ -39,6 +31,45 @@ export function DecisionPlane({ asset, pairing = null, launch = null }: Decision
   const [lock, setLock] = useState<Lock>(null);
   const resumeTimer = useRef<number | null>(null);
   const lastAvailableStage = launch && pairing ? 4 : pairing ? 3 : 2;
+
+  const signals = useMemo<AssetSignal[]>(() => {
+    const otherAssets = (assets ?? []).filter((item) => item.symbol !== asset.symbol);
+    const slots: Array<Stock | null> = [
+      otherAssets[0] ?? null,
+      otherAssets[1] ?? null,
+      otherAssets[2] ?? null,
+      otherAssets[3] ?? null,
+      asset,
+      otherAssets[4] ?? null,
+      otherAssets[5] ?? null,
+    ];
+
+    return SOURCE_Y.map((y, index) => {
+      const stock = slots[index];
+      if (!stock) {
+        return {
+          symbol: "",
+          sourceY: y,
+        };
+      }
+      const delta =
+        stock.rankMovement !== null
+          ? stock.rankMovement > 0
+            ? `+${stock.rankMovement}`
+            : stock.rankMovement < 0
+              ? `−${Math.abs(stock.rankMovement)}`
+              : "—"
+          : undefined;
+
+      return {
+        symbol: stock.symbol,
+        sourceY: y,
+        rank: stock.currentRank <= 5 ? stock.currentRank : undefined,
+        score: stock.opportunityScore,
+        delta,
+      };
+    });
+  }, [asset, assets]);
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -152,15 +183,17 @@ export function DecisionPlane({ asset, pairing = null, launch = null }: Decision
         <g className="plane-signal-inputs" aria-hidden="true">
           {signals.map((signal, index) => {
             const gateY = 280 + (signal.sourceY - 280) * 0.47;
-            return <path key={`signal-input-${signal.symbol}`} className={`decision-route signal-route${signal.symbol === "NVDA" ? " nvda-route nvda-input-route is-primary" : ""}${activeAsset === signal.symbol ? " is-focused" : ""}${activeAsset && activeAsset !== signal.symbol ? " is-dimmed" : ""}`} pathLength={1} d={`M48 ${signal.sourceY} C164 ${signal.sourceY} 250 ${gateY} 348 ${gateY}`} style={{ "--signal-delay": `${index * -0.22}s` } as CSSProperties} />;
+            const isPrimary = signal.symbol === asset.symbol;
+            return <path key={`signal-input-${index}`} className={`decision-route signal-route${isPrimary ? " nvda-route nvda-input-route is-primary" : ""}${activeAsset === signal.symbol && signal.symbol ? " is-focused" : ""}${activeAsset && activeAsset !== signal.symbol ? " is-dimmed" : ""}`} pathLength={1} d={`M48 ${signal.sourceY} C164 ${signal.sourceY} 250 ${gateY} 348 ${gateY}`} style={{ "--signal-delay": `${index * -0.22}s` } as CSSProperties} />;
           })}
         </g>
 
         <g className="plane-signal-outputs" aria-hidden="true">
-          {signals.filter((signal): signal is AssetSignal & { rank: number } => Boolean(signal.rank)).map((signal, index) => {
+          {signals.filter((signal): signal is AssetSignal & { symbol: string; rank: number } => Boolean(signal.symbol && signal.rank && rankY[signal.rank])).map((signal, index) => {
             const gateY = 280 + (signal.sourceY - 280) * 0.47;
             const rank = rankY[signal.rank];
-            return <path key={`signal-output-${signal.symbol}`} className={`decision-route signal-route output-route${signal.symbol === "NVDA" ? " nvda-route nvda-output-route is-primary" : ""}${activeAsset === signal.symbol ? " is-focused" : ""}${activeAsset && activeAsset !== signal.symbol ? " is-dimmed" : ""}`} pathLength={1} d={`M372 ${gateY} C430 ${gateY} 452 ${rank} 510 ${rank} L610 ${rank}`} style={{ "--signal-delay": `${(index + signals.length) * -0.22}s` } as CSSProperties} />;
+            const isPrimary = signal.symbol === asset.symbol;
+            return <path key={`signal-output-${signal.symbol}`} className={`decision-route signal-route output-route${isPrimary ? " nvda-route nvda-output-route is-primary" : ""}${activeAsset === signal.symbol ? " is-focused" : ""}${activeAsset && activeAsset !== signal.symbol ? " is-dimmed" : ""}`} pathLength={1} d={`M372 ${gateY} C430 ${gateY} 452 ${rank} 510 ${rank} L610 ${rank}`} style={{ "--signal-delay": `${(index + signals.length) * -0.22}s` } as CSSProperties} />;
           })}
         </g>
 
@@ -183,19 +216,20 @@ export function DecisionPlane({ asset, pairing = null, launch = null }: Decision
         <text className="plane-note" x="320" y="466">DECISION GATE</text>
 
         <g className="plane-rank-labels">
-          {signals.filter((signal): signal is AssetSignal & { rank: number; score: number; delta: string } => Boolean(signal.rank && signal.score && signal.delta)).map((signal) => {
+          {signals.filter((signal): signal is AssetSignal & { symbol: string; rank: number; score: number } => Boolean(signal.symbol && signal.rank && typeof signal.score === "number" && rankY[signal.rank])).map((signal) => {
             const y = rankY[signal.rank];
             const focusedRank = activeAsset === signal.symbol;
-            return <g key={`rank-${signal.symbol}`} className={`plane-rank-row${signal.symbol === "NVDA" ? " is-primary" : ""}${focusedRank ? " is-focused" : ""}${activeAsset && !focusedRank ? " is-dimmed" : ""}`} role="button" tabIndex={0} aria-label={`Focus ${signal.symbol} ranked ${signal.rank}`} aria-pressed={activeAsset === signal.symbol} onClick={(event) => { event.stopPropagation(); setTimedLock({ kind: "asset", value: signal.symbol }); }} onKeyDown={(event) => handleAssetKey(event, signal.symbol)} onMouseEnter={() => setHoverAsset(signal.symbol)} onMouseLeave={() => setHoverAsset(null)} onFocus={() => setHoverAsset(signal.symbol)} onBlur={() => setHoverAsset(null)}>
-              <text x="510" y={y - 9}>{String(signal.rank).padStart(2, "0")} {signal.symbol} {signal.symbol === "NVDA" ? asset.opportunityScore.toFixed(1) : signal.score.toFixed(1)}</text>
-              {signal.symbol === asset.symbol ? <><text className="plane-accent" x="510" y={y + 16}>JEV / {decision} {rankTransition}{asset.confidence === null ? "" : ` / ${asset.confidence}%`}</text><text className="plane-note" x="510" y={y + 34}>Opportunity / {asset.opportunityScore.toFixed(1)}</text></> : <text className="plane-note" x="510" y={y + 17}>Δ {signal.delta}</text>}
+            const isPrimary = signal.symbol === asset.symbol;
+            return <g key={`rank-${signal.symbol}`} className={`plane-rank-row${isPrimary ? " is-primary" : ""}${focusedRank ? " is-focused" : ""}${activeAsset && !focusedRank ? " is-dimmed" : ""}`} role="button" tabIndex={0} aria-label={`Focus ${signal.symbol} ranked ${signal.rank}`} aria-pressed={activeAsset === signal.symbol} onClick={(event) => { event.stopPropagation(); setTimedLock({ kind: "asset", value: signal.symbol }); }} onKeyDown={(event) => handleAssetKey(event, signal.symbol)} onMouseEnter={() => setHoverAsset(signal.symbol)} onMouseLeave={() => setHoverAsset(null)} onFocus={() => setHoverAsset(signal.symbol)} onBlur={() => setHoverAsset(null)}>
+              <text x="510" y={y - 9}>{String(signal.rank).padStart(2, "0")} {signal.symbol} {signal.score.toFixed(1)}</text>
+              {isPrimary ? <><text className="plane-accent" x="510" y={y + 16}>JEV / {decision} {rankTransition}{asset.confidence === null ? "" : ` / ${asset.confidence}%`}</text><text className="plane-note" x="510" y={y + 34}>Opportunity / {asset.opportunityScore.toFixed(1)}</text></> : <text className="plane-note" x="510" y={y + 17}>{signal.delta ? `Δ ${signal.delta}` : "—"}</text>}
               <line x1="510" y1={y + 28} x2="684" y2={y + 28} />
             </g>;
           })}
         </g>
 
         <g className="plane-assets">
-          {signals.map((signal) => <g key={`asset-${signal.symbol}`} className={`${assetClass(signal.symbol)}${signal.symbol === "NVDA" ? " is-primary" : ""}`} role="button" tabIndex={0} aria-label={`Focus ${signal.symbol} signal path`} aria-pressed={activeAsset === signal.symbol} onClick={(event) => { event.stopPropagation(); setTimedLock({ kind: "asset", value: signal.symbol }); }} onKeyDown={(event) => handleAssetKey(event, signal.symbol)} onMouseEnter={() => setHoverAsset(signal.symbol)} onMouseLeave={() => setHoverAsset(null)} onFocus={() => setHoverAsset(signal.symbol)} onBlur={() => setHoverAsset(null)}><text x="48" y={signal.sourceY + 4}>{signal.symbol}</text><circle cx="36" cy={signal.sourceY} r="2.5" /></g>)}
+          {signals.filter((signal) => Boolean(signal.symbol)).map((signal) => <g key={`asset-${signal.symbol}`} className={`${assetClass(signal.symbol)}${signal.symbol === asset.symbol ? " is-primary" : ""}`} role="button" tabIndex={0} aria-label={`Focus ${signal.symbol} signal path`} aria-pressed={activeAsset === signal.symbol} onClick={(event) => { event.stopPropagation(); setTimedLock({ kind: "asset", value: signal.symbol }); }} onKeyDown={(event) => handleAssetKey(event, signal.symbol)} onMouseEnter={() => setHoverAsset(signal.symbol)} onMouseLeave={() => setHoverAsset(null)} onFocus={() => setHoverAsset(signal.symbol)} onBlur={() => setHoverAsset(null)}><text x="48" y={signal.sourceY + 4}>{signal.symbol}</text><circle cx="36" cy={signal.sourceY} r="2.5" /></g>)}
         </g>
 
         <g className="plane-output-frame" aria-hidden="true">

@@ -127,18 +127,22 @@ export function AppSidebar({ agent, activeSection: activeSectionProp }: AppSideb
         </nav>
         <div className="ref-sidebar-bottom">
           <div className="side-net">
-            <span className="label">Network</span>
+            <span className="label">Network context</span>
             <div className="row">
-              <span className="label">Robinhood Chain</span>
-              <span className="label on">● Phase 0</span>
+              <span className="label">Robinhood Chain (Target)</span>
+              <span className="label">Phase 0</span>
+            </div>
+            <div className="row">
+              <span className="label">Network</span>
+              <span className="label"><b>{agent.networkLabel ?? "—"}</b></span>
             </div>
             <div className="row">
               <span className="label">Chain ID</span>
-              <span className="label"><b>4663</b> / simulated</span>
+              <span className="label"><b>—</b></span>
             </div>
             <div className="row">
               <span className="label">State</span>
-              <span className="label"><b>NOT CONNECTED</b></span>
+              <span className="label"><b>{agent.networkLabel ? "ONLINE" : "STATUS UNAVAILABLE"}</b></span>
             </div>
           </div>
           <span className="sr-only">{agent.networkLabel ?? "Network unavailable"} / cycle {formatCycle(agent.activeCycle)}</span>

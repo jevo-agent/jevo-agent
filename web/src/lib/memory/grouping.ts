@@ -67,7 +67,10 @@ export function groupMemoryRecords(records: MemoryRecord[]): GroupedAuditEntry[]
       last.earliestTimestamp = rec.timestamp;
       const latestTime = new Date(last.latestTimestamp).getTime();
       const earliestTime = new Date(rec.timestamp).getTime();
-      last.durationMinutes = Math.max(1, Math.round(Math.abs(latestTime - earliestTime) / 60000));
+      last.durationMinutes =
+        isNaN(latestTime) || isNaN(earliestTime)
+          ? 0
+          : Math.max(0, Math.round(Math.abs(latestTime - earliestTime) / 60000));
       last.records.push(rec);
     } else {
       groups.push({
@@ -81,7 +84,7 @@ export function groupMemoryRecords(records: MemoryRecord[]): GroupedAuditEntry[]
         latestTimestamp: rec.timestamp,
         earliestTimestamp: rec.timestamp,
         count: 1,
-        durationMinutes: 1,
+        durationMinutes: 0,
         summary: rec.summary,
         observedDelta:
           isChange && previousRank && currentRank

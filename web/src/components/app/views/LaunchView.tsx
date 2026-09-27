@@ -180,13 +180,13 @@ export function LaunchView({ launch, pairing, agent }: LaunchViewProps) {
               />
               <Fact
                 label="Agent wallet"
-                value="JEVO Agent Wallet / scoped permissions"
+                value="Awaiting candidate / Scoped policy rules"
               />
               <Fact
                 label="Guardian approval"
-                value="REQUIRED (Operator gate)"
+                value="Mandatory gate / Not scheduled"
               />
-              <Fact label="Transaction" value="NOT SUBMITTED (Standby)" />
+              <Fact label="Transaction" value="No execution in standby" />
             </div>
 
             <div className="perm">

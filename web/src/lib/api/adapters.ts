@@ -3,7 +3,7 @@ import { z } from "zod";
 import { mockAgentState } from "@/data/mock-agent-state";
 import { agentRuntimeSchema, agentCycleSchema, memoryComparisonSchema, memoryRecordSchema, stockSchema, pairingSchema, launchSchema } from "@/schemas/protocol";
 import type { AgentCycle, AgentRuntime, MemoryComparison, MemoryRecord, ProviderReference } from "@/types/agent";
-import type { AppData } from "@/components/app/types";
+import type { AppData, DomainStatus } from "@/components/app/types";
 import type { Launch } from "@/types/launch";
 import type { Pairing } from "@/types/pairing";
 import type { Stock } from "@/types/stock";
@@ -104,23 +104,42 @@ function makeSignals(raw: OpportunityApi): Stock["signals"] {
 function dimensionsForPoint(entry: NonNullable<OpportunityApi["history"]>[number]) {
   const dimensions = entry.dimensions;
   if (!dimensions) return {};
-  const pairability = dimensions.pairCompatibility;
-  const narrativeValues = [
-    dimensions.narrativeMomentum,
-    dimensions.culturalRelevance,
-    dimensions.socialVelocity,
-  ].filter((value): value is number => typeof value === "number");
+  const pairability =
+    typeof dimensions.pairCompatibility === "number"
+      ? dimensions.pairCompatibility
+      : typeof dimensions.memeCompatibility === "number"
+        ? dimensions.memeCompatibility
+        : undefined;
+  const narrative =
+    typeof dimensions.narrativeMomentum === "number"
+      ? dimensions.narrativeMomentum
+      : undefined;
   return {
     ...(typeof pairability === "number" ? { pairability } : {}),
-    ...(narrativeValues.length > 0 ? { narrative: narrativeValues.reduce((sum, value) => sum + value, 0) / narrativeValues.length } : {}),
+    ...(typeof narrative === "number" ? { narrative } : {}),
   };
 }
 
 export function adaptOpportunity(raw: OpportunityApi): Stock {
   const history = [...(raw.history ?? [])].sort((left, right) => left.recordedAt.localeCompare(right.recordedAt));
+  const rawPairability =
+    typeof raw.score?.pairCompatibility === "number"
+      ? raw.score.pairCompatibility
+      : typeof raw.score?.memeCompatibility === "number"
+        ? raw.score.memeCompatibility
+        : undefined;
+  const rawNarrative =
+    typeof raw.score?.narrativeMomentum === "number"
+      ? raw.score.narrativeMomentum
+      : undefined;
   const scoreHistory = history.length > 0
     ? history.map((entry) => ({ timestamp: entry.recordedAt, score: entry.score, ...dimensionsForPoint(entry) }))
-    : [{ timestamp: raw.recordedAt, score: raw.opportunityScore }];
+    : [{
+        timestamp: raw.recordedAt,
+        score: raw.opportunityScore,
+        ...(typeof rawPairability === "number" ? { pairability: rawPairability } : {}),
+        ...(typeof rawNarrative === "number" ? { narrative: rawNarrative } : {}),
+      }];
   const rankedHistory = history.flatMap((entry) => {
     const rank = entry.currentRank ?? entry.rank;
     return typeof rank === "number" ? [{ timestamp: entry.recordedAt, rank }] : [];
@@ -343,6 +362,7 @@ export function createProtocolData(input: {
   launches?: LaunchApi[];
   memory?: MemoryApi[];
   cycles?: CycleApi[];
+  domainStatus?: DomainStatus;
 }): AppData | null {
   if (!input.agent) return null;
   const assets = (input.opportunities ?? []).map(adaptOpportunity).sort((left, right) => left.currentRank - right.currentRank);
@@ -390,6 +410,7 @@ export function createProtocolData(input: {
     agentCycles: cycles,
     memoryComparison,
     providers,
+    domainStatus: input.domainStatus,
   };
 }
 

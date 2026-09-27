@@ -93,7 +93,9 @@ a, button { touch-action: manipulation; }
 
 /* Stock detail uses the approved JEVO system while keeping its deep-dive IA. */
 .stock-detail-root,
-.jevo-app .stock-workspace {
+.jevo-app .stock-workspace,
+.jevo-app .pairing-workspace,
+.jevo-app .launch-workspace {
   --jevo-bg: var(--bg, #0b0d0b);
   --jevo-panel: var(--bg-raise, #0e110f);
   --jevo-panel-raised: #121713;
@@ -109,7 +111,9 @@ a, button { touch-action: manipulation; }
   --jevo-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
   --jevo-mono: var(--font-plex-mono), ui-monospace, monospace;
 }
-.jevo-app .stock-workspace {
+.jevo-app .stock-workspace,
+.jevo-app .pairing-workspace,
+.jevo-app .launch-workspace {
   width: 100%;
   padding-top: 20px;
 }
@@ -120,7 +124,9 @@ a, button { touch-action: manipulation; }
   font-family: var(--jevo-sans);
 }
 .stock-detail-root .protocol-shell { max-width: 1480px; }
-.jevo-app .stock-workspace .protocol-shell {
+.jevo-app .stock-workspace .protocol-shell,
+.jevo-app .pairing-workspace .protocol-shell,
+.jevo-app .launch-workspace .protocol-shell {
   width: 100%;
   max-width: 100%;
   margin-inline: 0;
@@ -129,7 +135,11 @@ a, button { touch-action: manipulation; }
 .stock-detail-root .protocol-label,
 .stock-detail-root .font-mono,
 .jevo-app .stock-workspace .protocol-label,
-.jevo-app .stock-workspace .font-mono { font-family: var(--jevo-mono); }
+.jevo-app .stock-workspace .font-mono,
+.jevo-app .pairing-workspace .protocol-label,
+.jevo-app .pairing-workspace .font-mono,
+.jevo-app .launch-workspace .protocol-label,
+.jevo-app .launch-workspace .font-mono { font-family: var(--jevo-mono); }
 .stock-detail-root .stock-deep-header { background: rgb(11 13 11 / 92%); }
 .stock-detail-root .stock-brand-mark { display: grid; width: 26px; height: 26px; place-items: center; overflow: hidden; border: 1px solid var(--jevo-line-strong); }
 .stock-detail-root .stock-brand-mark img { width: 18px; height: 18px; object-fit: contain; }
@@ -138,7 +148,11 @@ a, button { touch-action: manipulation; }
 .stock-detail-root main > .border,
 .stock-detail-root main > div > .border,
 .jevo-app .stock-workspace-content > .border,
-.jevo-app .stock-workspace-content > div > .border { background: rgb(14 17 15 / 46%); }
+.jevo-app .stock-workspace-content > div > .border,
+.jevo-app .pairing-workspace-content > .border,
+.jevo-app .pairing-workspace-content > div > .border,
+.jevo-app .launch-workspace-content > .border,
+.jevo-app .launch-workspace-content > div > .border { background: rgb(14 17 15 / 46%); }
 
 @media (max-width: 640px) {
   .protocol-shell { width: min(calc(100% - 2rem), var(--jevo-max-width)); }

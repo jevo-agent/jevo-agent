@@ -6,6 +6,7 @@
 import { useMemo } from "react";
 import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
 
+import type { AppData, DomainStatus } from "@/components/app/types";
 import { apiGet, isJevoDemoMode, type ApiEnvelope } from "./client";
 import {
   adaptAgent,
@@ -31,7 +32,6 @@ import {
   protocolEventApiSchema,
   stockApiSchema,
 } from "./schemas";
-import type { AppData } from "@/components/app/types";
 import type { AgentRuntime } from "@/types/agent";
 import type { Pairing } from "@/types/pairing";
 import type { Stock } from "@/types/stock";
@@ -176,6 +176,15 @@ export function useProtocolState() {
   const memoryQuery = useMemory(undefined, queryOptions);
   const cyclesQuery = useCycles(10, queryOptions);
 
+  const domainStatus = useMemo<DomainStatus>(() => ({
+    agent: demo ? "ok" : agentQuery.isPending ? "loading" : agentQuery.isError ? "error" : "ok",
+    opportunities: demo ? "ok" : opportunitiesQuery.isPending ? "loading" : opportunitiesQuery.isError ? "error" : "ok",
+    pairings: demo ? "ok" : pairingsQuery.isPending ? "loading" : pairingsQuery.isError ? "error" : "ok",
+    launches: demo ? "ok" : launchesQuery.isPending ? "loading" : launchesQuery.isError ? "error" : "ok",
+    memory: demo ? "ok" : memoryQuery.isPending ? "loading" : memoryQuery.isError ? "error" : "ok",
+    cycles: demo ? "ok" : cyclesQuery.isPending ? "loading" : cyclesQuery.isError ? "error" : "ok",
+  }), [agentQuery.isError, agentQuery.isPending, cyclesQuery.isError, cyclesQuery.isPending, demo, launchesQuery.isError, launchesQuery.isPending, memoryQuery.isError, memoryQuery.isPending, opportunitiesQuery.isError, opportunitiesQuery.isPending, pairingsQuery.isError, pairingsQuery.isPending]);
+
   const data = useMemo<AppData | null>(() => {
     if (demo) return demoProtocolData();
     if (!opportunitiesQuery.data?.data || opportunitiesQuery.data.data.length === 0) return null;
@@ -186,13 +195,15 @@ export function useProtocolState() {
       launches: launchesQuery.data?.data ?? [],
       memory: memoryQuery.data?.data ?? [],
       cycles: cyclesQuery.data?.data ?? [],
+      domainStatus,
     });
-  }, [agentQuery.data, opportunitiesQuery.data, pairingsQuery.data, launchesQuery.data, memoryQuery.data, cyclesQuery.data, demo]);
+  }, [agentQuery.data, opportunitiesQuery.data, pairingsQuery.data, launchesQuery.data, memoryQuery.data, cyclesQuery.data, demo, domainStatus]);
 
   const queries = [agentQuery, opportunitiesQuery, pairingsQuery, launchesQuery, memoryQuery, cyclesQuery];
   const error = opportunitiesQuery.error ?? queries.find((query) => query.error)?.error;
   return {
     data,
+    domainStatus,
     isDemo: demo,
     isLoading: !demo && opportunitiesQuery.isPending,
     isError: !demo && opportunitiesQuery.isError,
