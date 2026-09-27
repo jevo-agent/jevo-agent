@@ -56,7 +56,7 @@ async function main() {
   if (result.rankingSummary?.rankedAssets && result.rankingSummary.rankedAssets.length > 0) {
     console.log("\nTop 3 Ranked Assets:");
     result.rankingSummary.rankedAssets.slice(0, 3).forEach((a, idx) => {
-      console.log(`  #${idx + 1} ${a.symbol} - Score: ${a.score} (Rank: ${a.rank})`);
+      console.log(`  #${idx + 1} ${a.symbol} - Score: ${a.opportunityScore} (Rank: ${a.currentRank})`);
     });
   }
 
