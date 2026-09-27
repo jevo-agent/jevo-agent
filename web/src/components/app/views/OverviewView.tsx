@@ -399,7 +399,7 @@ export function OverviewView({
             </div>
             <h3>No pairing proposals published</h3>
             <p className="side-copy">
-              JEV continuously evaluates monitored stock assets across 6 multi-signal dimensions. Candidates qualify only upon meeting dual-threshold criteria (Rank #01–#03 or Opportunity Score ≥ 85.0).
+              JEV continuously evaluates monitored stock assets across 6 multi-signal dimensions. Candidates qualify only upon meeting dual-threshold criteria (Rank #01–#03 or Jev decision: PROMOTE).
             </p>
             <p className="side-copy" style={{ color: "rgb(2 198 165 / 70%)", fontSize: "12.5px", marginTop: "8px", lineHeight: "1.5" }}>
               Monitored opportunities currently hold below qualification boundaries, maintaining strict conviction discipline in standby until a verified pairing thesis emerges.
@@ -409,7 +409,7 @@ export function OverviewView({
                 6 Evaluation Dimensions
               </span>
               <span className="label" style={{ padding: "4px 8px", border: "1px solid var(--line)", background: "var(--panel)" }}>
-                Dual Threshold (Rank ≤ 3 · Score ≥ 85)
+                Dual Threshold (Rank ≤ 3 · PROMOTE)
               </span>
               <span className="label" style={{ padding: "4px 8px", border: "1px solid var(--line)", background: "var(--panel)" }}>
                 Phase 0 Conviction Hold

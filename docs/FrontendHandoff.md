@@ -352,7 +352,7 @@ Four independent frontend enhancements and bugfixes were executed, verified, and
 ### 4. Overview Pairing & Launch Standby Summary Cards (`OverviewView.tsx`)
 - **Problem**: In `/app` Overview, the empty-state cards for Pairing (Section 05) and Launch (Section 06) were overly sparse ("No pairing proposals published" + 1 line), feeling jarring compared to the standalone pages.
 - **Implementation**:
-  - Enriched the Pairing summary card with 2–3 lines of operational context detailing multi-signal scanning across 6 scoring dimensions, the dual qualification threshold (Rank #01–#03 or Opportunity Score ≥ 85.0), and Phase 0 conviction hold.
+  - Enriched the Pairing summary card with 2–3 lines of operational context detailing multi-signal scanning across 6 scoring dimensions, the dual qualification threshold (Rank #01–#03 or Jev decision: PROMOTE), and Phase 0 conviction hold.
   - Enriched the Launch summary card with 2–3 lines explaining the 6-stage lifecycle (T-24H to T-00), containment under Phase 0, and the requirement of all 8 policy gates passing before Robinhood Chain deployment.
   - Added monospace parameter badges (`6 EVALUATION DIMENSIONS`, `DUAL THRESHOLD`, `8 POLICY GATES MANDATORY`, `ROBINHOOD CHAIN PHASE 0`).
   - Retained all existing CTA links (`Inspect pairing workspace →`, `Open launch workspace →`).

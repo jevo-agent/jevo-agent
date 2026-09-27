@@ -188,7 +188,7 @@ function LandingPairingStandbySection({
               <span className="label">01 / QUALIFICATION GATE</span>
               <h4>Top 3 Rank or Explicit PROMOTE</h4>
               <p>
-                Underlying equity tokens must hold rank #01–#03 or clear JEV&apos;s qualitative qualification curve (Opportunity Score ≥ 85.0). Currently tracking {featuredAsset.symbol} (#{String(featuredAsset.currentRank).padStart(2, "0")}) and monitored equity assets.
+                Underlying equity tokens must hold rank #01–#03 or receive an explicit qualitative PROMOTE decision from JEV. Currently tracking {featuredAsset.symbol} (#{String(featuredAsset.currentRank).padStart(2, "0")}) and monitored equity assets.
               </p>
             </div>
 
