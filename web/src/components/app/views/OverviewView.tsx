@@ -393,9 +393,28 @@ export function OverviewView({
         </div>
         {pairings.length === 0 ? (
           <div className="app-pairing-focus empty-state">
-            <span className="label">Pairing candidate / Intelligence</span>
+            <div className="kicker">
+              <span className="label">Pairing candidate / Intelligence</span>
+              <span className="label on">STANDBY · SCAN ACTIVE</span>
+            </div>
             <h3>No pairing proposals published</h3>
-            <p>The agent has not published a qualified pairing candidate for currently monitored market opportunities.</p>
+            <p className="side-copy">
+              JEV continuously evaluates monitored stock assets across 6 multi-signal dimensions. Candidates qualify only upon meeting dual-threshold criteria (Rank #01–#03 or Opportunity Score ≥ 85.0).
+            </p>
+            <p className="side-copy" style={{ color: "rgb(2 198 165 / 70%)", fontSize: "12.5px", marginTop: "8px", lineHeight: "1.5" }}>
+              Monitored opportunities currently hold below qualification boundaries, maintaining strict conviction discipline in standby until a verified pairing thesis emerges.
+            </p>
+            <div className="overview-summary-tags" style={{ display: "flex", gap: "8px", flexWrap: "wrap", margin: "14px 0 16px" }}>
+              <span className="label" style={{ padding: "4px 8px", border: "1px solid var(--line)", background: "var(--panel)" }}>
+                6 Evaluation Dimensions
+              </span>
+              <span className="label" style={{ padding: "4px 8px", border: "1px solid var(--line)", background: "var(--panel)" }}>
+                Dual Threshold (Rank ≤ 3 · Score ≥ 85)
+              </span>
+              <span className="label" style={{ padding: "4px 8px", border: "1px solid var(--line)", background: "var(--panel)" }}>
+                Phase 0 Conviction Hold
+              </span>
+            </div>
             <Link className="side-cta" href="/pairing">
               Inspect pairing workspace →
             </Link>
@@ -1811,11 +1830,30 @@ function LaunchSummary({
     return (
       <div className="app-launch-layout empty-state">
         <div className="app-launch-readout">
-          <span className="label">Autonomous launch / Phase 0</span>
-          <div className="clock-big">STANDBY</div>
+          <div className="kicker" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+            <span className="label">Autonomous launch / Phase 0</span>
+            <span className="label on">OPERATOR GATE ACTIVE</span>
+          </div>
+          <div className="clock-big" style={{ color: "rgb(2 198 165 / 45%)" }}>STANDBY</div>
           <h3>No active launch candidate</h3>
-          <p>Launch countdown and checkpoints will activate once a pairing candidate is approved and scheduled by the operator.</p>
-          <Link className="side-cta" href="/launch">
+          <p className="side-copy" style={{ maxWidth: "60ch", lineHeight: "1.5" }}>
+            Autonomous deployment remains in Phase 0 standby awaiting an approved pairing candidate. When triggered, progression advances through a 6-stage lifecycle from candidate selection to controlled execution.
+          </p>
+          <p className="side-copy" style={{ color: "rgb(2 198 165 / 70%)", fontSize: "12.5px", marginTop: "8px", maxWidth: "60ch", lineHeight: "1.5" }}>
+            All 8 pre-launch policy gates—including contract parameters, liquidity limits, collision checks, and zero-revert simulations—require affirmative guardian sign-off before Robinhood Chain deployment.
+          </p>
+          <div className="overview-summary-tags" style={{ display: "flex", gap: "8px", flexWrap: "wrap", margin: "14px 0 16px" }}>
+            <span className="label" style={{ padding: "4px 8px", border: "1px solid var(--line)", background: "var(--panel)" }}>
+              6 Lifecycle Stages (T-24H → T-00)
+            </span>
+            <span className="label" style={{ padding: "4px 8px", border: "1px solid var(--line)", background: "var(--panel)" }}>
+              8 Policy Gates Mandatory
+            </span>
+            <span className="label" style={{ padding: "4px 8px", border: "1px solid var(--line)", background: "var(--panel)" }}>
+              Robinhood Chain Phase 0
+            </span>
+          </div>
+          <Link className="side-cta" href="/launch" style={{ marginTop: "8px" }}>
             Open launch workspace →
           </Link>
         </div>
