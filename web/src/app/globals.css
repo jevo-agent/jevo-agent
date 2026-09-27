@@ -4761,6 +4761,375 @@ a, button { touch-action: manipulation; }
   font-size: 12px;
 }
 
+/* Landing Section 05: Consolidated Timeline & Audit Trail */
+.landing-root .mem-timeline-bar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 14px 18px;
+  margin-top: 14px;
+}
+
+.landing-root .mem-tl-anchor {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 130px;
+}
+
+.landing-root .mem-tl-anchor.is-clickable,
+.landing-root .mem-tl-track-steady.is-clickable {
+  cursor: pointer;
+}
+
+.landing-root .mem-tl-anchor.is-clickable:hover .mem-tl-time {
+  color: var(--accent);
+}
+
+.landing-root .mem-tl-anchor--latest {
+  text-align: right;
+  align-items: flex-end;
+}
+
+.landing-root .mem-tl-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--dim);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.landing-root .mem-tl-time {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  transition: color 0.15s ease;
+}
+
+.landing-root .mem-tl-stat {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.landing-root .mem-tl-stat--active {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.landing-root .mem-tl-track {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  position: relative;
+}
+
+.landing-root .mem-tl-track-steady {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+}
+
+.landing-root .mem-tl-rail-line {
+  width: 100%;
+  height: 2px;
+  background: repeating-linear-gradient(90deg, var(--line-strong) 0, var(--line-strong) 6px, transparent 6px, transparent 12px);
+  margin-bottom: 4px;
+}
+
+.landing-root .mem-tl-steady-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  background: rgb(2 198 165 / 7%);
+  border: 1px solid rgb(2 198 165 / 22%);
+  border-radius: 12px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+.landing-root .mem-tl-steady-badge b {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.landing-root .mem-tl-steady-badge .dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.landing-root .mem-tl-sub {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.landing-root .mem-tl-track-transitions {
+  width: 100%;
+}
+
+.landing-root .mem-tl-milestones-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.landing-root .mem-tl-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.landing-root .mem-tl-node:hover {
+  background: rgb(220 235 215 / 5%);
+  border-color: var(--line);
+}
+
+.landing-root .mem-tl-node.is-change {
+  border-color: rgb(2 198 165 / 35%);
+  background: rgb(2 198 165 / 8%);
+}
+
+.landing-root .mem-tl-node-tag {
+  font-family: var(--mono);
+  font-size: 8px;
+  color: var(--dim);
+  text-transform: uppercase;
+}
+
+.landing-root .mem-tl-node b {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+}
+
+.landing-root .mem-tl-node.is-change b {
+  color: var(--accent);
+}
+
+.landing-root .mem-tl-node-time {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--muted);
+}
+
+.landing-root .mem-decisions-col {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.landing-root .mlog-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  background: rgb(11 13 11 / 40%);
+}
+
+.landing-root .mlog-head-left h3 {
+  margin: 0;
+  font-size: 14px;
+  font-stretch: 92%;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.landing-root .mlog-head-left .label {
+  font-size: 9px;
+  color: var(--dim);
+}
+
+.landing-root .mlog-count-badge {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  background: rgb(220 235 215 / 4%);
+  border: 1px solid var(--line);
+  padding: 3px 8px;
+  border-radius: 2px;
+}
+
+.landing-root .mlog-grouped {
+  list-style: none;
+  margin: 0;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+.landing-root .mlog-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-radius: 4px;
+  padding: 12px 14px;
+  transition: border-color 0.15s ease;
+}
+
+.landing-root .mlog-card--steady {
+  background: rgb(220 235 215 / 2.5%);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--dim);
+}
+
+.landing-root .mlog-card--steady:hover {
+  border-color: var(--line-strong);
+  border-left-color: var(--muted);
+}
+
+.landing-root .mlog-card--change {
+  background: rgb(2 198 165 / 7%);
+  border: 1px solid rgb(2 198 165 / 40%);
+  border-left: 3px solid var(--accent);
+  box-shadow: 0 0 12px rgb(2 198 165 / 8%);
+}
+
+.landing-root .mlog-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.landing-root .mlog-time-badge {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--dim);
+  letter-spacing: 0.04em;
+}
+
+.landing-root .mlog-tag {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 2px;
+}
+
+.landing-root .mlog-tag--steady {
+  background: rgb(220 235 215 / 5%);
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+
+.landing-root .mlog-tag--change {
+  background: var(--accent);
+  color: #0b0d0b;
+  font-weight: 700;
+}
+
+.landing-root .mlog-decision {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.landing-root .mlog-decision.on {
+  color: var(--accent);
+}
+
+.landing-root .mlog-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.landing-root .mlog-headline {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.landing-root .mlog-reason-sub {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.landing-root .mlog-change-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-family: var(--mono);
+}
+
+.landing-root .mlog-change-summary b {
+  font-size: 13.5px;
+  color: var(--accent);
+}
+
+.landing-root .mlog-change-summary span {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.landing-root .mlog-card-desc {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.45;
+}
+
+.landing-root .mem-steady-watermark {
+  fill: rgb(220 235 215 / 14%);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+}
+
+@media (max-width: 980px) {
+  .landing-root .mem-timeline-bar {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .landing-root .mem-tl-anchor--latest {
+    text-align: left;
+    align-items: flex-start;
+  }
+}
+
+
 @media (max-width: 980px) {
   .jevo-app .mem-grid {
     grid-template-columns: 1fr;
