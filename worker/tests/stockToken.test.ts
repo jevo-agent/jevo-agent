@@ -91,11 +91,12 @@ describe("RealStockTokenProvider & Robinhood Chain Integration (BACKEND 14)", ()
 
     const res1 = await client.getTokenPrice("0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec");
     expect(res1.price).toBe(224.67);
-    expect(res1.capturedAt).toBe("2026-09-27T01:00:00Z");
+    expect(res1.capturedAt).toContain("2026-09-27T01:00:00");
+    expect(res1.isStale).toBeUndefined();
     expect(fetchCount).toBe(1);
   });
 
-  it("DexPaprikaClient falls back to stale cache on network or rate limit failure", async () => {
+  it("DexPaprikaClient falls back to stale cache with isStale: true on network or rate limit failure", async () => {
     const client = new DexPaprikaClient({ cacheTtlMs: 10 }); // very short TTL
 
     // Populate stale cache directly
@@ -114,9 +115,35 @@ describe("RealStockTokenProvider & Robinhood Chain Integration (BACKEND 14)", ()
       const details = await client.getTokenDetails("0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec");
       expect(details.symbol).toBe("NVDA");
       expect(details.summary?.price_usd).toBe(224.67);
+      expect(details.isStale).toBe(true);
+
+      const priceInfo = await client.getTokenPrice("0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec");
+      expect(priceInfo.price).toBe(224.67);
+      expect(priceInfo.isStale).toBe(true);
     } finally {
       globalThis.fetch = originalFetch;
     }
+  });
+
+  it("DexPaprikaClient throws explicit error on missing or malformed last_updated timestamp", async () => {
+    const client = new DexPaprikaClient();
+    (client as unknown as { getTokenDetails: (addr: string) => Promise<unknown> }).getTokenDetails = async () => ({
+      ...sampleDexPaprikaResponse,
+      last_updated: "not-a-valid-date",
+    });
+
+    await expect(
+      client.getTokenPrice("0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec"),
+    ).rejects.toThrow("DexPaprika returned malformed last_updated");
+
+    (client as unknown as { getTokenDetails: (addr: string) => Promise<unknown> }).getTokenDetails = async () => ({
+      ...sampleDexPaprikaResponse,
+      last_updated: "",
+    });
+
+    await expect(
+      client.getTokenPrice("0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec"),
+    ).rejects.toThrow("DexPaprika returned missing last_updated timestamp");
   });
 
   it("createProvidersRegistry switches stockTokenMode while preserving independent provider separation", () => {

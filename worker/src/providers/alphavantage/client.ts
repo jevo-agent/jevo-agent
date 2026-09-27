@@ -11,6 +11,7 @@ export interface AlphaVantageRawQuote {
   "08. previous close"?: string;
   "09. change"?: string;
   "10. change percent"?: string;
+  isStale?: boolean;
 }
 
 export interface AlphaVantageNewsArticle {
@@ -32,6 +33,7 @@ export interface AlphaVantageNewsArticle {
 export interface AlphaVantageNewsResponse {
   items?: string;
   feed?: AlphaVantageNewsArticle[];
+  isStale?: boolean;
 }
 
 interface CacheEntry<T> {
@@ -136,7 +138,7 @@ export class AlphaVantageClient {
     if (!this.tryConsumeDailyQuota()) {
       if (cached) {
         logger.warn({ symbol: uppercaseSymbol }, "Daily quota reached: returning stale cached quote");
-        return cached.data;
+        return { ...cached.data, isStale: true };
       }
       return {};
     }
@@ -158,14 +160,14 @@ export class AlphaVantageClient {
       // If rate limited or empty, fallback to stale cache if present
       if (cached) {
         logger.warn({ symbol: uppercaseSymbol }, "Using stale cached quote due to empty/rate-limited response");
-        return cached.data;
+        return { ...cached.data, isStale: true };
       }
 
       return rawQuote;
     } catch (err) {
       if (cached) {
         logger.warn({ symbol: uppercaseSymbol, err }, "Using stale cached quote due to network error");
-        return cached.data;
+        return { ...cached.data, isStale: true };
       }
       throw err;
     }
@@ -183,7 +185,7 @@ export class AlphaVantageClient {
     if (!this.tryConsumeDailyQuota()) {
       if (cached) {
         logger.warn({ symbol: uppercaseSymbol }, "Daily quota reached: returning stale cached news");
-        return cached.data;
+        return { ...cached.data, isStale: true };
       }
       return { feed: [] };
     }
@@ -207,14 +209,14 @@ export class AlphaVantageClient {
 
       if (cached) {
         logger.warn({ symbol: uppercaseSymbol }, "Using stale cached news due to empty/rate-limited response");
-        return cached.data;
+        return { ...cached.data, isStale: true };
       }
 
       return response;
     } catch (err) {
       if (cached) {
         logger.warn({ symbol: uppercaseSymbol, err }, "Using stale cached news due to network error");
-        return cached.data;
+        return { ...cached.data, isStale: true };
       }
       throw err;
     }

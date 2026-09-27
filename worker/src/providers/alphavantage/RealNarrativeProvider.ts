@@ -9,8 +9,8 @@ export interface RealNarrativeProviderOptions {
   client?: AlphaVantageClient;
 }
 
-function parseTimePublished(raw?: string): string {
-  if (!raw || raw.length < 8) return new Date().toISOString();
+function parseTimePublished(raw?: string): string | null {
+  if (!raw || raw.length < 8) return null;
   // Format: YYYYMMDDTHHMMSS -> e.g. 20260926T161439
   const year = raw.slice(0, 4);
   const month = raw.slice(4, 6);
@@ -21,7 +21,7 @@ function parseTimePublished(raw?: string): string {
   const secs = rest.slice(4, 6) || "00";
   const iso = `${year}-${month}-${day}T${hours}:${mins}:${secs}Z`;
   const date = new Date(iso);
-  return isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+  return isNaN(date.getTime()) ? null : date.toISOString();
 }
 
 export class RealNarrativeProvider implements NarrativeProvider {
@@ -57,6 +57,12 @@ export class RealNarrativeProvider implements NarrativeProvider {
     const results: SignalObservation[] = [];
     for (let idx = 0; idx < Math.min(5, feed.length); idx++) {
       const article = feed[idx];
+      const capturedAt = parseTimePublished(article.time_published);
+      if (!capturedAt) {
+        // Skip malformed/missing timestamp instead of synthesizing current time
+        continue;
+      }
+
       const tickerInfo = article.ticker_sentiment?.find(
         (t) => t.ticker.toUpperCase() === uppercaseSymbol,
       );
@@ -79,8 +85,9 @@ export class RealNarrativeProvider implements NarrativeProvider {
         kind: "NEWS",
         magnitude,
         label: article.title.slice(0, 150),
-        capturedAt: parseTimePublished(article.time_published),
+        capturedAt,
         source: "alphavantage",
+        ...(news.isStale ? { isStale: true } : {}),
       });
     }
 

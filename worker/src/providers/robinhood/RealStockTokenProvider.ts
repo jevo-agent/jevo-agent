@@ -48,7 +48,7 @@ export class RealStockTokenProvider implements StockTokenProvider {
    * Note: This is strictly the DEX price of the token on Robinhood Chain,
    * keeping it isolated from traditional market equity data (Alpha Vantage).
    */
-  async getOnchainPrice(address: string): Promise<{ price: number; capturedAt: string }> {
+  async getOnchainPrice(address: string): Promise<{ price: number; capturedAt: string; isStale?: boolean }> {
     return this.dexPaprika.getTokenPrice(address);
   }
 

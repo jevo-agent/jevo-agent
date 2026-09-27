@@ -19,6 +19,7 @@ export const marketSnapshotSchema = z.object({
   volatility: z.number().nonnegative(),
   capturedAt: timestampSchema,
   source: z.string().min(1),
+  isStale: z.boolean().optional(),
 });
 
 // --- Signal Observation (signal_observations table) ---
@@ -37,6 +38,7 @@ export const signalObservationSchema = z.object({
   label: z.string().min(1),
   capturedAt: timestampSchema,
   source: z.string().min(1),
+  isStale: z.boolean().optional(),
 });
 
 // --- Agent Cycles (agent_cycles table) ---

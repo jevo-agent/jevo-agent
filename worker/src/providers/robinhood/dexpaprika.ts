@@ -17,6 +17,7 @@ export interface DexPaprikaTokenResponse {
     };
   };
   last_updated?: string;
+  isStale?: boolean;
 }
 
 export interface DexPaprikaClientOptions {
@@ -83,7 +84,7 @@ export class DexPaprikaClient {
             { tokenAddress: normalized, status: res.status },
             "DexPaprika error or rate limited; falling back to stale cache",
           );
-          return this.staleFallback.get(normalized)!;
+          return { ...this.staleFallback.get(normalized)!, isStale: true };
         }
         throw new Error(`DexPaprika request failed for ${normalized}: HTTP ${res.status}`);
       }
@@ -98,7 +99,7 @@ export class DexPaprikaClient {
           { tokenAddress: normalized, err },
           "DexPaprika fetch exception; falling back to stale cache",
         );
-        return this.staleFallback.get(normalized)!;
+        return { ...this.staleFallback.get(normalized)!, isStale: true };
       }
       throw err;
     } finally {
@@ -106,7 +107,7 @@ export class DexPaprikaClient {
     }
   }
 
-  async getTokenPrice(tokenAddress: string): Promise<{ price: number; capturedAt: string }> {
+  async getTokenPrice(tokenAddress: string): Promise<{ price: number; capturedAt: string; isStale?: boolean }> {
     const details = await this.getTokenDetails(tokenAddress);
     const price = details.summary?.price_usd;
 
@@ -116,9 +117,22 @@ export class DexPaprikaClient {
       );
     }
 
+    if (!details.last_updated || details.last_updated.trim() === "") {
+      throw new Error(
+        `DexPaprika returned missing last_updated timestamp for token ${tokenAddress}`,
+      );
+    }
+    const date = new Date(details.last_updated);
+    if (isNaN(date.getTime())) {
+      throw new Error(
+        `DexPaprika returned malformed last_updated (${details.last_updated}) for token ${tokenAddress}`,
+      );
+    }
+
     return {
       price,
-      capturedAt: details.last_updated || new Date().toISOString(),
+      capturedAt: date.toISOString(),
+      ...(details.isStale ? { isStale: true } : {}),
     };
   }
 

@@ -91,6 +91,94 @@ describe("AlphaVantage Providers (BACKEND 12 + 13)", () => {
     );
   });
 
+  it("RealMarketDataProvider throws explicit error on missing or invalid high/low without synthesizing 0.01 volatility", async () => {
+    const client = new AlphaVantageClient({ apiKey: "test_key", cacheTtlMs: 60_000 });
+    const invalidQuote = {
+      "Global Quote": {
+        ...sampleQuote["Global Quote"],
+        "03. high": undefined,
+      },
+    };
+    (client as unknown as { fetchWithPacing: (url: string) => Promise<unknown> }).fetchWithPacing = async () => invalidQuote;
+
+    const provider = new RealMarketDataProvider({ client });
+    await expect(provider.getSnapshot("NVDA")).rejects.toThrow(
+      "AlphaVantage returned missing high/low price for symbol NVDA",
+    );
+  });
+
+  it("RealMarketDataProvider throws explicit error on missing or negative volume without defaulting to 0", async () => {
+    const client = new AlphaVantageClient({ apiKey: "test_key", cacheTtlMs: 60_000 });
+    const missingVolumeQuote = {
+      "Global Quote": {
+        ...sampleQuote["Global Quote"],
+        "06. volume": undefined,
+      },
+    };
+    (client as unknown as { fetchWithPacing: (url: string) => Promise<unknown> }).fetchWithPacing = async () => missingVolumeQuote;
+
+    const provider = new RealMarketDataProvider({ client });
+    await expect(provider.getSnapshot("NVDA")).rejects.toThrow(
+      "AlphaVantage returned missing volume for symbol NVDA",
+    );
+  });
+
+  it("RealMarketDataProvider throws explicit error on malformed latest trading day without synthesizing new Date()", async () => {
+    const client = new AlphaVantageClient({ apiKey: "test_key", cacheTtlMs: 60_000 });
+    const malformedDateQuote = {
+      "Global Quote": {
+        ...sampleQuote["Global Quote"],
+        "07. latest trading day": "invalid-date-string",
+      },
+    };
+    (client as unknown as { fetchWithPacing: (url: string) => Promise<unknown> }).fetchWithPacing = async () => malformedDateQuote;
+
+    const provider = new RealMarketDataProvider({ client });
+    await expect(provider.getSnapshot("NVDA")).rejects.toThrow(
+      "AlphaVantage returned malformed latest trading day",
+    );
+  });
+
+  it("RealMarketDataProvider marks isStale: true when receiving stale cached quote", async () => {
+    const client = new AlphaVantageClient({ apiKey: "test_key", cacheTtlMs: 60_000 });
+    const staleQuote = {
+      ...sampleQuote["Global Quote"],
+      isStale: true,
+    };
+    (client as unknown as { getGlobalQuote: (s: string) => Promise<unknown> }).getGlobalQuote = async () => staleQuote;
+
+    const provider = new RealMarketDataProvider({ client });
+    const snapshot = await provider.getSnapshot("NVDA");
+    expect(snapshot.isStale).toBe(true);
+  });
+
+  it("RealNarrativeProvider skips articles with malformed time_published instead of synthesizing current time", async () => {
+    const client = new AlphaVantageClient({ apiKey: "test_key", cacheTtlMs: 60_000 });
+    const mixedNews = {
+      items: "2",
+      feed: [
+        {
+          ...sampleNews.feed[0],
+          title: "Malformed Date Article",
+          time_published: "malformed",
+        },
+        {
+          ...sampleNews.feed[0],
+          title: "Valid Date Article",
+          time_published: "20260926T161439",
+        },
+      ],
+    };
+    (client as unknown as { fetchWithPacing: (url: string) => Promise<unknown> }).fetchWithPacing = async () => mixedNews;
+
+    const provider = new RealNarrativeProvider({ client });
+    const signals = await provider.getSignals("NVDA");
+    // Article with malformed date must be skipped!
+    expect(signals.length).toBe(1);
+    expect(signals[0].label).toContain("Valid Date Article");
+    expect(signals[0].capturedAt).toContain("2026-09-26");
+  });
+
   it("RealNarrativeProvider returns an empty array when feed is empty without synthetic baseline signals", async () => {
     const client = new AlphaVantageClient({ apiKey: "test_key", cacheTtlMs: 60_000 });
     // Empty news feed

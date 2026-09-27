@@ -16,7 +16,7 @@ export interface StockTokenProvider {
   getCanonicalAddress(symbol: string): Promise<string | null>;
 
   /** Reads the authoritative on-chain price feed (e.g. Chainlink oracle) */
-  getOnchainPrice(address: string): Promise<{ price: number; capturedAt: string }>;
+  getOnchainPrice(address: string): Promise<{ price: number; capturedAt: string; isStale?: boolean }>;
 
   /**
    * Discovers and syncs the token catalog from the external Robinhood Chain registry.

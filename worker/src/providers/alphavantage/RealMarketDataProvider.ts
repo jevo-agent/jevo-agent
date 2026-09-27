@@ -46,34 +46,64 @@ export class RealMarketDataProvider implements MarketDataProvider {
       );
     }
 
-    const high = parseFloat(raw["03. high"] ?? "0");
-    const low = parseFloat(raw["04. low"] ?? "0");
-    const volume24h = parseInt(raw["06. volume"] ?? "0", 10);
+    const rawHigh = raw["03. high"];
+    const rawLow = raw["04. low"];
+    if (!rawHigh || !rawLow) {
+      throw new Error(
+        `AlphaVantage returned missing high/low price for symbol ${uppercaseSymbol}`,
+      );
+    }
+    const high = parseFloat(rawHigh);
+    const low = parseFloat(rawLow);
+    if (isNaN(high) || isNaN(low) || high <= 0 || low <= 0 || high < low) {
+      throw new Error(
+        `AlphaVantage returned invalid high/low range [${rawLow}, ${rawHigh}] for symbol ${uppercaseSymbol}`,
+      );
+    }
+
+    const rawVolume = raw["06. volume"];
+    if (rawVolume === undefined || rawVolume === null || rawVolume.trim() === "") {
+      throw new Error(
+        `AlphaVantage returned missing volume for symbol ${uppercaseSymbol}`,
+      );
+    }
+    const volume24h = parseInt(rawVolume, 10);
+    if (isNaN(volume24h) || volume24h < 0) {
+      throw new Error(
+        `AlphaVantage returned invalid volume (${rawVolume}) for symbol ${uppercaseSymbol}`,
+      );
+    }
 
     // Calculate intraday volatility (high - low) / price, bounded between 0.005 and 1.0
-    const intradayRange =
-      high > 0 && low > 0 && high >= low ? (high - low) / price : 0.01;
+    const intradayRange = (high - low) / price;
     const volatility = Math.min(
       1.0,
       Math.max(0.005, Number(intradayRange.toFixed(4))),
     );
 
     const tradingDay = raw["07. latest trading day"];
-    if (!tradingDay) {
+    if (!tradingDay || tradingDay.trim() === "") {
       throw new Error(
         `AlphaVantage returned missing latest trading day for symbol ${uppercaseSymbol}`,
       );
     }
-    const capturedAt = new Date(tradingDay).toISOString();
+    const date = new Date(tradingDay);
+    if (isNaN(date.getTime())) {
+      throw new Error(
+        `AlphaVantage returned malformed latest trading day (${tradingDay}) for symbol ${uppercaseSymbol}`,
+      );
+    }
+    const capturedAt = date.toISOString();
 
     return {
       id: `mkt-${uppercaseSymbol.toLowerCase()}-${randomUUID().slice(0, 8)}`,
       symbol: uppercaseSymbol,
       price,
-      volume24h: isNaN(volume24h) || volume24h < 0 ? 0 : volume24h,
+      volume24h,
       volatility,
       capturedAt,
       source: "alphavantage",
+      ...(raw.isStale ? { isStale: true } : {}),
     };
   }
 
