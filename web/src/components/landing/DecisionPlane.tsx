@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from "react";
+import { useEffect, useMemo, useState, type CSSProperties, type MouseEvent } from "react";
 
 import type { Launch } from "@/types/launch";
 import type { Pairing } from "@/types/pairing";
@@ -8,10 +8,8 @@ import type { Stock } from "@/types/stock";
 
 const STAGES = ["Observe", "Decide", "Rank", "Pair", "Launch"] as const;
 const LOOP_MS = 12_000;
-const RESUME_MS = 5_000;
 
 type AssetSignal = { symbol: string; sourceY: number; rank?: number; score?: number; delta?: string };
-type Lock = { kind: "asset" | "pair" | "stage"; value: string } | null;
 
 const SOURCE_Y = [82, 150, 218, 286, 354, 422, 490] as const;
 const rankY: Record<number, number> = { 1: 162, 2: 226, 3: 290, 4: 354, 5: 418 };
@@ -25,12 +23,11 @@ interface DecisionPlaneProps {
 
 export function DecisionPlane({ asset, assets, pairing = null, launch = null }: DecisionPlaneProps) {
   const [autoStage, setAutoStage] = useState(0);
+  const [autoAssetIndex, setAutoAssetIndex] = useState(0);
   const [hoverAsset, setHoverAsset] = useState<string | null>(null);
   const [hoverPair, setHoverPair] = useState<string | null>(null);
   const [hoverStage, setHoverStage] = useState<number | null>(null);
-  const [lock, setLock] = useState<Lock>(null);
   const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
-  const resumeTimer = useRef<number | null>(null);
   const lastAvailableStage = launch && pairing ? 4 : pairing ? 3 : 2;
 
   const signals = useMemo<AssetSignal[]>(() => {
@@ -72,33 +69,36 @@ export function DecisionPlane({ asset, assets, pairing = null, launch = null }: 
     });
   }, [asset, assets]);
 
+  const rankedSignals = useMemo(() => {
+    return signals.filter((s): s is AssetSignal & { symbol: string; rank: number } =>
+      Boolean(s.symbol && s.rank && rankY[s.rank])
+    );
+  }, [signals]);
+
+  // Auto-cycle through ranked assets sequentially; pause when hovered ("setiap yang di hover dia akan diam")
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (rankedSignals.length <= 1) return;
+    if (hoverAsset) return;
+
+    const timer = window.setInterval(() => {
+      setAutoAssetIndex((prev) => (prev + 1) % rankedSignals.length);
+    }, 3800);
+
+    return () => window.clearInterval(timer);
+  }, [hoverAsset, rankedSignals.length]);
+
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const timer = window.setInterval(() => setAutoStage((stage) => stage >= lastAvailableStage ? 0 : stage + 1), LOOP_MS / STAGES.length);
     return () => window.clearInterval(timer);
   }, [lastAvailableStage]);
 
-  useEffect(() => {
-    const onKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key === "Escape") {
-        if (resumeTimer.current) window.clearTimeout(resumeTimer.current);
-        setLock(null);
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  const activeStage = hoverStage ?? Math.min(autoStage, lastAvailableStage);
+  const activePair = pairing ? hoverPair : null;
+  const focused = Boolean(hoverAsset || activePair);
 
-  useEffect(() => () => {
-    if (resumeTimer.current) window.clearTimeout(resumeTimer.current);
-  }, []);
-
-  const activeStage = lock?.kind === "stage" && Number(lock.value) <= lastAvailableStage ? Number(lock.value) : hoverStage ?? Math.min(autoStage, lastAvailableStage);
-  const activeAsset = lock?.kind === "asset" ? lock.value : hoverAsset;
-  const activePair = pairing ? (lock?.kind === "pair" ? lock.value : hoverPair) : null;
-  const focused = Boolean(activeAsset || activePair);
-
-  const effectiveSymbol = activeAsset || asset.symbol;
+  const effectiveSymbol = hoverAsset || rankedSignals[autoAssetIndex]?.symbol || asset.symbol;
   const selectedSignal =
     signals.find((s) => s.symbol === effectiveSymbol) ||
     signals.find((s) => s.symbol === asset.symbol) ||
@@ -118,17 +118,6 @@ export function DecisionPlane({ asset, assets, pairing = null, launch = null }: 
     return `M48 ${sourceY} C164 ${sourceY} 250 ${gateY} 348 ${gateY} L372 ${gateY} C430 ${gateY} 452 ${targetY} 510 ${targetY} L610 ${targetY}`;
   }, [selectedSignal, asset.symbol, pairing]);
 
-  function setTimedLock(nextLock: Lock) {
-    if (resumeTimer.current) window.clearTimeout(resumeTimer.current);
-    setLock(nextLock);
-    if (nextLock) {
-      resumeTimer.current = window.setTimeout(() => {
-        setLock(null);
-        resumeTimer.current = null;
-      }, RESUME_MS);
-    }
-  }
-
   function handleMouseMove(event: MouseEvent<SVGSVGElement>) {
     const rect = event.currentTarget.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
@@ -141,27 +130,6 @@ export function DecisionPlane({ asset, assets, pairing = null, launch = null }: 
     } else {
       setCursorPos(null);
     }
-  }
-
-  function handleAssetKey(event: KeyboardEvent<SVGGElement>, symbol: string) {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      setTimedLock({ kind: "asset", value: symbol });
-    }
-  }
-
-  function handlePairKey(event: KeyboardEvent<SVGGElement>) {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      const symbol = event.currentTarget.dataset.pairSymbol;
-      if (symbol) setTimedLock({ kind: "pair", value: symbol });
-    }
-  }
-
-  function handlePairClick(event: MouseEvent<SVGGElement>) {
-    event.stopPropagation();
-    const symbol = event.currentTarget.dataset.pairSymbol;
-    if (symbol) setTimedLock({ kind: "pair", value: symbol });
   }
 
   function assetClass(symbol: string) {
@@ -191,12 +159,12 @@ export function DecisionPlane({ asset, assets, pairing = null, launch = null }: 
     : "Market signals enter from the left, pass through the JEV decision gate, rank into an opportunity list, and resolve with no qualified pair or launch candidate this cycle.";
 
   return (
-    <div className={`decision-plane${lock ? " is-locked" : ""}${focused ? " has-focus" : ""}${lock?.kind === "stage" ? " is-stage-locked" : ""}`}>
+    <div className={`decision-plane${focused ? " has-focus" : ""}`}>
       <div className="decision-stage-controls" role="group" aria-label="Decision plane stages">
         {STAGES.map((stage, index) => {
           const available = index <= lastAvailableStage;
           const active = activeStage === index;
-          return <button key={stage} type="button" className={active ? "is-active" : undefined} disabled={!available} aria-pressed={lock?.kind === "stage" && lock.value === String(index)} onClick={() => setTimedLock({ kind: "stage", value: String(index) })} onMouseEnter={() => setHoverStage(index)} onMouseLeave={() => setHoverStage(null)}>{String(index + 1).padStart(2, "0")} {stage}</button>;
+          return <button key={stage} type="button" className={active ? "is-active" : undefined} disabled={!available} onMouseEnter={() => setHoverStage(index)} onMouseLeave={() => setHoverStage(null)}>{String(index + 1).padStart(2, "0")} {stage}</button>;
         })}
       </div>
 
@@ -205,7 +173,6 @@ export function DecisionPlane({ asset, assets, pairing = null, launch = null }: 
         viewBox="0 0 940 560"
         role="img"
         aria-labelledby="decision-plane-title decision-plane-description"
-        onClick={() => setTimedLock(null)}
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setCursorPos(null)}
       >
@@ -494,17 +461,19 @@ export function DecisionPlane({ asset, assets, pairing = null, launch = null }: 
           })}
         </g>
 
-        {/* Dynamic Active Selected Route & Signal Traveling Marker */}
+        {/* Dynamic Active Selected Route with progressive 0-100% line draw animation */}
         {activeTrajectoryPath ? (
           <g className="plane-active-route" aria-hidden="true">
             <path
+              key={effectiveSymbol}
               className="decision-route active-selected-route"
+              pathLength={100}
               d={activeTrajectoryPath}
             />
-            <circle key={selectedSignal?.symbol} className="active-signal-marker" r="3.2">
+            <circle key={`marker-${effectiveSymbol}`} className="active-signal-marker" r="3.2">
               <animateMotion
                 key={activeTrajectoryPath}
-                dur="7s"
+                dur="6.5s"
                 repeatCount="indefinite"
                 path={activeTrajectoryPath}
               />
@@ -563,12 +532,12 @@ export function DecisionPlane({ asset, assets, pairing = null, launch = null }: 
           </text>
         </g>
 
-        <g className="plane-rank-labels">
+        <g className="plane-rank-labels" aria-hidden="true">
           {signals.filter((signal): signal is AssetSignal & { symbol: string; rank: number; score: number } => Boolean(signal.symbol && signal.rank && typeof signal.score === "number" && rankY[signal.rank])).map((signal) => {
             const y = rankY[signal.rank];
             const focusedRank = effectiveSymbol === signal.symbol;
             const isPrimary = signal.symbol === asset.symbol;
-            return <g key={`rank-${signal.symbol}`} className={`plane-rank-row${isPrimary ? " is-primary" : ""}${focusedRank ? " is-focused" : ""}${activeAsset && !focusedRank ? " is-dimmed" : ""}`} role="button" tabIndex={0} aria-label={`Focus ${signal.symbol} ranked ${signal.rank}`} aria-pressed={effectiveSymbol === signal.symbol} onClick={(event) => { event.stopPropagation(); setTimedLock({ kind: "asset", value: signal.symbol }); }} onKeyDown={(event) => handleAssetKey(event, signal.symbol)} onMouseEnter={() => setHoverAsset(signal.symbol)} onMouseLeave={() => setHoverAsset(null)} onFocus={() => setHoverAsset(signal.symbol)} onBlur={() => setHoverAsset(null)}>
+            return <g key={`rank-${signal.symbol}`} className={`plane-rank-row${isPrimary ? " is-primary" : ""}${focusedRank ? " is-focused" : ""}${hoverAsset && !focusedRank ? " is-dimmed" : ""}`} onMouseEnter={() => setHoverAsset(signal.symbol)} onMouseLeave={() => setHoverAsset(null)}>
               <text x="510" y={y - 9}>{String(signal.rank).padStart(2, "0")} {signal.symbol} {signal.score.toFixed(1)}</text>
               {focusedRank ? (
                 isPrimary ? (
@@ -591,7 +560,7 @@ export function DecisionPlane({ asset, assets, pairing = null, launch = null }: 
         </g>
 
         <g className="plane-assets">
-          {signals.filter((signal) => Boolean(signal.symbol)).map((signal) => <g key={`asset-${signal.symbol}`} className={`${assetClass(signal.symbol)}${signal.symbol === asset.symbol ? " is-primary" : ""}`} role="button" tabIndex={0} aria-label={`Focus ${signal.symbol} signal path`} aria-pressed={effectiveSymbol === signal.symbol} onClick={(event) => { event.stopPropagation(); setTimedLock({ kind: "asset", value: signal.symbol }); }} onKeyDown={(event) => handleAssetKey(event, signal.symbol)} onMouseEnter={() => setHoverAsset(signal.symbol)} onMouseLeave={() => setHoverAsset(null)} onFocus={() => setHoverAsset(signal.symbol)} onBlur={() => setHoverAsset(null)}><text x="48" y={signal.sourceY + 4}>{signal.symbol}</text><circle cx="36" cy={signal.sourceY} r="2.5" /></g>)}
+          {signals.filter((signal) => Boolean(signal.symbol)).map((signal) => <g key={`asset-${signal.symbol}`} className={`${assetClass(signal.symbol)}${signal.symbol === asset.symbol ? " is-primary" : ""}`} aria-hidden="true" onMouseEnter={() => setHoverAsset(signal.symbol)} onMouseLeave={() => setHoverAsset(null)}><text x="48" y={signal.sourceY + 4}>{signal.symbol}</text><circle cx="36" cy={signal.sourceY} r="2.5" /></g>)}
         </g>
 
         {/* High-Precision JEV Output Register (Solid institutional status card) */}
@@ -612,7 +581,7 @@ export function DecisionPlane({ asset, assets, pairing = null, launch = null }: 
         </g> : null}
 
         <g className="plane-pair-labels">
-          {pairing ? pairLabels.map((pair, index) => <g key={pair.symbol} className={pairClass(pair.symbol)} role="button" tabIndex={0} data-pair-symbol={pair.symbol} aria-label={`Focus ${pair.label} pairing flow`} aria-pressed={activePair === pair.symbol} onClick={handlePairClick} onKeyDown={handlePairKey} onMouseEnter={() => setHoverPair(pair.symbol)} onMouseLeave={() => setHoverPair(null)} onFocus={() => setHoverPair(pair.symbol)} onBlur={() => setHoverPair(null)}><text className={pair.symbol === pairing.symbol ? "plane-pair-symbol selected" : "plane-pair-symbol"} x="714" y={94 + index * 62}>{pair.label}</text><text className="plane-note" x="714" y={111 + index * 62}>{pair.detail}</text></g>) : <g className="plane-pair-empty" aria-label="No qualified pair this cycle"><text className="plane-note" x="714" y="94">PAIR</text><text className="plane-accent" x="714" y="111">NO QUALIFIED PAIR</text><text className="plane-note" x="714" y="128">THIS CYCLE</text></g>}
+          {pairing ? pairLabels.map((pair, index) => <g key={pair.symbol} className={pairClass(pair.symbol)} aria-hidden="true" onMouseEnter={() => setHoverPair(pair.symbol)} onMouseLeave={() => setHoverPair(null)}><text className={pair.symbol === pairing.symbol ? "plane-pair-symbol selected" : "plane-pair-symbol"} x="714" y={94 + index * 62}>{pair.label}</text><text className="plane-note" x="714" y={111 + index * 62}>{pair.detail}</text></g>) : <g className="plane-pair-empty" aria-label="No qualified pair this cycle"><text className="plane-note" x="714" y="94">PAIR</text><text className="plane-accent" x="714" y="111">NO QUALIFIED PAIR</text><text className="plane-note" x="714" y="128">THIS CYCLE</text></g>}
         </g>
 
         <g className="plane-launch-label">
@@ -644,7 +613,7 @@ export function DecisionPlane({ asset, assets, pairing = null, launch = null }: 
       </svg>
 
       <div className="decision-plane-rail" aria-hidden="true"><span>Observe / Stock Tokens</span><span>Jev / Decision Gate</span><span>Pair / <b>{pairing ? `${pairing.stockSymbol} × ${pairing.symbol}` : "No qualified pair"}</b></span><span>Launch / <b>{launch ? launch.transactionState.replaceAll("_", " ") : "No launch candidate"}</b></span></div>
-      <span className="decision-plane-lock-status" aria-live="polite">{lock ? `Locked ${lock.kind}: ${lock.value}. Auto emphasis resumes in 5 seconds.` : "Automatic decision sequence active."}</span>
+      <span className="decision-plane-lock-status" aria-live="polite">{hoverAsset ? `Focusing ${hoverAsset} telemetry trajectory.` : "Autonomous decision sequence active."}</span>
     </div>
   );
 }
