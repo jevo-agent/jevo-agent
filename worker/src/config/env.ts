@@ -11,6 +11,12 @@ export const envSchema = z.object({
   LOG_LEVEL: z.enum(["trace", "debug", "info", "warn", "error", "fatal"]).default("info"),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   REDIS_URL: z.string().min(1, "REDIS_URL is required"),
+  /**
+   * Global/legacy master toggle and Section 19 Production Startup Guard.
+   * When NODE_ENV=production, PROVIDER_MODE cannot be "mock".
+   * For granular control per-provider in dev/test, use the specific toggles below:
+   * MARKET_DATA_MODE, NARRATIVE_MODE, STOCK_TOKEN_MODE, and JEV_MODE.
+   */
   PROVIDER_MODE: z.enum(["mock", "real"]).default("mock"),
   JEV_MODE: z.enum(["mock", "real"]).default("mock"),
   AI_GATEWAY_API_KEY: z.string().optional(),

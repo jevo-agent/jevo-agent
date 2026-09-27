@@ -50,17 +50,7 @@ export class RealNarrativeProvider implements NarrativeProvider {
 
     const feed = news.feed ?? [];
     if (feed.length === 0) {
-      return [
-        {
-          id: `sig-nar-${uppercaseSymbol.toLowerCase()}-base-${randomUUID().slice(0, 8)}`,
-          symbol: uppercaseSymbol,
-          kind: "NARRATIVE",
-          magnitude: 50,
-          label: `${uppercaseSymbol} Alpha Vantage news baseline`,
-          capturedAt: new Date().toISOString(),
-          source: "alphavantage",
-        },
-      ];
+      return [];
     }
 
     // Filter articles with specific sentiment for this symbol, take top 5

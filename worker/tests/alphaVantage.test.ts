@@ -78,6 +78,33 @@ describe("AlphaVantage Providers (BACKEND 12 + 13)", () => {
     expect(signals[0].source).toBe("alphavantage");
   });
 
+  it("RealMarketDataProvider throws explicit error on invalid or missing price/trading day without synthetic fallbacks", async () => {
+    const client = new AlphaVantageClient({ apiKey: "test_key", cacheTtlMs: 60_000 });
+    // Empty quote response
+    (client as unknown as { fetchWithPacing: (url: string) => Promise<unknown> }).fetchWithPacing = async () => ({
+      "Global Quote": {},
+    });
+
+    const provider = new RealMarketDataProvider({ client });
+    await expect(provider.getSnapshot("NVDA")).rejects.toThrow(
+      "AlphaVantage returned missing price for symbol NVDA",
+    );
+  });
+
+  it("RealNarrativeProvider returns an empty array when feed is empty without synthetic baseline signals", async () => {
+    const client = new AlphaVantageClient({ apiKey: "test_key", cacheTtlMs: 60_000 });
+    // Empty news feed
+    (client as unknown as { fetchWithPacing: (url: string) => Promise<unknown> }).fetchWithPacing = async () => ({
+      items: "0",
+      feed: [],
+    });
+
+    const provider = new RealNarrativeProvider({ client });
+    const signals = await provider.getSignals("NVDA");
+    expect(signals).toEqual([]);
+    expect(signals.length).toBe(0);
+  });
+
   it("AlphaVantageClient caches responses within TTL to conserve the 25 req/day quota", async () => {
     let callCount = 0;
     const client = new AlphaVantageClient({ apiKey: "test_key", cacheTtlMs: 10_000 });
