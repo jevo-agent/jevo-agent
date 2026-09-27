@@ -996,7 +996,7 @@ function OpportunityField({
 
   const history =
     inspectedAsset.scoreHistory.length > 0
-      ? inspectedAsset.scoreHistory
+      ? inspectedAsset.scoreHistory.slice(-24)
       : [{ score: inspectedAsset.opportunityScore }];
   const startScore = history[0]?.score ?? inspectedAsset.previousScore;
   const endScore = inspectedAsset.opportunityScore;
@@ -1263,28 +1263,36 @@ function OpportunityField({
             {activePosition && (
               <g className="field-transition-story" aria-label={`State transition telemetry for ${activePosition.asset.symbol}`}>
                 {/* Vector Trail from Previous to Current */}
-                {activePosition.previousX !== null && activePosition.previousY !== null ? <line
-                  x1={activePosition.previousX}
-                  y1={activePosition.previousY}
-                  x2={activePosition.x}
-                  y2={activePosition.y}
-                  className="field-selected-vector"
-                  markerEnd="url(#field-arrow)"
-                /> : null}
+                {activePosition.previousX !== null &&
+                activePosition.previousY !== null &&
+                Math.hypot(activePosition.x - activePosition.previousX, activePosition.y - activePosition.previousY) > 2 ? (
+                  <line
+                    x1={activePosition.previousX}
+                    y1={activePosition.previousY}
+                    x2={activePosition.x}
+                    y2={activePosition.y}
+                    className="field-selected-vector"
+                    markerEnd="url(#field-arrow)"
+                  />
+                ) : null}
 
                 {/* Previous State Anchor at (previousX, previousY) */}
-                {activePosition.previousX !== null && activePosition.previousY !== null ? <g className="field-prev-anchor" transform={`translate(${activePosition.previousX}, ${activePosition.previousY})`}>
-                  <circle cx="0" cy="0" r="7" className="prev-anchor-ring" />
-                  <circle cx="0" cy="0" r="2.5" className="prev-anchor-core" />
-                  <text
-                    x="0"
-                    y={activePosition.previousY > activePosition.y ? 18 : -12}
-                    textAnchor="middle"
-                    className="field-prev-tag"
-                  >
-                    PREV {activePosition.asset.previousRank === null || activePosition.asset.previousScore === null ? "UNAVAILABLE" : `#${String(activePosition.asset.previousRank).padStart(2, "0")} (${activePosition.asset.previousScore.toFixed(1)})`}
-                  </text>
-                </g> : null}
+                {activePosition.previousX !== null &&
+                activePosition.previousY !== null &&
+                Math.hypot(activePosition.x - activePosition.previousX, activePosition.y - activePosition.previousY) > 2 ? (
+                  <g className="field-prev-anchor" transform={`translate(${activePosition.previousX}, ${activePosition.previousY})`}>
+                    <circle cx="0" cy="0" r="7" className="prev-anchor-ring" />
+                    <circle cx="0" cy="0" r="2.5" className="prev-anchor-core" />
+                    <text
+                      x="0"
+                      y={activePosition.previousY > activePosition.y ? 18 : -12}
+                      textAnchor="middle"
+                      className="field-prev-tag"
+                    >
+                      PREV {activePosition.asset.previousRank === null || activePosition.asset.previousScore === null ? "UNAVAILABLE" : `#${String(activePosition.asset.previousRank).padStart(2, "0")} (${activePosition.asset.previousScore.toFixed(1)})`}
+                    </text>
+                  </g>
+                ) : null}
 
                 {/* Restrained JEV Decision Marker along the transition trajectory */}
                 <g
@@ -1431,8 +1439,14 @@ function OpportunityField({
                 <span className="spark-tag current">
                   CURRENT <b>{endScore.toFixed(1)}</b>
                 </span>
-                <span className={`spark-delta ${scoreDelta === null || scoreDelta >= 0 ? "up" : "dn"}`}>
-                  {scoreDelta === null ? "—" : scoreDelta >= 0 ? `▲ +${scoreDelta.toFixed(1)}` : `▼ ${Math.abs(scoreDelta).toFixed(1)}`} {scoreDelta === null ? "" : "PTS"}
+                <span className={`spark-delta ${scoreDelta === null || Math.abs(scoreDelta) < 0.05 ? "flat" : scoreDelta > 0 ? "up" : "dn"}`}>
+                  {scoreDelta === null
+                    ? "—"
+                    : Math.abs(scoreDelta) < 0.05
+                      ? "0.0 PTS (STEADY)"
+                      : scoreDelta > 0
+                        ? `▲ +${scoreDelta.toFixed(1)} PTS`
+                        : `▼ ${Math.abs(scoreDelta).toFixed(1)} PTS`}
                 </span>
                 <span className="spark-conf">
                   CONFIDENCE <b>{inspectedAsset.confidence === null ? "—" : `${inspectedAsset.confidence}%`}</b>
@@ -1442,31 +1456,86 @@ function OpportunityField({
 
             <div className="sparkline-svg-wrap">
               <svg viewBox="0 0 840 68" preserveAspectRatio="none" className="sparkline-svg">
+                <defs>
+                  <linearGradient id="sparkline-fill-grad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.20" />
+                    <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.0" />
+                  </linearGradient>
+                </defs>
                 {/* Sparkline horizontal guide lines */}
                 <line x1="0" y1="14" x2="840" y2="14" stroke="rgba(255, 255, 255, 0.05)" strokeDasharray="3 3" />
-                <line x1="0" y1="36" x2="840" y2="36" stroke="rgba(255, 255, 255, 0.05)" strokeDasharray="3 3" />
-                <line x1="0" y1="58" x2="840" y2="58" stroke="rgba(255, 255, 255, 0.08)" />
+                <line x1="0" y1="36" x2="840" y2="36" stroke="rgba(255, 255, 255, 0.08)" strokeDasharray="3 3" />
+                <line x1="0" y1="58" x2="840" y2="58" stroke="rgba(255, 255, 255, 0.12)" />
 
                 {(() => {
+                  const scores = history.map((h) => h.score);
+                  const rawMin = Math.min(...scores);
+                  const rawMax = Math.max(...scores);
+                  const variance = rawMax - rawMin;
+                  const isFlat = variance < 0.2;
+
+                  // Center flat scores cleanly on the middle guide line (y = 36)
+                  // When dynamic, enforce at least a 10pt span so sub-point noise is never amplified into a zigzag
+                  const midVal = (rawMin + rawMax) / 2;
+                  const span = Math.max(variance, 10);
+                  const minVal = isFlat ? midVal - 5 : midVal - span * 0.55;
+                  const maxVal = isFlat ? midVal + 5 : midVal + span * 0.55;
+
                   const pts = history.map((h, i) => {
                     const x = history.length === 1 ? 420 : 20 + (i / (history.length - 1)) * 800;
-                    const minVal = 70;
-                    const maxVal = 100;
-                    const y = 58 - ((clamp(h.score, minVal, maxVal) - minVal) / (maxVal - minVal)) * 46;
+                    const norm = (clamp(h.score, minVal, maxVal) - minVal) / Math.max(maxVal - minVal, 1e-4);
+                    const y = 58 - norm * 44;
                     return { x, y, score: h.score };
                   });
+
                   const pathD = pts.reduce((acc, p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `${acc} L ${p.x} ${p.y}`), "");
+                  const areaD = `${pathD} L ${pts[pts.length - 1]?.x ?? 820} 58 L ${pts[0]?.x ?? 20} 58 Z`;
+
                   return (
                     <g>
+                      <path d={areaD} fill="url(#sparkline-fill-grad)" />
                       <path d={pathD} fill="none" stroke="var(--accent)" strokeWidth="1.8" />
-                      {pts.map((p, idx) => (
-                        <g key={idx}>
-                          <circle cx={p.x} cy={p.y} r="3" fill="#08090a" stroke="var(--accent)" strokeWidth="1.5" />
-                          <text x={p.x} y={p.y - 7} textAnchor="middle" className="spark-pt-val">
-                            {p.score.toFixed(1)}
-                          </text>
-                        </g>
-                      ))}
+                      {pts.map((p, idx) => {
+                        const isStart = idx === 0;
+                        const isEnd = idx === pts.length - 1;
+                        const isSignificant =
+                          pts.length <= 12 ||
+                          isStart ||
+                          isEnd ||
+                          (!isFlat && idx > 0 && Math.abs(p.score - pts[idx - 1].score) >= 0.5);
+
+                        return (
+                          <g key={idx}>
+                            <circle
+                              cx={p.x}
+                              cy={p.y}
+                              r={isStart || isEnd ? 3.5 : 2.5}
+                              fill="#08090a"
+                              stroke="var(--accent)"
+                              strokeWidth="1.5"
+                            />
+                            {isSignificant ? (
+                              <text x={p.x} y={p.y - 7} textAnchor="middle" className="spark-pt-val">
+                                {p.score.toFixed(1)}
+                              </text>
+                            ) : null}
+                          </g>
+                        );
+                      })}
+                      {isFlat && pts.length > 6 && (
+                        <text
+                          x="420"
+                          y="22"
+                          textAnchor="middle"
+                          fill="var(--accent)"
+                          opacity="0.6"
+                          fontSize="9"
+                          fontFamily="var(--mono)"
+                          letterSpacing="0.08em"
+                        >
+                          STEADY EVALUATION · 0.0 PTS DRIFT ({pts.length} CYCLES)
+                        </text>
+                      )}
                     </g>
                   );
                 })()}
