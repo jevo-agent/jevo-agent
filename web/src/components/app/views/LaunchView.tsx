@@ -23,14 +23,14 @@ const STANDBY_STAGES = [
 ];
 
 const STANDBY_POLICY_CHECKS = [
-  { id: "policy-stock", label: "Valid Stock Token", desc: "Identitas aset kanonikal diverifikasi di Robinhood Chain." },
-  { id: "policy-pair", label: "Approved Pairing Asset", desc: "Aset pairing diizinkan oleh batas kebijakan protokol." },
-  { id: "policy-metadata", label: "Token Metadata", desc: "Nama token, simbol ticker, dan paket metadata valid." },
-  { id: "policy-contract", label: "Contract Parameters", desc: "Parameter peluncuran dalam batas izin Phase 0." },
-  { id: "policy-limits", label: "Launch Limits", desc: "Batas likuiditas awal dan batas volume dipatuhi." },
-  { id: "policy-duplicate", label: "Duplicate Check", desc: "Verifikasi anti-tabrakan; tidak ada token ganda." },
-  { id: "policy-permission", label: "Agent Permission", desc: "Izin eksekutor terbatas valid untuk tindakan yang disetujui." },
-  { id: "policy-simulation", label: "Transaction Simulation", desc: "Simulasi preflight zero-revert terverifikasi." },
+  { id: "policy-stock", label: "Valid Stock Token", desc: "Canonical asset identity verified on Robinhood Chain." },
+  { id: "policy-pair", label: "Approved Pairing Asset", desc: "Pairing asset permitted by protocol policy boundaries." },
+  { id: "policy-metadata", label: "Token Metadata", desc: "Token name, ticker symbol, and metadata payload valid." },
+  { id: "policy-contract", label: "Contract Parameters", desc: "Launch parameters within Phase 0 permission boundaries." },
+  { id: "policy-limits", label: "Launch Limits", desc: "Initial liquidity limits and volume thresholds respected." },
+  { id: "policy-duplicate", label: "Duplicate Check", desc: "Collision verification; no duplicate active tokens." },
+  { id: "policy-permission", label: "Agent Permission", desc: "Scoped executor permissions valid for approved action." },
+  { id: "policy-simulation", label: "Transaction Simulation", desc: "Zero-revert preflight simulation verified." },
 ];
 
 export function LaunchView({ launch, pairing, agent }: LaunchViewProps) {
@@ -72,11 +72,11 @@ export function LaunchView({ launch, pairing, agent }: LaunchViewProps) {
             {/* Preserved explanatory text */}
             <div className="launch-standby-readout">
               <span className="label">Autonomous launch / Phase 0 Standby</span>
-              <h3>Belum ada launch aktif</h3>
-              <p>Countdown dan checkpoint launch akan aktif setelah kandidat pairing disetujui dan dijadwalkan oleh operator.</p>
+              <h3>No active launch candidate</h3>
+              <p>Launch countdown and checkpoints will activate once a pairing candidate is approved and scheduled by the operator.</p>
             </div>
 
-            <p className="label" style={{ marginTop: "24px" }}>Phase 0 / Urutan Siklus Peluncuran (Standby)</p>
+            <p className="label" style={{ marginTop: "24px" }}>Phase 0 / Launch Cycle Sequence (Standby)</p>
             <ol className="lcycle">
               {STANDBY_STAGES.map((stage) => (
                 <li key={stage.id} className="lcycle-standby">

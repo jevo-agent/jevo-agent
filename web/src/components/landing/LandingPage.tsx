@@ -60,8 +60,30 @@ export function LandingPage(data: LandingPageProps) {
           ranking={data.ranking}
           cycle={data.agent.activeCycle}
         />
-        {data.featuredPairing ? <PairingSection pairing={data.featuredPairing} asset={data.assets.find((asset) => asset.symbol === data.featuredPairing?.stockSymbol) ?? data.featuredAsset} /> : <LandingUnavailableSection id="pairings" index="03" title="No qualified pairing this cycle" highlight="pairing" copy="JEV completed the opportunity evaluation without publishing a qualified pairing candidate." />}
-        {data.launch && data.featuredPairing ? <PipelineSection launch={data.launch} pairing={data.featuredPairing} asset={data.assets.find((asset) => asset.symbol === data.featuredPairing?.stockSymbol) ?? data.featuredAsset} /> : <LandingUnavailableSection id="pipeline" index="04" title="No launch candidate this cycle" highlight="launch" copy="Launch readiness remains unavailable until a pairing candidate is approved and scheduled." />}
+        {data.featuredPairing ? (
+          <PairingSection
+            pairing={data.featuredPairing}
+            asset={data.assets.find((asset) => asset.symbol === data.featuredPairing?.stockSymbol) ?? data.featuredAsset}
+          />
+        ) : (
+          <LandingPairingStandbySection
+            agent={data.agent}
+            assets={data.assets}
+            featuredAsset={data.featuredAsset}
+          />
+        )}
+        {data.launch && data.featuredPairing ? (
+          <PipelineSection
+            launch={data.launch}
+            pairing={data.featuredPairing}
+            asset={data.assets.find((asset) => asset.symbol === data.featuredPairing?.stockSymbol) ?? data.featuredAsset}
+          />
+        ) : (
+          <LandingPipelineStandbySection
+            agent={data.agent}
+            asset={data.featuredAsset}
+          />
+        )}
         <MemorySection
           asset={data.featuredAsset}
           memory={data.memory}
@@ -110,20 +132,311 @@ function LandingHeader() {
   );
 }
 
-function LandingUnavailableSection({ id, index, title, highlight, copy }: { id: string; index: string; title: string; highlight?: string; copy: string }) {
-  const highlightIndex = highlight ? title.toLowerCase().indexOf(highlight.toLowerCase()) : -1;
-  const highlightedTitle = highlightIndex >= 0 && highlight
-    ? <>{title.slice(0, highlightIndex)}<em>{title.slice(highlightIndex, highlightIndex + highlight.length)}</em>{title.slice(highlightIndex + highlight.length)}</>
-    : title;
+const PAIRING_FORMULA_COMPONENTS = [
+  { key: "narrative", label: "Narrative Momentum", weight: 20 },
+  { key: "meme", label: "Meme Concept Attention", weight: 20 },
+  { key: "cultural", label: "Cultural Alignment", weight: 15 },
+  { key: "crypto", label: "Crypto Adjacency", weight: 15 },
+  { key: "timing", label: "Market Timing", weight: 15 },
+  { key: "stockRelevance", label: "Stock Relevance", weight: 15 },
+] as const;
+
+function LandingPairingStandbySection({
+  agent,
+  assets,
+  featuredAsset,
+}: {
+  agent: AgentRuntime;
+  assets: Stock[];
+  featuredAsset: Stock;
+}) {
+  const topCandidates = assets.slice(0, 3);
+
   return (
-    <section className="section" id={id}>
+    <section className="section" id="pairings">
       <div className="wrap">
         <div className="sec-head">
           <div className="left">
-            <p className="label sec-index">{index} / Protocol state</p>
-            <h2 className="h2">{highlightedTitle}</h2>
+            <p className="label sec-index">03 / Stock × meme pairing</p>
+            <h2 className="h2 text-4xl!">
+              One stock. <br /> Multiple <em>cultural expressions.</em>
+            </h2>
           </div>
-          <p className="body">{copy}</p>
+          <p className="body">
+            Rank alone never picks the meme. JEV continuously screens top-ranked equity tokens against cultural meme concepts. When no candidate achieves dual-threshold convergence in the active cycle, the engine maintains disciplined standby.
+          </p>
+        </div>
+
+        {/* Operational Telemetry Banner */}
+        <div className="landing-standby-banner">
+          <div className="landing-standby-header">
+            <div className="landing-standby-badge">
+              <span className="live-dot" aria-hidden="true" />
+              <span>JEV EVALUATION ACTIVE · MEME CONVERGENCE STANDBY</span>
+            </div>
+            <span className="label">THRESHOLD: RANK ≤ 3 OR PROMOTE</span>
+            <span className="label">CYCLE {formatCycle(agent.activeCycle)} · 0 PROPOSALS PUBLISHED</span>
+          </div>
+        </div>
+
+        {/* Main 2-Column Grid */}
+        <div className="landing-standby-grid">
+          {/* Left: Architecture & 6-Component Deterministic Formula */}
+          <div className="landing-standby-column">
+            <div className="landing-standby-card">
+              <span className="label">01 / QUALIFICATION GATE</span>
+              <h4>Top 3 Rank or Explicit PROMOTE</h4>
+              <p>
+                Underlying equity tokens must hold rank #01–#03 or clear JEV&apos;s qualitative qualification curve (Opportunity Score ≥ 85.0). Currently tracking {featuredAsset.symbol} (#{String(featuredAsset.currentRank).padStart(2, "0")}) and monitored equity assets.
+              </p>
+            </div>
+
+            <div className="landing-standby-card">
+              <div className="landing-card-header">
+                <span className="label">02 / PAIRING SCORE FORMULA</span>
+                <span className="label">DETERMINISTIC 6-DIMENSION MODEL</span>
+              </div>
+              <h4>Arithmetic Composite (0–100)</h4>
+              <p>
+                JEV evaluates 6 qualitative dimensions; the composite pairing score is calculated deterministically with fixed arithmetic weights:
+              </p>
+              <div className="landing-formula-grid">
+                {PAIRING_FORMULA_COMPONENTS.map((comp) => (
+                  <div key={comp.key} className="landing-formula-pill">
+                    <span className="landing-pill-name">{comp.label}</span>
+                    <b className="landing-pill-weight">{comp.weight}%</b>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="landing-standby-card">
+              <span className="label">03 / OPERATOR CURATION GATE</span>
+              <h4>Mandatory Manual Review</h4>
+              <p>
+                All pairing proposals enter as <b>AGENT_PROPOSED</b>. Autonomous deployment without explicit human operator approval is strictly prohibited.
+              </p>
+            </div>
+          </div>
+
+          {/* Right: Monitored Assets Radar & 4-Pillar Thesis Blueprint */}
+          <div className="landing-standby-column">
+            <div className="landing-standby-card">
+              <div className="landing-card-header">
+                <span className="label">MONITORED EQUITY PIPELINE</span>
+                <span className="label">AWAITING MEME MATCH</span>
+              </div>
+              <div className="landing-candidate-list">
+                {topCandidates.map((asset) => (
+                  <div key={asset.symbol} className="landing-candidate-row">
+                    <div className="landing-candidate-rank">
+                      #{String(asset.currentRank).padStart(2, "0")}
+                    </div>
+                    <div className="landing-candidate-main">
+                      <div className="landing-candidate-title">
+                        <b>{asset.symbol}</b>
+                        <span>{asset.name.replace(" Stock Token", "")}</span>
+                      </div>
+                      <span className="landing-candidate-status">
+                        ● Scanning for Meme Concept
+                      </span>
+                    </div>
+                    <div className="landing-candidate-score">
+                      <span className="label">SCORE</span>
+                      <b>{asset.opportunityScore.toFixed(1)}</b>
+                    </div>
+                    <Link
+                      href={`/stock/${asset.symbol}`}
+                      className="landing-candidate-link"
+                      aria-label={`Inspect ${asset.symbol} signals`}
+                    >
+                      Audit signals ↗
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="landing-standby-card">
+              <div className="landing-card-header">
+                <span className="label">PAIRING THESIS ARCHITECTURE</span>
+                <span className="label">4 KEY CRITERIA</span>
+              </div>
+              <div className="landing-blueprint-grid">
+                <div className="landing-blueprint-item">
+                  <span className="label">01 / WHY STOCK</span>
+                  <h5>Equity Momentum</h5>
+                  <p>Real-world liquidity volume and macroeconomic narrative acceleration.</p>
+                </div>
+                <div className="landing-blueprint-item">
+                  <span className="label">02 / WHY MEME</span>
+                  <h5>Cultural Resonance</h5>
+                  <p>Viral attention velocity, community depth, and crypto-native sentiment.</p>
+                </div>
+                <div className="landing-blueprint-item">
+                  <span className="label">03 / WHY PAIR</span>
+                  <h5>Thematic Synergy</h5>
+                  <p>Narrative cohesion and cross-market attention reflexivity.</p>
+                </div>
+                <div className="landing-blueprint-item">
+                  <span className="label">04 / WHY NOW</span>
+                  <h5>Timing & Density</h5>
+                  <p>Urgent catalyst convergence and optimal launch liquidity window.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Section Footer */}
+        <div className="landing-standby-foot">
+          <span className="label">
+            Pairing theses generate autonomously each cycle when dual-threshold criteria are satisfied.
+          </span>
+          <Link className="btn btn-sm" href="/pairing">
+            Explore pairing marketplace →
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const STANDBY_PIPELINE_STAGES = [
+  { id: "CANDIDATE_SELECTED", point: "T-24H", desc: "Opportunity and pair thesis locked for launch review." },
+  { id: "NARRATIVE_VALIDATION", point: "T-18H", desc: "Narrative pressure and why-now context verified above launch threshold." },
+  { id: "PAIRING_VALIDATION", point: "T-12H", desc: "Pairing score, metadata, Stock Token identity, and policy constraints validated." },
+  { id: "CONTRACT_PREPARATION", point: "T-06H", desc: "Approved launch parameters assembled for Launch Executor and Pons adapter." },
+  { id: "FINAL_POLICY_CHECK", point: "T-01H", desc: "Permissions, transaction simulation, launch limits, and guardian approval verified." },
+  { id: "CONTROLLED_EXECUTION", point: "T-00", desc: "Approved action submitted through restricted Launch Executor." },
+];
+
+function LandingPipelineStandbySection({
+  agent,
+  asset,
+}: {
+  agent: AgentRuntime;
+  asset: Stock;
+}) {
+  const [selectedStageIndex, setSelectedStageIndex] = useState(0);
+
+  return (
+    <section className="section" id="pipeline">
+      <div className="wrap">
+        <div className="sec-head">
+          <div className="left">
+            <p className="label sec-index">04 / Autonomous pipeline</p>
+            <h2 className="h2">
+              From signal
+              <br />
+              to <em>controlled launch.</em>
+            </h2>
+          </div>
+          <p className="body">
+            Autonomous does not mean unrestricted. The agent can only execute pre-approved actions through an 8-gate policy contract. When no pairing proposal has been approved and scheduled by the operator, execution remains strictly locked in standby.
+          </p>
+        </div>
+
+        {/* 6-Stage Lifecycle Stepper */}
+        <ol className="stages">
+          {STANDBY_PIPELINE_STAGES.map((source, index) => (
+            <li
+              key={source.id}
+              className={`stage ${selectedStageIndex === index ? "inspect" : ""}`}
+            >
+              <button
+                type="button"
+                className="stage-control"
+                aria-current={selectedStageIndex === index ? "step" : undefined}
+                aria-pressed={selectedStageIndex === index}
+                onClick={() => setSelectedStageIndex(index)}
+              >
+                <span className="state">Standby · {source.point}</span>
+                <h3>{source.id.replaceAll("_", " ")}</h3>
+                <p>{source.desc}</p>
+              </button>
+            </li>
+          ))}
+        </ol>
+
+        {/* Split Grid */}
+        <div className="pipe-grid">
+          <div className="pipeline-timeline">
+            <p className="label">
+              Next agent launch / <b>STANDBY (AWAITING PROPOSAL)</b>
+            </p>
+            <div className="clock">
+              STANDBY
+            </div>
+            <p className="label">Simulated 24h verification sequence / phase 0 · cycle {formatCycle(agent.activeCycle)}</p>
+            <ol className="cycle">
+              {STANDBY_PIPELINE_STAGES.map((stage, index) => (
+                <li
+                  key={stage.id}
+                  className={selectedStageIndex === index ? "inspect" : ""}
+                >
+                  <span className="t">{stage.point}</span>
+                  <span>{stage.desc}</span>
+                  <span className="s">Standby</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+
+          <div className="pipeline-policy">
+            <div className="facts">
+              <div className="fact">
+                <span className="label">Opportunity / pairing</span>
+                <span className="v">{asset.symbol} ({asset.opportunityScore.toFixed(1)}) / STANDBY</span>
+              </div>
+              <div className="fact">
+                <span className="label">Pre-launch checks</span>
+                <span className="v">0 / 8 passed (Standby)</span>
+              </div>
+              <div className="fact">
+                <span className="label">Pairing asset</span>
+                <span className="v">Awaiting operator-approved pairing</span>
+              </div>
+              <div className="fact">
+                <span className="label">Agent wallet</span>
+                <span className="v">JEVO Agent Wallet / scoped permissions</span>
+              </div>
+              <div className="fact">
+                <span className="label">Guardian approval</span>
+                <span className="v">REQUIRED (Operator gate)</span>
+              </div>
+              <div className="fact">
+                <span className="label">Transaction</span>
+                <span className="v accent">Not submitted (Standby)</span>
+              </div>
+            </div>
+
+            <div className="perm">
+              <Permission
+                title="Agent can"
+                items={[
+                  "Deploy the approved token template",
+                  "Initialise an approved pool",
+                  "Call the approved launch function",
+                ]}
+              />
+              <Permission
+                title="Agent cannot"
+                items={[
+                  "Make arbitrary transfers",
+                  "Withdraw treasury",
+                  "Change launch parameters",
+                ]}
+                restricted
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="pipeline-link">
+          <Link className="btn btn-sm" href="/launch">
+            Open launch workspace →
+          </Link>
         </div>
       </div>
     </section>

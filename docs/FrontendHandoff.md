@@ -248,30 +248,67 @@ converted into synthetic numeric counters.
 - **Candidate Evaluation**: Iterates over 10 candidate directional slots around each coordinate, applying penalties for boundary proximity and label collisions, prioritized by opportunity score.
 - **Leader Lines**: Renders subtle dashed leader lines (`.field-label-leader`) when offset relaxation exceeds 20px.
 
-### Landing Page Section 05 Boundary
-- Section 05 (`MemorySection` / `DecisionHistoryChart`) resides directly in [`web/src/components/landing/LandingPage.tsx`](file:///Users/fmpangestu/Codingan/WEB3/FIRST%20PROJECT/Jevo/web/src/components/landing/LandingPage.tsx), which also contains the landing hero currently managed by Codex.
-- To prevent merge collisions, modifications to `LandingPage.tsx` are paused; [`web/src/lib/memory/grouping.ts`](file:///Users/fmpangestu/Codingan/WEB3/FIRST%20PROJECT/Jevo/web/src/lib/memory/grouping.ts) is ready for import once hero updates are complete.
+### Landing Page Scope & Ownership Correction
+- **Ownership Scope**: Codex serves exclusively for auditing / diagnosis. All frontend execution — including the landing page (`/`), app shell, and sub-pages — is owned and implemented directly via AGY CLI. The previous restriction pausing landing page edits is **revoked**.
+- **Unified Workspace & Landing Harmony**: Landing page sections 03 (`Stock × meme pairing`) and 04 (`Autonomous pipeline`) now match the visual richness of sections 01, 02, and 05 while preserving the concise teaser context of the public landing page.
 
 ---
 
-## 8. Rich Standby Architecture for `/pairing` and `/launch`
+## 8. Rich Standby Architecture for `/pairing`, `/launch`, and Landing Sections 03/04
 
 ### `/pairing` Standby & Governance Architecture
 - **Genuinely 0 Proposals State**: Replaces minimal empty notices with an active operational telemetry workspace. Explains that the agent is actively scanning each cycle and waiting for convergence between qualified Stock Tokens and culturally viable meme concepts.
 - **Explicit Threshold Criteria**:
   - **Qualification Gate**: Asset rank in Top 3 (`Rank <= 3`) or explicit JEV qualitative decision `PROMOTE`.
-  - **Scoring Formula**: 5-factor deterministic model (Narrative Resonance 30%, Cultural Fit 25%, Meme Velocity 20%, Crypto Adjacency 15%, Structural Viability 10%).
+  - **Scoring Formula (Synchronized with `worker/src/pairing/evaluate.ts`)**: 6-component deterministic arithmetic model (`computePairingScore`):
+    - Narrative Momentum: 20% (`weights.narrative = 0.2`)
+    - Meme Concept Attention: 20% (`weights.meme = 0.2`)
+    - Cultural Alignment: 15% (`weights.cultural = 0.15`)
+    - Crypto Adjacency: 15% (`weights.crypto = 0.15`)
+    - Market Timing: 15% (`weights.timing = 0.15`)
+    - Stock Relevance: 15% (`weights.stockRelevance = 0.15`)
+    - *Note: JEV evaluates the 6 qualitative dimension scores [0–100]; the composite pairing score is blended deterministically using these exact weights.*
   - **Governance Mandate**: Human curation required. Autonomous deployment without human approval is strictly prohibited.
-- **Monitored Candidates Table**: Directly reads real opportunity data from the active cycle query, presenting candidate assets (e.g. NVDA, TSLA, PLTR) with their canonical rank, opportunity score, JEV decision, signal context, and direct link to audit signals (`/stock/[symbol]`).
+- **Monitored Candidates Table**: Directly reads real opportunity data from the active cycle query, presenting candidate assets (e.g. GME, TSLA, NVDA) with their canonical rank, opportunity score, JEV decision, signal context, and direct link to audit signals (`/stock/[symbol]`).
 - **4-Pillar Thesis Blueprint**: Shows the 4 formal thesis questions generated when a match occurs (*Why Stock*, *Why Meme*, *Why Pair*, *Why Now*).
 - **Autonomous Pipeline Stepper**: Visual 4-stage pipeline from signal scan to launch queue, highlighting the locked operator curation gate.
-- **Distinct `AGENT_PROPOSED` State**: When candidate proposals exist in the database awaiting admin curation, a dedicated governance alert (`🔒 GERBANG KURASI ADMIN AKTIF`) is displayed, distinguishing pending proposals from both the "0 proposals" standby state and approved pairings. Individual proposal cards and the thesis inspector clearly indicate `AWAITING HUMAN OPERATOR REVIEW`.
+- **Distinct `AGENT_PROPOSED` State**: When candidate proposals exist in the database awaiting admin curation, a dedicated governance alert (`🔒 OPERATOR CURATION GATE ACTIVE`) is displayed, distinguishing pending proposals from both the "0 proposals" standby state and approved pairings. Individual proposal cards and the thesis inspector clearly indicate `AWAITING HUMAN OPERATOR REVIEW`.
 
 ### `/launch` Standby Lifecycle & Policy Architecture
-- **Preserved Explanatory Text**: Retains the canonical explanation ("Countdown dan checkpoint launch akan aktif setelah kandidat pairing disetujui dan dijadwalkan oleh operator").
+- **Preserved Explanatory Text**: Retains the canonical explanation ("Launch countdown and checkpoints will activate once a pairing candidate is approved and scheduled by the operator.").
 - **Visual 6-Stage Lifecycle Preview**: Renders the complete 6-stage lifecycle strip (`T-24H` to `T-00`: `CANDIDATE_SELECTED`, `NARRATIVE_VALIDATION`, `PAIRING_VALIDATION`, `CONTRACT_PREPARATION`, `FINAL_POLICY_CHECK`, `CONTROLLED_EXECUTION`) in dimmed standby mode, giving operators and users immediate understanding of the launch shape before an active cycle begins.
 - **Standby Readout & Scoped Permissions**: Displays a dimmed tabular `STANDBY` readout, protocol facts panel (opportunity score, check counters, asset status, agent wallet, guardian approval, transaction state), and strict permission boundaries (`Agent can` vs `Agent cannot`).
 - **8 Pre-Launch Policy Checks Grid**: Renders a dedicated 8-card grid showing all safety gates (Valid Stock Token, Approved Pairing Asset, Token Metadata, Contract Parameters, Launch Limits, Duplicate Check, Agent Permission, Transaction Simulation) in standby verification mode.
+
+---
+
+## 9. Landing Page Sections 03/04 Visual Harmonization & Global English Rule
+
+### Landing Section 03 & 04 Standby Teasers
+- **Problem Resolved**: When `featuredPairing` or `launch` was `null` in canonical runtime, sections 03 and 04 rendered bare two-line headers with large blank whitespace voids below and to the right, inconsistent with the visual density of sections 01, 02, and 05.
+- **Section 03 (`LandingPairingStandbySection`)**:
+  - Live operational telemetry banner with active cycle and threshold indicators (`RANK ≤ 3 OR PROMOTE`).
+  - Balanced 2-column grid:
+    - **Left Column**: Evaluation architecture gates (Top 3 rank / PROMOTE qualification gate, deterministic 6-dimension formula pills with exact 20%/20%/15%/15%/15%/15% weights, mandatory operator curation gate).
+    - **Right Column**: Monitored equity candidates list with live rank badges, opportunity scores, and direct deep-links to `/stock/[symbol]`, plus a 4-pillar thesis blueprint teaser (*Why Stock*, *Why Meme*, *Why Pair*, *Why Now*).
+  - Clean footer with direct routing to `/pairing`.
+- **Section 04 (`LandingPipelineStandbySection`)**:
+  - 6-stage horizontal lifecycle stepper (`CANDIDATE_SELECTED` through `CONTROLLED_EXECUTION` from `T-24H` to `T-00`).
+  - Split grid featuring simulated 24h cycle sequence with interactive stage inspection, tabular `STANDBY` clock, pre-launch facts matrix, and scoped permissions (`Agent can` vs `Agent cannot`).
+  - Clean footer with direct routing to `/launch`.
+
+### Standing Rule: 100% User-Facing English Across All Routes
+- Enforced global English standard across all routes (`/`, `/app`, `/pairing`, `/launch`, `/stock/[symbol]`, `/memory`, `/admin`).
+- Translated all legacy Indonesian strings across `/app`, `/pairing`, `/launch`, and `OverviewView`:
+  - `PairingsView.tsx`: Standby headers, thresholds, candidate table headers, thesis blueprint questions, pipeline stepper, governance alert badges, and curation banner tags.
+  - `LaunchView.tsx`: 8 policy check descriptions, standby readouts, and sequence captions.
+  - `OverviewView.tsx`: Section empty states for unpopulated pairings and launches.
+
+### Verification & Visual Artifacts
+- **Screenshots Captured**:
+  - Before: `docs/screenshots/before_landing_sec03_04.png`, `docs/screenshots/before_landing_sec03.png`, `docs/screenshots/before_landing_sec04.png`, `docs/screenshots/before_pairing.png`, `docs/screenshots/before_launch.png`
+  - After: `docs/screenshots/after_landing_sec03.png`, `docs/screenshots/after_landing_sec04.png`, `docs/screenshots/after_pairing.png`, `docs/screenshots/after_launch.png`
+- **Build Status**: `bun --filter web lint` (0 errors), `bun --filter web build` (passed, 21 routes compiled cleanly).
 
 ---
 
@@ -291,6 +328,7 @@ converted into synthetic numeric counters.
 - Do not expose hidden model reasoning or API secrets.
 - Do not redesign the visual system without an explicit request.
 - Do not add autonomous mainnet execution.
+- Maintain 100% English user-facing text across all pages.
 
 ## NEXT AGENT TASK
 

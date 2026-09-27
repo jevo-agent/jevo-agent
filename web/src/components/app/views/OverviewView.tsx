@@ -394,8 +394,8 @@ export function OverviewView({
         {pairings.length === 0 ? (
           <div className="app-pairing-focus empty-state">
             <span className="label">Pairing candidate / Intelligence</span>
-            <h3>Belum ada pairing yang diusulkan</h3>
-            <p>Sistem belum mengusulkan kandidat pairing token untuk peluang pasar yang sedang dipantau.</p>
+            <h3>No pairing proposals published</h3>
+            <p>The agent has not published a qualified pairing candidate for currently monitored market opportunities.</p>
             <Link className="side-cta" href="/pairing">
               Inspect pairing workspace →
             </Link>
@@ -1744,8 +1744,8 @@ function LaunchSummary({
         <div className="app-launch-readout">
           <span className="label">Autonomous launch / Phase 0</span>
           <div className="clock-big">STANDBY</div>
-          <h3>Belum ada launch aktif</h3>
-          <p>Countdown dan checkpoint launch akan aktif setelah kandidat pairing disetujui dan dijadwalkan oleh operator.</p>
+          <h3>No active launch candidate</h3>
+          <p>Launch countdown and checkpoints will activate once a pairing candidate is approved and scheduled by the operator.</p>
           <Link className="side-cta" href="/launch">
             Open launch workspace →
           </Link>
