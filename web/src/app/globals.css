@@ -937,6 +937,15 @@ a, button { touch-action: manipulation; }
 .landing-root .plane-output-frame line { stroke: var(--line); stroke-width: 1; }
 .landing-root .plane-output-frame text { fill: var(--dim); font-family: var(--mono); font-size: 8px; letter-spacing: .13em; }
 .landing-root .plane-scan-sweep { stroke: var(--accent); stroke-width: .7; opacity: 0; transform: translateX(-180px); transform-box: fill-box; transform-origin: center; animation: plane-scan-sweep 12s ease-in-out infinite; }
+.landing-root .plane-orbit-field { pointer-events: none; }
+.landing-root .orbit-contour { fill: none; stroke: rgb(2 198 165 / 16%); stroke-width: 1.4; stroke-linecap: round; stroke-dasharray: 0.1 7; }
+.landing-root .orbit-contour-accent { fill: none; stroke: rgb(2 198 165 / 26%); stroke-width: 1.8; stroke-linecap: round; stroke-dasharray: 0.1 8.5; }
+.landing-root .orbit-contour-faint { fill: none; stroke: rgb(220 235 215 / 10%); stroke-width: 1.2; stroke-linecap: round; stroke-dasharray: 0.1 7.5; }
+.landing-root .orbit-particle { fill: var(--accent); }
+.landing-root .orbit-particle-faint { fill: var(--text-2); opacity: 0.45; }
+.landing-root .orbit-particle-glow { fill: var(--accent); filter: url(#orbit-glow); }
+.landing-root .orbit-telemetry { fill: var(--dim); font-family: var(--mono); font-size: 7.5px; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.72; }
+.landing-root .orbit-tick { stroke: rgb(2 198 165 / 32%); stroke-width: 0.8; }
 .landing-root .decision-plane-rail { display: flex; justify-content: space-between; gap: 16px; border-top: 1px solid var(--line); padding: 12px 0 0 8%; color: var(--muted); font-family: var(--mono); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; opacity: .42; }
 .landing-root .decision-plane-rail b { color: var(--accent); font-weight: 500; }
 .landing-root .decision-plane-lock-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -1034,6 +1043,7 @@ a, button { touch-action: manipulation; }
   .landing-root .decision-plane .signal-route { opacity: .18; }
   .landing-root .decision-plane .output-route:not(.is-primary) { opacity: .08; }
   .landing-root .decision-plane .nvda-route, .landing-root .decision-plane .gpu-route, .landing-root .decision-plane .launch-route { opacity: .72; }
+  .landing-root .decision-plane .plane-orbit-particles { display: none; }
 }
 
 /* Agent memory field ---------------------------------------------------- */

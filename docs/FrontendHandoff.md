@@ -378,6 +378,16 @@ Four independent frontend enhancements and bugfixes were executed, verified, and
 
 ---
 
+## Landing Hero DecisionPlane Orbit Field Enhancement
+
+- **Visual Upgrade**: Added an autonomous point-cloud orbit and wave topography field to the right-side visual in `DecisionPlane.tsx`.
+- **Grounded Conceptual Motif**: Grounded in `docs/BRIEF.md` (§0, §2 Layer A: OBSERVE & Layer B: DECIDE, §4/5 UI Philosophy, §7 Live Agent Terminal). The orbital field represents the continuous cloud of ~2.8k monitored equity assets and streaming multi-dimensional market signals in perpetual evaluation around the Jev Decision Core.
+- **Asynchronous Motion**: 32 distinct glowing micro-particles on 12 distinct trajectories (5 core orbital rings + 10 undulating topographic wave contours + 2 counter-flow streams), each driven by coprime durations and unique phase offsets for organic, non-repeating motion.
+- **Strict Data Integrity**: Preserved 100% canonical API bindings (no fake tickers, ranks, or scores introduced).
+- **Screenshots**: Before `docs/screenshots/before_hero_orbit.png` → After `docs/screenshots/after_hero_orbit.png`.
+
+---
+
 ### Remaining work (priority order)
 
 1. Select and verify real market/provider sources for `PROVIDER_MODE=real`.

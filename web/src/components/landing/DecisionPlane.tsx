@@ -180,6 +180,268 @@ export function DecisionPlane({ asset, assets, pairing = null, launch = null }: 
           <line className="plane-scan-sweep" x1="420" y1="24" x2="420" y2="530" />
         </g>
 
+        {/* Grounded Autonomous Orbit Field (BRIEF.md Layer A: Observe / Multi-Signal Scanning Universe) */}
+        <g className="plane-orbit-field" aria-hidden="true">
+          <defs>
+            {/* Smooth glowing filter for prominent foreground particle nodes */}
+            <filter id="orbit-glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="1.8" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+
+            {/* Orbit paths: continuous closed orbits around Decision Core (x: 360, y: 280) */}
+            <path id="orbit-ring-inner" d="M 285 280 C 285 220, 435 215, 435 280 C 435 345, 285 340, 285 280 Z" />
+            <path id="orbit-ring-mid" d="M 220 280 C 220 185, 500 180, 500 280 C 500 380, 220 375, 220 280 Z" />
+            <path id="orbit-ring-outer" d="M 170 295 C 170 150, 565 140, 565 275 C 565 410, 170 420, 170 295 Z" />
+            <path id="orbit-ring-scanning" d="M 195 315 C 195 125, 740 115, 740 265 C 740 425, 195 445, 195 315 Z" />
+            <path id="orbit-ring-counter" d="M 680 285 C 680 155, 250 170, 250 275 C 250 395, 680 415, 680 285 Z" />
+
+            {/* Topographical Wave Contours (Continuous asset scanning streams across market coordinate planes) */}
+            <path id="topo-wave-1" d="M 140 110 C 260 55, 380 145, 510 75 C 640 25, 750 115, 890 65" />
+            <path id="topo-wave-2" d="M 120 150 C 250 95, 390 195, 530 115 C 660 60, 770 160, 910 110" />
+            <path id="topo-wave-3" d="M 110 190 C 240 145, 370 235, 510 160 C 640 100, 760 205, 920 155" />
+            <path id="topo-wave-4" d="M 130 235 C 260 190, 400 275, 535 205 C 665 145, 785 245, 905 195" />
+            <path id="topo-wave-5" d="M 145 280 C 275 240, 410 320, 545 255 C 675 195, 795 285, 915 245" />
+            <path id="topo-wave-6" d="M 135 330 C 270 285, 415 370, 550 305 C 680 250, 800 340, 925 295" />
+            <path id="topo-wave-7" d="M 150 380 C 285 330, 425 425, 560 360 C 690 305, 810 400, 930 350" />
+            <path id="topo-wave-8" d="M 170 435 C 305 380, 445 475, 580 410 C 705 360, 815 450, 915 405" />
+            <path id="topo-wave-9" d="M 190 480 C 330 435, 470 515, 605 460 C 725 415, 825 495, 920 455" />
+            <path id="topo-wave-10" d="M 215 525 C 360 485, 490 545, 630 495 C 750 455, 840 520, 930 490" />
+
+            {/* Counter-directional flow paths */}
+            <path id="topo-wave-4-rev" d="M 905 195 C 785 245, 665 145, 535 205 C 400 275, 260 190, 130 235" />
+            <path id="topo-wave-7-rev" d="M 930 350 C 810 400, 690 305, 560 360 C 425 425, 285 330, 150 380" />
+          </defs>
+
+          {/* 1. Dotted Point-Cloud Topography Mesh (Micro-Dots via stroke-dasharray) */}
+          <g className="plane-orbit-tracks">
+            <path d="M 140 110 C 260 55, 380 145, 510 75 C 640 25, 750 115, 890 65" className="orbit-contour-faint" />
+            <path d="M 120 150 C 250 95, 390 195, 530 115 C 660 60, 770 160, 910 110" className="orbit-contour" />
+            <path d="M 110 190 C 240 145, 370 235, 510 160 C 640 100, 760 205, 920 155" className="orbit-contour-accent" />
+            <path d="M 130 235 C 260 190, 400 275, 535 205 C 665 145, 785 245, 905 195" className="orbit-contour" />
+            <path d="M 145 280 C 275 240, 410 320, 545 255 C 675 195, 795 285, 915 245" className="orbit-contour-accent" />
+            <path d="M 135 330 C 270 285, 415 370, 550 305 C 680 250, 800 340, 925 295" className="orbit-contour" />
+            <path d="M 150 380 C 285 330, 425 425, 560 360 C 690 305, 810 400, 930 350" className="orbit-contour-accent" />
+            <path d="M 170 435 C 305 380, 445 475, 580 410 C 705 360, 815 450, 915 405" className="orbit-contour" />
+            <path d="M 190 480 C 330 435, 470 515, 605 460 C 725 415, 825 495, 920 455" className="orbit-contour-faint" />
+            <path d="M 215 525 C 360 485, 490 545, 630 495 C 750 455, 840 520, 930 490" className="orbit-contour-faint" />
+
+            {/* Inclined orbital rings encircling the JEV Decision Core */}
+            <path d="M 285 280 C 285 220, 435 215, 435 280 C 435 345, 285 340, 285 280 Z" className="orbit-contour-accent" />
+            <path d="M 220 280 C 220 185, 500 180, 500 280 C 500 380, 220 375, 220 280 Z" className="orbit-contour" />
+            <path d="M 170 295 C 170 150, 565 140, 565 275 C 565 410, 170 420, 170 295 Z" className="orbit-contour-accent" />
+            <path d="M 195 315 C 195 125, 740 115, 740 265 C 740 425, 195 445, 195 315 Z" className="orbit-contour" />
+            <path d="M 680 285 C 680 155, 250 170, 250 275 C 250 395, 680 415, 680 285 Z" className="orbit-contour-faint" />
+          </g>
+
+          {/* 2. Tactical Radar Crosses & Micro Telemetry (Topological Context) */}
+          <g className="plane-orbit-hud">
+            <g transform="translate(210, 58)">
+              <line x1="-4" y1="0" x2="4" y2="0" className="orbit-tick" />
+              <line x1="0" y1="-4" x2="0" y2="4" className="orbit-tick" />
+              <text x="8" y="3" className="orbit-telemetry">OBSERVE // MULTI-SIGNAL ORBIT</text>
+            </g>
+            <g transform="translate(450, 62)">
+              <line x1="-4" y1="0" x2="4" y2="0" className="orbit-tick" />
+              <line x1="0" y1="-4" x2="0" y2="4" className="orbit-tick" />
+              <text x="8" y="3" className="orbit-telemetry">EVALUATION FIELD // 2.8K MONITORED</text>
+            </g>
+            <g transform="translate(450, 512)">
+              <line x1="-4" y1="0" x2="4" y2="0" className="orbit-tick" />
+              <line x1="0" y1="-4" x2="0" y2="4" className="orbit-tick" />
+              <text x="8" y="3" className="orbit-telemetry">DECISION TOPOLOGY // ACTIVE LOOP</text>
+            </g>
+            <g transform="translate(730, 512)">
+              <line x1="-4" y1="0" x2="4" y2="0" className="orbit-tick" />
+              <line x1="0" y1="-4" x2="0" y2="4" className="orbit-tick" />
+              <text x="8" y="3" className="orbit-telemetry">SURVEILLANCE // NOMINAL</text>
+            </g>
+          </g>
+
+          {/* 3. Autonomous Orbiting & Streaming Micro-Particles (Monitored Asset Signals) */}
+          {/* Each particle has a coprime duration and unique phase offset so motion is smooth, asynchronous & organic */}
+          <g className="plane-orbit-particles">
+            {/* Core Orbit Ring Particles */}
+            <circle r="1.8" className="orbit-particle-glow">
+              <animateMotion dur="7.3s" repeatCount="indefinite" begin="-1.7s">
+                <mpath href="#orbit-ring-inner" />
+              </animateMotion>
+            </circle>
+            <circle r="1.1" className="orbit-particle" opacity="0.45">
+              <animateMotion dur="7.3s" repeatCount="indefinite" begin="-5.2s">
+                <mpath href="#orbit-ring-inner" />
+              </animateMotion>
+            </circle>
+
+            <circle r="2.0" className="orbit-particle-glow">
+              <animateMotion dur="11.7s" repeatCount="indefinite" begin="-3.4s">
+                <mpath href="#orbit-ring-mid" />
+              </animateMotion>
+            </circle>
+            <circle r="1.3" className="orbit-particle" opacity="0.55">
+              <animateMotion dur="11.7s" repeatCount="indefinite" begin="-8.6s">
+                <mpath href="#orbit-ring-mid" />
+              </animateMotion>
+            </circle>
+
+            <circle r="2.2" className="orbit-particle-glow">
+              <animateMotion dur="17.9s" repeatCount="indefinite" begin="-4.2s">
+                <mpath href="#orbit-ring-outer" />
+              </animateMotion>
+            </circle>
+            <circle r="1.4" className="orbit-particle" opacity="0.6">
+              <animateMotion dur="17.9s" repeatCount="indefinite" begin="-11.8s">
+                <mpath href="#orbit-ring-outer" />
+              </animateMotion>
+            </circle>
+            <circle r="1.0" className="orbit-particle-faint">
+              <animateMotion dur="17.9s" repeatCount="indefinite" begin="-15.3s">
+                <mpath href="#orbit-ring-outer" />
+              </animateMotion>
+            </circle>
+
+            <circle r="2.3" className="orbit-particle-glow">
+              <animateMotion dur="23.1s" repeatCount="indefinite" begin="-6.5s">
+                <mpath href="#orbit-ring-scanning" />
+              </animateMotion>
+            </circle>
+            <circle r="1.5" className="orbit-particle" opacity="0.65">
+              <animateMotion dur="23.1s" repeatCount="indefinite" begin="-14.2s">
+                <mpath href="#orbit-ring-scanning" />
+              </animateMotion>
+            </circle>
+            <circle r="1.1" className="orbit-particle-faint">
+              <animateMotion dur="23.1s" repeatCount="indefinite" begin="-19.7s">
+                <mpath href="#orbit-ring-scanning" />
+              </animateMotion>
+            </circle>
+
+            <circle r="1.7" className="orbit-particle-glow">
+              <animateMotion dur="19.3s" repeatCount="indefinite" begin="-7.1s">
+                <mpath href="#orbit-ring-counter" />
+              </animateMotion>
+            </circle>
+            <circle r="1.2" className="orbit-particle" opacity="0.5">
+              <animateMotion dur="19.3s" repeatCount="indefinite" begin="-16.4s">
+                <mpath href="#orbit-ring-counter" />
+              </animateMotion>
+            </circle>
+
+            {/* Topographic Wave Streaming Particles */}
+            <circle r="1.5" className="orbit-particle" opacity="0.7">
+              <animateMotion dur="9.7s" repeatCount="indefinite" begin="-2.5s">
+                <mpath href="#topo-wave-1" />
+              </animateMotion>
+            </circle>
+            <circle r="1.0" className="orbit-particle-faint">
+              <animateMotion dur="9.7s" repeatCount="indefinite" begin="-7.3s">
+                <mpath href="#topo-wave-1" />
+              </animateMotion>
+            </circle>
+
+            <circle r="1.9" className="orbit-particle-glow">
+              <animateMotion dur="13.1s" repeatCount="indefinite" begin="-4.8s">
+                <mpath href="#topo-wave-2" />
+              </animateMotion>
+            </circle>
+            <circle r="1.2" className="orbit-particle" opacity="0.5">
+              <animateMotion dur="13.1s" repeatCount="indefinite" begin="-10.2s">
+                <mpath href="#topo-wave-2" />
+              </animateMotion>
+            </circle>
+
+            <circle r="2.1" className="orbit-particle-glow">
+              <animateMotion dur="14.9s" repeatCount="indefinite" begin="-3.1s">
+                <mpath href="#topo-wave-3" />
+              </animateMotion>
+            </circle>
+            <circle r="1.3" className="orbit-particle" opacity="0.6">
+              <animateMotion dur="14.9s" repeatCount="indefinite" begin="-9.4s">
+                <mpath href="#topo-wave-3" />
+              </animateMotion>
+            </circle>
+
+            <circle r="1.8" className="orbit-particle-glow">
+              <animateMotion dur="16.3s" repeatCount="indefinite" begin="-5.9s">
+                <mpath href="#topo-wave-4" />
+              </animateMotion>
+            </circle>
+            <circle r="1.1" className="orbit-particle-faint">
+              <animateMotion dur="16.3s" repeatCount="indefinite" begin="-12.7s">
+                <mpath href="#topo-wave-4" />
+              </animateMotion>
+            </circle>
+
+            <circle r="2.4" className="orbit-particle-glow">
+              <animateMotion dur="12.7s" repeatCount="indefinite" begin="-1.8s">
+                <mpath href="#topo-wave-5" />
+              </animateMotion>
+            </circle>
+            <circle r="1.4" className="orbit-particle" opacity="0.65">
+              <animateMotion dur="12.7s" repeatCount="indefinite" begin="-7.6s">
+                <mpath href="#topo-wave-5" />
+              </animateMotion>
+            </circle>
+
+            <circle r="1.7" className="orbit-particle" opacity="0.7">
+              <animateMotion dur="15.7s" repeatCount="indefinite" begin="-4.4s">
+                <mpath href="#topo-wave-6" />
+              </animateMotion>
+            </circle>
+            <circle r="1.2" className="orbit-particle-faint">
+              <animateMotion dur="15.7s" repeatCount="indefinite" begin="-11.1s">
+                <mpath href="#topo-wave-6" />
+              </animateMotion>
+            </circle>
+
+            <circle r="2.0" className="orbit-particle-glow">
+              <animateMotion dur="18.1s" repeatCount="indefinite" begin="-6.2s">
+                <mpath href="#topo-wave-7" />
+              </animateMotion>
+            </circle>
+            <circle r="1.3" className="orbit-particle" opacity="0.55">
+              <animateMotion dur="18.1s" repeatCount="indefinite" begin="-13.9s">
+                <mpath href="#topo-wave-7" />
+              </animateMotion>
+            </circle>
+
+            <circle r="1.6" className="orbit-particle" opacity="0.6">
+              <animateMotion dur="21.1s" repeatCount="indefinite" begin="-8.3s">
+                <mpath href="#topo-wave-8" />
+              </animateMotion>
+            </circle>
+            <circle r="1.1" className="orbit-particle-faint">
+              <animateMotion dur="21.1s" repeatCount="indefinite" begin="-16.8s">
+                <mpath href="#topo-wave-8" />
+              </animateMotion>
+            </circle>
+
+            <circle r="1.5" className="orbit-particle" opacity="0.5">
+              <animateMotion dur="25.7s" repeatCount="indefinite" begin="-9.7s">
+                <mpath href="#topo-wave-9" />
+              </animateMotion>
+            </circle>
+
+            <circle r="1.4" className="orbit-particle-faint">
+              <animateMotion dur="28.3s" repeatCount="indefinite" begin="-15.4s">
+                <mpath href="#topo-wave-10" />
+              </animateMotion>
+            </circle>
+
+            {/* Counter-Flow Particles (Right to Left turbulence) */}
+            <circle r="1.9" className="orbit-particle-glow">
+              <animateMotion dur="17.1s" repeatCount="indefinite" begin="-3.8s">
+                <mpath href="#topo-wave-4-rev" />
+              </animateMotion>
+            </circle>
+            <circle r="1.6" className="orbit-particle-glow">
+              <animateMotion dur="20.7s" repeatCount="indefinite" begin="-10.5s">
+                <mpath href="#topo-wave-7-rev" />
+              </animateMotion>
+            </circle>
+          </g>
+        </g>
+
         <g className="plane-signal-inputs" aria-hidden="true">
           {signals.map((signal, index) => {
             const gateY = 280 + (signal.sourceY - 280) * 0.47;
