@@ -312,6 +312,55 @@ converted into synthetic numeric counters.
 
 ---
 
+## 10. Memory Grouping, Score Trajectory Chart Fix, Launch Teal Palette, & Overview Standby Cards
+
+Four independent frontend enhancements and bugfixes were executed, verified, and committed individually:
+
+### 1. Landing Section 05: Agent Memory Consolidation (`LandingPage.tsx`)
+- **Problem**: In Landing Section 05 ("05 / AGENT MEMORY"), identical raw audit records repeating every minute created a wall-of-repetition in both the bottom 5-slot snapshot row and the right-hand DECISIONS LOG.
+- **Implementation**:
+  - Integrated `groupMemoryRecords()` from `web/src/lib/memory/grouping.ts` into `LandingPage.tsx`.
+  - Replaced the repeating raw 7-item log with consolidated interval cards showing cycle spans (e.g., `UNCHANGED · 41 CYCLES (32m)`), decision transition badges, and clean collapsed entries.
+  - Replaced the repetitive 5-button `.snap` grid with a streamlined timeline rail (`.mem-timeline-bar`) displaying the evaluation window start, a steady rail badge, and the current active state.
+  - Updated the bottom transition metrics to reflect the real evaluation window and drift statistics.
+- **Commit**: `602cd47` (`feat(fe): consolidate landing memory section using grouped audit records`)
+- **Screenshots**: Before `docs/screenshots/before_landing_sec05.png` → After `docs/screenshots/after_landing_sec05.png`
+
+### 2. Bugfix: Market Map Score Trajectory Flat-Data SVG Rendering (`OverviewView.tsx`)
+- **Problem**: When an asset had flat scores across cycles (e.g., NVDA with `score = 89.1` or `score = 63.7` with zero/sub-0.2 variance), the SVG trajectory chart rendered overlapping text collisions and bottom-axis clamping artifacts due to hardcoded bounds (`minVal = 70; maxVal = 100`). Additionally, zero-displacement assets produced self-intersecting 2D vectors.
+- **Implementation**:
+  - Sliced trajectory history to the latest 24 cycles (`inspectedAsset.scoreHistory.slice(-24)`).
+  - Replaced hardcoded [70, 100] bounds with a safe dynamic domain: when data is flat (`variance < 0.2`), centered the trajectory cleanly on the middle guide line (`y = 36`) with a safe ±5 pt domain window (`minVal = midVal - 5`, `maxVal = midVal + 5`), preventing division-by-zero, bottom clamping, and micro-noise amplification.
+  - Added a soft area fill gradient (`url(#sparkline-fill-grad)`) underneath the curve.
+  - Filtered overlapping numeric labels, displaying a centered `STEADY EVALUATION · 0.0 PTS DRIFT (N CYCLES)` indicator.
+  - Suppressed zero-length 2D field transition vectors (`Math.hypot(x - prevX, y - prevY) <= 2`) to eliminate marker arrow collisions.
+- **Commit**: `17edf64` (`fix(fe): fix flat-data svg rendering on market map score trajectory chart`)
+- **Screenshots**: Before `docs/screenshots/before_chart_nvda.png` → After `docs/screenshots/after_chart_nvda.png`
+
+### 3. Launch Stage Typography & White+Teal Palette (`LaunchView.tsx`, `globals.css`)
+- **Problem**: Stage descriptions on `/launch` were rendered in a faded, dead gray (`var(--muted)`), making the pipeline feel inactive and disconnected from the application's white+teal visual design language.
+- **Implementation**:
+  - Upgraded stage descriptions (`.lstage p`, `.lstage--standby p`, `.lcycle-standby span:nth-child(2)`) to muted teal (`rgb(2 198 165 / 65%)` and `rgb(2 198 165 / 75%)`).
+  - Preserved clear semantic hierarchy between "standby vs active":
+    - **Standby / Pending Stages**: Muted low-opacity teal (`65%–75%`), signaling unreached states with high legibility.
+    - **Active Stages (`.now`)**: Full-intensity vibrant neon teal (`var(--accent)`).
+    - **Completed Stages (`.done`)**: Clean soft white (`var(--text-2)`).
+  - Extended muted teal styling to the 8 pre-launch policy cards (`.policy-card--standby p`).
+- **Commit**: `e414622` (`feat(fe): apply muted teal palette to launch stage descriptions`)
+- **Screenshots**: Before `docs/screenshots/before_launch_styling.png` → After `docs/screenshots/after_launch_styling.png`
+
+### 4. Overview Pairing & Launch Standby Summary Cards (`OverviewView.tsx`)
+- **Problem**: In `/app` Overview, the empty-state cards for Pairing (Section 05) and Launch (Section 06) were overly sparse ("No pairing proposals published" + 1 line), feeling jarring compared to the standalone pages.
+- **Implementation**:
+  - Enriched the Pairing summary card with 2–3 lines of operational context detailing multi-signal scanning across 6 scoring dimensions, the dual qualification threshold (Rank #01–#03 or Opportunity Score ≥ 85.0), and Phase 0 conviction hold.
+  - Enriched the Launch summary card with 2–3 lines explaining the 6-stage lifecycle (T-24H to T-00), containment under Phase 0, and the requirement of all 8 policy gates passing before Robinhood Chain deployment.
+  - Added monospace parameter badges (`6 EVALUATION DIMENSIONS`, `DUAL THRESHOLD`, `8 POLICY GATES MANDATORY`, `ROBINHOOD CHAIN PHASE 0`).
+  - Retained all existing CTA links (`Inspect pairing workspace →`, `Open launch workspace →`).
+- **Commit**: `b224b9d` (`feat(fe): enrich overview pairing and launch standby cards with operational context`)
+- **Screenshots**: Before `docs/screenshots/before_overview_cards.png` → After `docs/screenshots/after_overview_cards.png`
+
+---
+
 ### Remaining work (priority order)
 
 1. Select and verify real market/provider sources for `PROVIDER_MODE=real`.
