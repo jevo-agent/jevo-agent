@@ -29,6 +29,7 @@ export function DecisionPlane({ asset, assets, pairing = null, launch = null }: 
   const [hoverPair, setHoverPair] = useState<string | null>(null);
   const [hoverStage, setHoverStage] = useState<number | null>(null);
   const [lock, setLock] = useState<Lock>(null);
+  const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
   const resumeTimer = useRef<number | null>(null);
   const lastAvailableStage = launch && pairing ? 4 : pairing ? 3 : 2;
 
@@ -97,6 +98,26 @@ export function DecisionPlane({ asset, assets, pairing = null, launch = null }: 
   const activePair = pairing ? (lock?.kind === "pair" ? lock.value : hoverPair) : null;
   const focused = Boolean(activeAsset || activePair);
 
+  const effectiveSymbol = activeAsset || asset.symbol;
+  const selectedSignal =
+    signals.find((s) => s.symbol === effectiveSymbol) ||
+    signals.find((s) => s.symbol === asset.symbol) ||
+    signals[4];
+
+  const activeGateY = selectedSignal ? 280 + (selectedSignal.sourceY - 280) * 0.47 : 315;
+
+  const activeTrajectoryPath = useMemo(() => {
+    if (!selectedSignal || !selectedSignal.symbol) return "";
+    const sourceY = selectedSignal.sourceY;
+    const gateY = 280 + (sourceY - 280) * 0.47;
+    const targetY = selectedSignal.rank && rankY[selectedSignal.rank] ? rankY[selectedSignal.rank] : sourceY;
+
+    if (selectedSignal.symbol === asset.symbol && pairing) {
+      return `M48 ${sourceY} C164 ${sourceY} 250 ${gateY} 348 ${gateY} L372 ${gateY} C430 ${gateY} 452 ${targetY} 510 ${targetY} L610 ${targetY} C660 ${targetY} 670 88 714 88 L782 88 C820 88 828 120 828 176 L828 246 C828 304 814 354 772 382 L690 382`;
+    }
+    return `M48 ${sourceY} C164 ${sourceY} 250 ${gateY} 348 ${gateY} L372 ${gateY} C430 ${gateY} 452 ${targetY} 510 ${targetY} L610 ${targetY}`;
+  }, [selectedSignal, asset.symbol, pairing]);
+
   function setTimedLock(nextLock: Lock) {
     if (resumeTimer.current) window.clearTimeout(resumeTimer.current);
     setLock(nextLock);
@@ -105,6 +126,20 @@ export function DecisionPlane({ asset, assets, pairing = null, launch = null }: 
         setLock(null);
         resumeTimer.current = null;
       }, RESUME_MS);
+    }
+  }
+
+  function handleMouseMove(event: MouseEvent<SVGSVGElement>) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const scaleX = 940 / rect.width;
+    const scaleY = 560 / rect.height;
+    const x = Math.round((event.clientX - rect.left) * scaleX);
+    const y = Math.round((event.clientY - rect.top) * scaleY);
+    if (x >= 0 && x <= 940 && y >= 0 && y <= 560) {
+      setCursorPos({ x, y });
+    } else {
+      setCursorPos(null);
     }
   }
 
@@ -130,7 +165,7 @@ export function DecisionPlane({ asset, assets, pairing = null, launch = null }: 
   }
 
   function assetClass(symbol: string) {
-    const selected = activeAsset === symbol;
+    const selected = effectiveSymbol === symbol;
     const dimmed = focused && !selected;
     return `plane-asset${selected ? " is-focused" : ""}${dimmed ? " is-dimmed" : ""}`;
   }
@@ -165,7 +200,15 @@ export function DecisionPlane({ asset, assets, pairing = null, launch = null }: 
         })}
       </div>
 
-      <svg className="decision-plane-svg" viewBox="0 0 940 560" role="img" aria-labelledby="decision-plane-title decision-plane-description" onClick={() => setTimedLock(null)}>
+      <svg
+        className="decision-plane-svg"
+        viewBox="0 0 940 560"
+        role="img"
+        aria-labelledby="decision-plane-title decision-plane-description"
+        onClick={() => setTimedLock(null)}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setCursorPos(null)}
+      >
         <title id="decision-plane-title">JEVO autonomous decision plane</title>
         <desc id="decision-plane-description">{description}</desc>
         <g className="plane-guides" aria-hidden="true">
@@ -188,6 +231,22 @@ export function DecisionPlane({ asset, assets, pairing = null, launch = null }: 
               <feGaussianBlur stdDeviation="1.8" result="blur" />
               <feComposite in="SourceGraphic" in2="blur" operator="over" />
             </filter>
+
+            {/* Gradient for Decision Gate aperture column */}
+            <linearGradient id="gate-glow-gradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="rgb(2, 198, 165)" stopOpacity="0.04" />
+              <stop offset="25%" stopColor="rgb(2, 198, 165)" stopOpacity="0.12" />
+              <stop offset="50%" stopColor="rgb(2, 198, 165)" stopOpacity="0.22" />
+              <stop offset="75%" stopColor="rgb(2, 198, 165)" stopOpacity="0.12" />
+              <stop offset="100%" stopColor="rgb(2, 198, 165)" stopOpacity="0.04" />
+            </linearGradient>
+
+            {/* Soft radial aura for interactive cursor hover */}
+            <radialGradient id="cursor-aura-gradient" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="rgb(2, 198, 165)" stopOpacity="0.14" />
+              <stop offset="50%" stopColor="rgb(2, 198, 165)" stopOpacity="0.04" />
+              <stop offset="100%" stopColor="rgb(2, 198, 165)" stopOpacity="0" />
+            </radialGradient>
 
             {/* Orbit paths: continuous closed orbits around Decision Core (x: 360, y: 280) */}
             <path id="orbit-ring-inner" d="M 285 280 C 285 220, 435 215, 435 280 C 435 345, 285 340, 285 280 Z" />
@@ -232,30 +291,6 @@ export function DecisionPlane({ asset, assets, pairing = null, launch = null }: 
             <path d="M 170 295 C 170 150, 565 140, 565 275 C 565 410, 170 420, 170 295 Z" className="orbit-contour-accent" />
             <path d="M 195 315 C 195 125, 740 115, 740 265 C 740 425, 195 445, 195 315 Z" className="orbit-contour" />
             <path d="M 680 285 C 680 155, 250 170, 250 275 C 250 395, 680 415, 680 285 Z" className="orbit-contour-faint" />
-          </g>
-
-          {/* 2. Tactical Radar Crosses & Micro Telemetry (Topological Context) */}
-          <g className="plane-orbit-hud">
-            <g transform="translate(210, 58)">
-              <line x1="-4" y1="0" x2="4" y2="0" className="orbit-tick" />
-              <line x1="0" y1="-4" x2="0" y2="4" className="orbit-tick" />
-              <text x="8" y="3" className="orbit-telemetry">OBSERVE // MULTI-SIGNAL ORBIT</text>
-            </g>
-            <g transform="translate(450, 62)">
-              <line x1="-4" y1="0" x2="4" y2="0" className="orbit-tick" />
-              <line x1="0" y1="-4" x2="0" y2="4" className="orbit-tick" />
-              <text x="8" y="3" className="orbit-telemetry">EVALUATION FIELD // 2.8K MONITORED</text>
-            </g>
-            <g transform="translate(450, 512)">
-              <line x1="-4" y1="0" x2="4" y2="0" className="orbit-tick" />
-              <line x1="0" y1="-4" x2="0" y2="4" className="orbit-tick" />
-              <text x="8" y="3" className="orbit-telemetry">DECISION TOPOLOGY // ACTIVE LOOP</text>
-            </g>
-            <g transform="translate(730, 512)">
-              <line x1="-4" y1="0" x2="4" y2="0" className="orbit-tick" />
-              <line x1="0" y1="-4" x2="0" y2="4" className="orbit-tick" />
-              <text x="8" y="3" className="orbit-telemetry">SURVEILLANCE // NOMINAL</text>
-            </g>
           </g>
 
           {/* 3. Autonomous Orbiting & Streaming Micro-Particles (Monitored Asset Signals) */}
@@ -445,8 +480,8 @@ export function DecisionPlane({ asset, assets, pairing = null, launch = null }: 
         <g className="plane-signal-inputs" aria-hidden="true">
           {signals.map((signal, index) => {
             const gateY = 280 + (signal.sourceY - 280) * 0.47;
-            const isPrimary = signal.symbol === asset.symbol;
-            return <path key={`signal-input-${index}`} className={`decision-route signal-route${isPrimary ? " nvda-route nvda-input-route is-primary" : ""}${activeAsset === signal.symbol && signal.symbol ? " is-focused" : ""}${activeAsset && activeAsset !== signal.symbol ? " is-dimmed" : ""}`} pathLength={1} d={`M48 ${signal.sourceY} C164 ${signal.sourceY} 250 ${gateY} 348 ${gateY}`} style={{ "--signal-delay": `${index * -0.22}s` } as CSSProperties} />;
+            const isSelected = effectiveSymbol === signal.symbol;
+            return <path key={`signal-input-${index}`} className={`decision-route signal-route${isSelected ? " is-focused" : ""}${focused && !isSelected ? " is-dimmed" : ""}`} pathLength={1} d={`M48 ${signal.sourceY} C164 ${signal.sourceY} 250 ${gateY} 348 ${gateY}`} style={{ "--signal-delay": `${index * -0.22}s` } as CSSProperties} />;
           })}
         </g>
 
@@ -454,51 +489,120 @@ export function DecisionPlane({ asset, assets, pairing = null, launch = null }: 
           {signals.filter((signal): signal is AssetSignal & { symbol: string; rank: number } => Boolean(signal.symbol && signal.rank && rankY[signal.rank])).map((signal, index) => {
             const gateY = 280 + (signal.sourceY - 280) * 0.47;
             const rank = rankY[signal.rank];
-            const isPrimary = signal.symbol === asset.symbol;
-            return <path key={`signal-output-${signal.symbol}`} className={`decision-route signal-route output-route${isPrimary ? " nvda-route nvda-output-route is-primary" : ""}${activeAsset === signal.symbol ? " is-focused" : ""}${activeAsset && activeAsset !== signal.symbol ? " is-dimmed" : ""}`} pathLength={1} d={`M372 ${gateY} C430 ${gateY} 452 ${rank} 510 ${rank} L610 ${rank}`} style={{ "--signal-delay": `${(index + signals.length) * -0.22}s` } as CSSProperties} />;
+            const isSelected = effectiveSymbol === signal.symbol;
+            return <path key={`signal-output-${signal.symbol}`} className={`decision-route signal-route output-route${isSelected ? " is-focused" : ""}${focused && !isSelected ? " is-dimmed" : ""}`} pathLength={1} d={`M372 ${gateY} C430 ${gateY} 452 ${rank} 510 ${rank} L610 ${rank}`} style={{ "--signal-delay": `${(index + signals.length) * -0.22}s` } as CSSProperties} />;
           })}
         </g>
 
-        <g className="plane-signal-marker" aria-hidden="true">
-          <circle className="nvda-signal-marker" r="2.2" cx="48" cy="354">
-            <animateMotion
-              dur="12s"
-              repeatCount="indefinite"
-              calcMode="linear"
-              keyTimes="0;0.22;0.42;0.58;0.74;0.9;1"
-              keyPoints="0;0.2;0.33;0.5;0.64;0.82;1"
-              path="M48 354 C164 354 250 315 348 315 L372 315 C430 315 452 162 510 162 L610 162 C660 162 670 88 714 88 L782 88 C820 88 828 120 828 176 L828 246 C828 304 814 354 772 382 L690 382"
+        {/* Dynamic Active Selected Route & Signal Traveling Marker */}
+        {activeTrajectoryPath ? (
+          <g className="plane-active-route" aria-hidden="true">
+            <path
+              className="decision-route active-selected-route"
+              d={activeTrajectoryPath}
             />
-          </circle>
-        </g>
+            <circle key={selectedSignal?.symbol} className="active-signal-marker" r="3.2">
+              <animateMotion
+                key={activeTrajectoryPath}
+                dur="7s"
+                repeatCount="indefinite"
+                path={activeTrajectoryPath}
+              />
+            </circle>
+          </g>
+        ) : null}
 
-        <rect className={`plane-gate${activeStage === 1 ? " is-active" : ""}`} x="348" y="116" width="24" height="328" rx="1" />
-        <path className="nvda-gate-crossing" pathLength={1} d="M348 315 L372 315" aria-hidden="true" />
-        <text className={`plane-gate-label${activeStage === 1 ? " is-active" : ""}`} x="348" y="102">JEV</text>
-        <text className="plane-note" x="320" y="466">DECISION GATE</text>
+        {/* Cybernetic JEV Decision Gate & Containment Aperture */}
+        <g className="plane-gate-group" aria-hidden="true">
+          {/* Containment Column with subtle glow fill */}
+          <rect
+            className={`plane-gate-column${activeStage === 1 ? " is-active" : ""}`}
+            x="346"
+            y="96"
+            width="28"
+            height="360"
+            rx="3"
+          />
+
+          {/* Caliper brackets top & bottom */}
+          <path className="plane-gate-bracket" d="M342 110 L342 94 L378 94 L378 110" />
+          <path className="plane-gate-bracket" d="M342 442 L342 458 L378 458 L378 442" />
+
+          {/* Precision calibration tick marks */}
+          <line x1="346" y1="162" x2="352" y2="162" className="plane-gate-tick" />
+          <text x="341" y="165" textAnchor="end" className="plane-gate-tick-label">0.95</text>
+
+          <line x1="346" y1="226" x2="352" y2="226" className="plane-gate-tick" />
+          <text x="341" y="229" textAnchor="end" className="plane-gate-tick-label">0.90</text>
+
+          <line x1="346" y1="280" x2="355" y2="280" className="plane-gate-tick is-threshold" />
+          <text x="341" y="283" textAnchor="end" className="plane-gate-tick-label is-threshold">0.85 GATE</text>
+
+          <line x1="346" y1="354" x2="352" y2="354" className="plane-gate-tick" />
+          <text x="341" y="357" textAnchor="end" className="plane-gate-tick-label">0.80</text>
+
+          <line x1="346" y1="418" x2="352" y2="418" className="plane-gate-tick" />
+          <text x="341" y="421" textAnchor="end" className="plane-gate-tick-label">0.75</text>
+
+          {/* Core vertical scanning laser */}
+          <line x1="360" y1="102" x2="360" y2="450" className="plane-gate-laser" />
+
+          {/* Dynamic Active Signal Gate Crossing */}
+          <g className="gate-crossing-active" transform={`translate(360, ${activeGateY})`}>
+            <line x1="-14" y1="0" x2="14" y2="0" className="gate-crossing-beam" />
+            <polygon points="0,-5 5,0 0,5 -5,0" className="gate-crossing-lens" />
+            <circle r="1.8" fill="#ffffff" />
+          </g>
+
+          {/* Labels */}
+          <text className={`plane-gate-title${activeStage === 1 ? " is-active" : ""}`} x="360" y="80" textAnchor="middle">
+            JEV DECISION CORE
+          </text>
+          <text className="plane-note" x="360" y="478" textAnchor="middle">
+            DECISION GATE // 0.85 THRESHOLD
+          </text>
+        </g>
 
         <g className="plane-rank-labels">
           {signals.filter((signal): signal is AssetSignal & { symbol: string; rank: number; score: number } => Boolean(signal.symbol && signal.rank && typeof signal.score === "number" && rankY[signal.rank])).map((signal) => {
             const y = rankY[signal.rank];
-            const focusedRank = activeAsset === signal.symbol;
+            const focusedRank = effectiveSymbol === signal.symbol;
             const isPrimary = signal.symbol === asset.symbol;
-            return <g key={`rank-${signal.symbol}`} className={`plane-rank-row${isPrimary ? " is-primary" : ""}${focusedRank ? " is-focused" : ""}${activeAsset && !focusedRank ? " is-dimmed" : ""}`} role="button" tabIndex={0} aria-label={`Focus ${signal.symbol} ranked ${signal.rank}`} aria-pressed={activeAsset === signal.symbol} onClick={(event) => { event.stopPropagation(); setTimedLock({ kind: "asset", value: signal.symbol }); }} onKeyDown={(event) => handleAssetKey(event, signal.symbol)} onMouseEnter={() => setHoverAsset(signal.symbol)} onMouseLeave={() => setHoverAsset(null)} onFocus={() => setHoverAsset(signal.symbol)} onBlur={() => setHoverAsset(null)}>
+            return <g key={`rank-${signal.symbol}`} className={`plane-rank-row${isPrimary ? " is-primary" : ""}${focusedRank ? " is-focused" : ""}${activeAsset && !focusedRank ? " is-dimmed" : ""}`} role="button" tabIndex={0} aria-label={`Focus ${signal.symbol} ranked ${signal.rank}`} aria-pressed={effectiveSymbol === signal.symbol} onClick={(event) => { event.stopPropagation(); setTimedLock({ kind: "asset", value: signal.symbol }); }} onKeyDown={(event) => handleAssetKey(event, signal.symbol)} onMouseEnter={() => setHoverAsset(signal.symbol)} onMouseLeave={() => setHoverAsset(null)} onFocus={() => setHoverAsset(signal.symbol)} onBlur={() => setHoverAsset(null)}>
               <text x="510" y={y - 9}>{String(signal.rank).padStart(2, "0")} {signal.symbol} {signal.score.toFixed(1)}</text>
-              {isPrimary ? <><text className="plane-accent" x="510" y={y + 16}>JEV / {decision} {rankTransition}{asset.confidence === null ? "" : ` / ${asset.confidence}%`}</text><text className="plane-note" x="510" y={y + 34}>Opportunity / {asset.opportunityScore.toFixed(1)}</text></> : <text className="plane-note" x="510" y={y + 17}>{signal.delta ? `Δ ${signal.delta}` : "—"}</text>}
+              {focusedRank ? (
+                isPrimary ? (
+                  <>
+                    <text className="plane-accent" x="510" y={y + 16}>JEV / {decision} {rankTransition}{asset.confidence === null ? "" : ` / ${asset.confidence}%`}</text>
+                    <text className="plane-note" x="510" y={y + 34}>Opportunity / {asset.opportunityScore.toFixed(1)}</text>
+                  </>
+                ) : (
+                  <>
+                    <text className="plane-accent" x="510" y={y + 16}>JEV / ACTIVE EVALUATION #{String(signal.rank).padStart(2, "0")}{signal.delta ? ` · Δ ${signal.delta}` : ""}</text>
+                    <text className="plane-note" x="510" y={y + 32}>Opportunity / {signal.score.toFixed(1)}</text>
+                  </>
+                )
+              ) : (
+                <text className="plane-note" x="510" y={y + 17}>{signal.delta ? `Δ ${signal.delta}` : "—"}</text>
+              )}
               <line x1="510" y1={y + 28} x2="684" y2={y + 28} />
             </g>;
           })}
         </g>
 
         <g className="plane-assets">
-          {signals.filter((signal) => Boolean(signal.symbol)).map((signal) => <g key={`asset-${signal.symbol}`} className={`${assetClass(signal.symbol)}${signal.symbol === asset.symbol ? " is-primary" : ""}`} role="button" tabIndex={0} aria-label={`Focus ${signal.symbol} signal path`} aria-pressed={activeAsset === signal.symbol} onClick={(event) => { event.stopPropagation(); setTimedLock({ kind: "asset", value: signal.symbol }); }} onKeyDown={(event) => handleAssetKey(event, signal.symbol)} onMouseEnter={() => setHoverAsset(signal.symbol)} onMouseLeave={() => setHoverAsset(null)} onFocus={() => setHoverAsset(signal.symbol)} onBlur={() => setHoverAsset(null)}><text x="48" y={signal.sourceY + 4}>{signal.symbol}</text><circle cx="36" cy={signal.sourceY} r="2.5" /></g>)}
+          {signals.filter((signal) => Boolean(signal.symbol)).map((signal) => <g key={`asset-${signal.symbol}`} className={`${assetClass(signal.symbol)}${signal.symbol === asset.symbol ? " is-primary" : ""}`} role="button" tabIndex={0} aria-label={`Focus ${signal.symbol} signal path`} aria-pressed={effectiveSymbol === signal.symbol} onClick={(event) => { event.stopPropagation(); setTimedLock({ kind: "asset", value: signal.symbol }); }} onKeyDown={(event) => handleAssetKey(event, signal.symbol)} onMouseEnter={() => setHoverAsset(signal.symbol)} onMouseLeave={() => setHoverAsset(null)} onFocus={() => setHoverAsset(signal.symbol)} onBlur={() => setHoverAsset(null)}><text x="48" y={signal.sourceY + 4}>{signal.symbol}</text><circle cx="36" cy={signal.sourceY} r="2.5" /></g>)}
         </g>
 
+        {/* High-Precision JEV Output Register (Solid institutional status card) */}
         <g className="plane-output-frame" aria-hidden="true">
-          <rect x="676" y="48" width="220" height="410" rx="2" />
+          <rect className="output-backdrop" x="676" y="48" width="220" height="410" rx="3" />
+          <rect className="output-header-bar" x="676" y="48" width="220" height="26" rx="3" />
+          <circle className="output-status-led" cx="688" cy="61" r="2.8" />
+          <text className="output-title" x="698" y="65">JEV OUTPUT REGISTER</text>
+          <line x1="676" y1="74" x2="896" y2="74" />
           <line x1="676" y1="238" x2="896" y2="238" />
-          <text x="694" y="68">JEV OUTPUT REGISTER</text>
-          <text x="694" y="358">CONTROLLED STATE</text>
+          <text className="output-subheading" x="694" y="255">CONTROLLED STATE // ACT</text>
         </g>
 
         {pairing ? <g className="plane-pair-routes">
@@ -515,6 +619,27 @@ export function DecisionPlane({ asset, assets, pairing = null, launch = null }: 
           <line x1="690" y1="366" x2="690" y2="454" />
           {launch && pairing ? <><text className="plane-note" x="708" y="388">LAUNCH / {launch.stage.replaceAll("_", " ")}</text><text className="plane-accent" x="708" y="414">{pairing.stockSymbol} × {pairing.symbol}</text><text className="plane-note" x="708" y="438">{launch.readiness} · TX / {launch.transactionState.replaceAll("_", " ")}</text></> : <><text className="plane-note" x="708" y="388">LAUNCH</text><text className="plane-accent" x="708" y="414">NO LAUNCH CANDIDATE</text><text className="plane-note" x="708" y="438">THIS CYCLE</text></>}
         </g>
+
+        {/* Interactive Cursor Reticle (tracks mouse dynamically across decision plane) */}
+        {cursorPos ? (
+          <g className="plane-cursor-group" aria-hidden="true">
+            <circle
+              cx={cursorPos.x}
+              cy={cursorPos.y}
+              r="55"
+              className="plane-cursor-aura"
+            />
+            <line x1={cursorPos.x - 20} y1={cursorPos.y} x2={cursorPos.x - 5} y2={cursorPos.y} className="plane-cursor-cross" />
+            <line x1={cursorPos.x + 5} y1={cursorPos.y} x2={cursorPos.x + 20} y2={cursorPos.y} className="plane-cursor-cross" />
+            <line x1={cursorPos.x} y1={cursorPos.y - 20} x2={cursorPos.x} y2={cursorPos.y - 5} className="plane-cursor-cross" />
+            <line x1={cursorPos.x} y1={cursorPos.y + 5} x2={cursorPos.x} y2={cursorPos.y + 20} className="plane-cursor-cross" />
+            <circle cx={cursorPos.x} cy={cursorPos.y} r="12" className="plane-cursor-ring" />
+            <circle cx={cursorPos.x} cy={cursorPos.y} r="2.2" className="plane-cursor-dot" />
+            <text x={cursorPos.x + 10} y={cursorPos.y - 10} className="plane-cursor-coords">
+              {`POS: ${cursorPos.x},${cursorPos.y} // SURVEILLANCE`}
+            </text>
+          </g>
+        ) : null}
 
       </svg>
 

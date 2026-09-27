@@ -378,13 +378,17 @@ Four independent frontend enhancements and bugfixes were executed, verified, and
 
 ---
 
-## Landing Hero DecisionPlane Orbit Field Enhancement
+## Landing Hero DecisionPlane Orbit Field & Cybernetic Core Overhaul
 
-- **Visual Upgrade**: Added an autonomous point-cloud orbit and wave topography field to the right-side visual in `DecisionPlane.tsx`.
-- **Grounded Conceptual Motif**: Grounded in `docs/BRIEF.md` (§0, §2 Layer A: OBSERVE & Layer B: DECIDE, §4/5 UI Philosophy, §7 Live Agent Terminal). The orbital field represents the continuous cloud of ~2.8k monitored equity assets and streaming multi-dimensional market signals in perpetual evaluation around the Jev Decision Core.
-- **Asynchronous Motion**: 32 distinct glowing micro-particles on 12 distinct trajectories (5 core orbital rings + 10 undulating topographic wave contours + 2 counter-flow streams), each driven by coprime durations and unique phase offsets for organic, non-repeating motion.
-- **Strict Data Integrity**: Preserved 100% canonical API bindings (no fake tickers, ranks, or scores introduced).
-- **Screenshots**: Before `docs/screenshots/before_hero_orbit.png` → After `docs/screenshots/after_hero_orbit.png`.
+- **Interactive Cursor Surveillance Reticle**: Added a dynamic SVG cursor tracking system that calculates exact mouse coordinates within plane space, projecting a rotating radar reticle, crosshair, coordinate telemetry (`POS: X,Y // SURVEILLANCE`), and soft illumination aura.
+- **Universal Dynamic Routing for All Monitored Assets**: Clicking or hovering on any rank row (`01 NVDA`, `02 GME`, `03 TSLA`, `04 COIN`, `05 PLTR`, etc.) or asset tag dynamically computes and renders that asset's active trajectory route through the Decision Gate at its specific `gateY`, animating an active signal packet along its path and displaying real-time evaluation telemetry without altering canonical API bindings.
+- **Cybernetic JEV Decision Gate & Containment Aperture**: Overhauled the previously hollow rectangle ("kotak kotak") into an institutional agent aperture featuring top/bottom caliper brackets (`[ ]`), calibrated measurement tick marks (`0.95`, `0.90`, `0.85 GATE`, `0.80`, `0.75`), an animated core vertical scanning laser, and an active optical refraction lens at the signal intersection node.
+- **High-Precision JEV Output Register**: Replaced the sheer translucent wireframe with a deep-dark institutional backdrop (`fill: rgb(6 14 12 / 96%)`), status header bar with pulsing LED (`ONLINE // EMIT`), and clean dividers, ensuring background wave dots and particles do not bleed into or collide with text.
+- **HUD Noise Cleanup**: Removed distracting floating text labels (`+ OBSERVE // ...`, `+ EVALUATION FIELD // ...`) to restore clean institutional minimalism.
+- **Screenshots**:
+  - Full Interactive Canvas: `docs/screenshots/after_hero_interactive.png`
+  - Asset Selection (TSLA active route): `docs/screenshots/after_hero_gme_active.png`
+  - Cursor Radar Reticle Tracking: `docs/screenshots/after_hero_cursor_hover.png`
 
 ---
 
