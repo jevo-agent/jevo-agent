@@ -1,7 +1,7 @@
 import { env } from "./config/env";
 import { logger } from "./observability/logger";
 import { pool } from "./db/client";
-import { seedAssets } from "./db/seed";
+import { seedAll } from "./db/seed";
 import { createServer } from "./api/server";
 import {
   startCycleWorker,
@@ -28,11 +28,11 @@ async function main() {
     "JEVO worker & API booting (BACKEND 08 - Realtime SSE & Composed Entrypoint)",
   );
 
-  // 1. Seed initial stock assets into Postgres
+  // 1. Seed initial stock assets and curated meme concepts into Postgres
   try {
-    await seedAssets();
+    await seedAll();
   } catch (err) {
-    logger.warn({ err }, "Could not seed initial assets (proceeding anyway)");
+    logger.warn({ err }, "Could not seed initial data (proceeding anyway)");
   }
 
   // 2. Start BullMQ workers & schedulers

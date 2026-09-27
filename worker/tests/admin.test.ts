@@ -808,41 +808,46 @@ describe("Admin API (BACKEND 10)", () => {
   describe("Verification 2: Double-Click Protection on Scan Trigger", () => {
     it("deduplicates rapid consecutive triggers for same cycle kind to exactly 1 BullMQ job", async () => {
       const queue = getCycleQueue();
-      // Ensure queue is drained before test
+      // Ensure queue is paused and drained before test to prevent race with running workers
+      await queue.pause();
       await queue.drain();
 
-      // Trigger DELTA twice rapidly in parallel
-      const [res1, res2] = await Promise.all([
-        app.inject({
-          method: "POST",
-          url: "/api/v1/admin/scan/trigger",
-          headers: authHeaders,
-          payload: { kind: "DELTA" },
-        }),
-        app.inject({
-          method: "POST",
-          url: "/api/v1/admin/scan/trigger",
-          headers: authHeaders,
-          payload: { kind: "DELTA" },
-        }),
-      ]);
+      try {
+        // Trigger DELTA twice rapidly in parallel
+        const [res1, res2] = await Promise.all([
+          app.inject({
+            method: "POST",
+            url: "/api/v1/admin/scan/trigger",
+            headers: authHeaders,
+            payload: { kind: "DELTA" },
+          }),
+          app.inject({
+            method: "POST",
+            url: "/api/v1/admin/scan/trigger",
+            headers: authHeaders,
+            payload: { kind: "DELTA" },
+          }),
+        ]);
 
-      expect(res1.statusCode).toBe(200);
-      expect(res2.statusCode).toBe(200);
+        expect(res1.statusCode).toBe(200);
+        expect(res2.statusCode).toBe(200);
 
-      const json1 = JSON.parse(res1.body);
-      const json2 = JSON.parse(res2.body);
+        const json1 = JSON.parse(res1.body);
+        const json2 = JSON.parse(res2.body);
 
-      // Both should return the same deterministic job ID
-      expect(json1.data.jobId).toBe(json2.data.jobId);
-      expect(json1.data.jobId).toContain("manual-DELTA:");
+        // Both should return the same deterministic job ID
+        expect(json1.data.jobId).toBe(json2.data.jobId);
+        expect(json1.data.jobId).toContain("manual-DELTA:");
 
-      // Check BullMQ queue job count for this ID
-      const jobs = await queue.getJobs(["waiting", "active", "delayed"]);
-      const matchingJobs = jobs.filter((j) => j.id === json1.data.jobId);
+        // Check BullMQ queue job count for this ID across active, waiting, delayed, and completed
+        const jobs = await queue.getJobs(["waiting", "active", "delayed", "completed"]);
+        const matchingJobs = jobs.filter((j) => j.id === json1.data.jobId);
 
-      // BullMQ level assert: exactly 1 job queued, duplicate was prevented
-      expect(matchingJobs.length).toBe(1);
+        // BullMQ level assert: exactly 1 job queued/processed, duplicate was prevented
+        expect(matchingJobs.length).toBe(1);
+      } finally {
+        await queue.resume();
+      }
     });
   });
 
@@ -947,5 +952,11 @@ describe("Admin API (BACKEND 10)", () => {
       await db.delete(pairingHistory).where(eq(pairingHistory.pairingCandidateId, integrationPairingId));
       await db.delete(pairingCandidates).where(eq(pairingCandidates.id, integrationPairingId));
     });
+  });
+
+  afterAll(async () => {
+    await db
+      .delete(agentConfigVersions)
+      .where(eq(agentConfigVersions.createdBy, "OPERATOR"));
   });
 });

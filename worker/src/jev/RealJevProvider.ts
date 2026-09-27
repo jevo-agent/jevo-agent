@@ -236,7 +236,7 @@ function choiceFromAnswer<T extends string>(answer: unknown, input: ChoiceInput<
 }
 
 function contextSignals(context: Record<string, unknown>): string[] {
-  const value = context.signals;
+  const value = context.signals ?? context.narrativeSignals ?? context.headlines;
   return Array.isArray(value) && value.every((item) => typeof item === "string") ? value : [];
 }
 

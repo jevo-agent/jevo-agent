@@ -153,7 +153,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
           .select()
           .from(protocolEvents)
           .where(gte(protocolEvents.createdAt, lastEvtRow.createdAt))
-          .orderBy(asc(protocolEvents.createdAt));
+          .orderBy(asc(protocolEvents.createdAt), asc(protocolEvents.eventId));
 
         const cursorIndex = candidateRows.findIndex((r) => r.eventId === lastEventId);
         if (cursorIndex >= 0) {
@@ -168,7 +168,7 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
             .select()
             .from(protocolEvents)
             .where(gt(protocolEvents.createdAt, sinceDate))
-            .orderBy(asc(protocolEvents.createdAt));
+            .orderBy(asc(protocolEvents.createdAt), asc(protocolEvents.eventId));
         }
       }
 

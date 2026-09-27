@@ -42,8 +42,9 @@ describe("Agent Cycle Orchestration (BACKEND 05)", () => {
     await db.delete(protocolEvents).where(inArray(protocolEvents.cycleId, testCycleIds));
     await db.delete(agentCycles).where(inArray(agentCycles.id, testCycleIds));
 
-    // Clear BullMQ test queue
+    // Clear and pause BullMQ test queue to prevent external worker interference
     const queue = getCycleQueue();
+    await queue.pause();
     await queue.drain();
   });
 
@@ -56,7 +57,10 @@ describe("Agent Cycle Orchestration (BACKEND 05)", () => {
     await db.delete(protocolEvents).where(inArray(protocolEvents.cycleId, testCycleIds));
     await db.delete(agentCycles).where(inArray(agentCycles.id, testCycleIds));
 
-    // Close BullMQ queue and Redis connection cleanly
+    // Drain, resume, and close BullMQ queue and Redis connection cleanly
+    const queue = getCycleQueue();
+    await queue.drain();
+    await queue.resume();
     await closeCycleQueue();
   });
 
@@ -167,6 +171,10 @@ describe("Agent Cycle Orchestration (BACKEND 05)", () => {
       const matchingJobs = waitingJobs.filter((j) => j.id === expectedJobId);
 
       expect(matchingJobs.length).toBe(1);
+
+      // Clean up enqueued test job so background workers do not execute it
+      await job1.remove().catch(() => {});
+      await queue.drain();
     });
 
     it("running the same cycleId twice leaves exactly the same row count across database tables", async () => {

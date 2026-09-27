@@ -224,10 +224,13 @@ export async function evaluatePairing(
     return a.record.memeSymbol.localeCompare(b.record.memeSymbol);
   });
 
-  // Persist all candidates (both primary winner and alternates)
+  // Persist all candidates (both primary winner and alternates) in sorted order
+  let candidateTime = Date.now();
   for (const item of evaluatedCandidates) {
     const { record, decision, confidence } = item;
-    const createdAt = new Date(record.createdAt);
+    candidateTime += 1;
+    const createdAt = new Date(candidateTime);
+    record.createdAt = createdAt.toISOString();
 
     // Write to pairing_candidates
     await client

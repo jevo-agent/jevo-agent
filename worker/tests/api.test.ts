@@ -75,6 +75,8 @@ describe("REST API - Ten Endpoints (BACKEND 07)", () => {
     await db.delete(pairingDecisions);
     await db.delete(pairingCandidates);
     await db.delete(memeConcepts);
+    const { seedMemeConcepts } = await import("../src/db/seed");
+    await seedMemeConcepts();
     await db.delete(rankHistory);
     await db.delete(opportunityScores);
     await db.delete(jevDecisions);

@@ -429,12 +429,29 @@ export async function executeAgentCycle(
         });
         await publishProtocolEvent(analyzedEvt);
 
-        // Step 6: Detect meaningful deltas (Skip gate to control LLM cost / rate limits)
+        // Step 6: Detect meaningful deltas (Skip gate across market, social, and narrative)
         const hasPrior = prior !== undefined;
+        const currentNarrativeSignals = assetNarrativeSignalsMap.get(asset.symbol) ?? [];
+        const primaryNarrativeSignal =
+          narrativeSignals.find((s) => s.kind === "NARRATIVE") ??
+          narrativeSignals[0];
+        const narrativeMagnitude =
+          primaryNarrativeSignal !== undefined
+            ? primaryNarrativeSignal.magnitude
+            : (prior?.narrativeMomentum ?? 50.0);
+
         // Check delta against prior cycle; threshold is strict (skip if literally identical or difference <= 0.001)
         const deltaMarket = hasPrior ? Math.abs(marketMomentum - prior.marketMomentum) : 100;
         const deltaSocial = hasPrior ? Math.abs(socialVelocity - prior.socialVelocity) : 100;
-        const hasMeaningfulDelta = !hasPrior || deltaMarket > 0.001 || deltaSocial > 0.001;
+        const deltaNarrative =
+          hasPrior && typeof prior.narrativeMomentum === "number"
+            ? Math.abs(narrativeMagnitude - prior.narrativeMomentum)
+            : 100;
+        const hasMeaningfulDelta =
+          !hasPrior ||
+          deltaMarket > 0.001 ||
+          deltaSocial > 0.001 ||
+          deltaNarrative > 0.001;
 
         let jevScores: {
           narrativeMomentum: number;
@@ -446,17 +463,27 @@ export async function executeAgentCycle(
 
         if (hasMeaningfulDelta) {
           // Step 7: Request Jev evaluation ONLY for symbols with meaningful changes
-          const decisionRecord = await decisionEngine.decideForAsset(cycleId, asset.symbol, {
+          // Pass rich context including narrativeSignals and headlines
+          const evaluationContext = {
             marketMomentum,
             socialVelocity,
-          });
+            narrativeMagnitude,
+            narrativeSignals: currentNarrativeSignals,
+            headlines: currentNarrativeSignals,
+          };
+
+          const decisionRecord = await decisionEngine.decideForAsset(
+            cycleId,
+            asset.symbol,
+            evaluationContext,
+          );
           decisionsMap.set(asset.symbol, decisionRecord.decision);
 
           const rawQualitative =
-            await decisionEngine.evaluateQualitativeScores(asset.symbol, {
-              marketMomentum,
-              socialVelocity,
-            });
+            await decisionEngine.evaluateQualitativeScores(
+              asset.symbol,
+              evaluationContext,
+            );
 
           const requiredDimensions = [
             "narrativeMomentum",
@@ -572,6 +599,9 @@ export async function executeAgentCycle(
             const fallbackDecision = await decisionEngine.decideForAsset(cycleId, asset.symbol, {
               marketMomentum,
               socialVelocity,
+              narrativeMagnitude,
+              narrativeSignals: currentNarrativeSignals,
+              headlines: currentNarrativeSignals,
             });
             decisionsMap.set(asset.symbol, fallbackDecision.decision);
           }

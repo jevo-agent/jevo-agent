@@ -31,11 +31,13 @@ describe("Pairing Engine & Meme Concept Lookup (BACKEND 06)", () => {
   });
 
   afterAll(async () => {
-    // Clean up test data after tests
+    // Clean up test data after tests and restore curated concepts
     await db.delete(pairingHistory);
     await db.delete(pairingDecisions);
     await db.delete(pairingCandidates);
     await db.delete(memeConcepts);
+    const { seedMemeConcepts } = await import("../src/db/seed");
+    await seedMemeConcepts();
   });
 
   describe("1. Empty meme_concepts handling", () => {

@@ -20,7 +20,10 @@ describe("Scoring & Ranking Engine (BACKEND 04)", () => {
   const testCycle2 = "cycle-ranking-test-02";
 
   beforeAll(async () => {
-    // Ensure clean state for test cycles
+    // Ensure clean state for test configs and cycles
+    await db
+      .delete(agentConfigVersions)
+      .where(eq(agentConfigVersions.createdBy, "OPERATOR"));
     await db
       .delete(rankHistory)
       .where(inArray(rankHistory.cycleId, [testCycle1, testCycle2]));
@@ -31,6 +34,9 @@ describe("Scoring & Ranking Engine (BACKEND 04)", () => {
 
   afterAll(async () => {
     // Clean up test rows
+    await db
+      .delete(agentConfigVersions)
+      .where(eq(agentConfigVersions.createdBy, "OPERATOR"));
     await db
       .delete(rankHistory)
       .where(inArray(rankHistory.cycleId, [testCycle1, testCycle2]));
