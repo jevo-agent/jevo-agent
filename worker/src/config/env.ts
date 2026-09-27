@@ -23,6 +23,10 @@ export const envSchema = z.object({
   ALPHA_VANTAGE_API_KEY: z.string().optional(),
   ALPHA_VANTAGE_CACHE_TTL_MS: z.coerce.number().int().positive().default(22 * 60 * 60 * 1000),
   ALPHA_VANTAGE_MAX_DAILY_REQUESTS: z.coerce.number().int().positive().default(25),
+  STOCK_TOKEN_MODE: z.enum(["mock", "real"]).default("mock"),
+  ROBINHOOD_RPC_URL: z.string().url().default("https://rpc.mainnet.chain.robinhood.com"),
+  DEXPAPRIKA_API_URL: z.string().url().default("https://api.dexpaprika.com"),
+  DEXPAPRIKA_CACHE_TTL_MS: z.coerce.number().int().positive().default(60_000),
   ADMIN_API_TOKENS: z.string().optional(),
   NEXT_PUBLIC_APP_URL: z.string().optional(),
 });

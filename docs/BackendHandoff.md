@@ -891,6 +891,26 @@ Eleven tasks, each meant to be one Codex/AGY prompt, each landable and reviewabl
 - Tests: `tests/alphaVantage.test.ts` unit tests with mocked payloads, caching verification, daily request governor verification, provider registry switching, and a live smoke test that skips if `ALPHA_VANTAGE_API_KEY` is omitted.
 - Stop when: Smoke test succeeds against live Alpha Vantage endpoints, and a manual cycle produces verified real market prices and news headlines without exhausting the daily quota.
 
+**BACKEND 14 — Stock Token Provider & RPC (Robinhood Chain)**
+
+- Goal: Production-ready `RealStockTokenProvider` resolving canonical Robinhood Chain Mainnet tokenized equity contract addresses, streaming real-time on-chain DEX prices via DexPaprika, and performing read-only contract verification via Viem RPC (`https://rpc.mainnet.chain.robinhood.com`, Chain ID 4663).
+- Files:
+  - `worker/src/providers/robinhood/constants.ts`
+  - `worker/src/providers/robinhood/dexpaprika.ts`
+  - `worker/src/providers/robinhood/RealStockTokenProvider.ts`
+  - `worker/src/providers/index.ts`
+  - `worker/src/config/env.ts`
+  - `worker/tests/stockToken.test.ts`
+- Depends on: BACKEND 02, BACKEND 05, BACKEND 12
+- Do:
+  - Establish canonical deterministic address resolution for all 7 tracked equities (NVDA, TSLA, PLTR, AAPL, GME, AMD, COIN) deployed under shared UpgradeableBeacon `0xe10b6f6b275de231345c20d14ab812db62151b00`.
+  - Implement `DexPaprikaClient` with 60s in-memory TTL caching, safe outbound request pacing (120ms), and automatic stale fallback to stay well below DexPaprika's 10-req burst rate limit and keyless credit quotas.
+  - Keep `getOnchainPrice()` strictly separated from `MarketDataProvider`'s `price` field, maintaining independent storage and conceptual boundaries (DEX token price vs underlying equity market price).
+  - Provide read-only verification capabilities via `viem` public client connecting directly to Robinhood Chain Mainnet RPC without wallets or private keys.
+  - Add `STOCK_TOKEN_MODE=mock|real` env toggle (default `mock`).
+- Tests: `tests/stockToken.test.ts` unit and integration tests covering canonical resolution, active asset listing, metadata extraction, DexPaprika TTL caching, stale fallback, provider registry switching, and live RPC bytecode verification.
+- Stop when: All 7 canonical assets resolve correctly, unit and live on-chain tests pass, and `STOCK_TOKEN_MODE=real` runs safely without credential requirements.
+
 ## 21. Deferred Blockchain Phase
 
 None of BACKEND 00–10 touches `contracts/`, signs anything, or calls Pons. `launch_candidates.transactionStatus` has exactly one possible value this phase — `"not_submitted"` — by the type itself, not by convention.

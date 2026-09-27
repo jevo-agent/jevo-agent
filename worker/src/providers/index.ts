@@ -6,6 +6,7 @@ import { MockMarketDataProvider } from "./mock/MockMarketDataProvider";
 import { MockNarrativeProvider } from "./mock/MockNarrativeProvider";
 import { MockSocialProvider } from "./mock/MockSocialProvider";
 import { MockStockTokenProvider } from "./mock/MockStockTokenProvider";
+import { RealStockTokenProvider } from "./robinhood/RealStockTokenProvider";
 import type { ProvidersRegistry } from "./types";
 import { wrapProviderWithHealthLogging } from "./wrapper";
 
@@ -18,10 +19,14 @@ export * from "./mock/MockStockTokenProvider";
 export * from "./alphavantage/RealMarketDataProvider";
 export * from "./alphavantage/RealNarrativeProvider";
 export * from "./alphavantage/client";
+export * from "./robinhood/RealStockTokenProvider";
+export * from "./robinhood/constants";
+export * from "./robinhood/dexpaprika";
 
 export interface CreateProvidersRegistryOptions {
   marketDataMode?: "mock" | "real";
   narrativeMode?: "mock" | "real";
+  stockTokenMode?: "mock" | "real";
 }
 
 export function createProvidersRegistry(
@@ -29,14 +34,17 @@ export function createProvidersRegistry(
 ): ProvidersRegistry {
   let marketMode: "mock" | "real";
   let narrativeMode: "mock" | "real";
+  let stockTokenMode: "mock" | "real";
 
   if (typeof optionsOrMode === "string") {
     // Backward compatibility with legacy PROVIDER_MODE toggle
     marketMode = optionsOrMode === "real" ? "real" : env.MARKET_DATA_MODE;
     narrativeMode = optionsOrMode === "real" ? "real" : env.NARRATIVE_MODE;
+    stockTokenMode = optionsOrMode === "real" ? "real" : env.STOCK_TOKEN_MODE;
   } else {
     marketMode = optionsOrMode?.marketDataMode ?? env.MARKET_DATA_MODE;
     narrativeMode = optionsOrMode?.narrativeMode ?? env.NARRATIVE_MODE;
+    stockTokenMode = optionsOrMode?.stockTokenMode ?? env.STOCK_TOKEN_MODE;
   }
 
   let sharedClient: AlphaVantageClient | undefined;
@@ -73,12 +81,26 @@ export function createProvidersRegistry(
           new MockNarrativeProvider(),
         );
 
+  const stockToken =
+    stockTokenMode === "real"
+      ? wrapProviderWithHealthLogging(
+          "real-stock-token-robinhood",
+          new RealStockTokenProvider({
+            rpcUrl: env.ROBINHOOD_RPC_URL,
+            dexPaprikaOptions: {
+              baseUrl: env.DEXPAPRIKA_API_URL,
+              cacheTtlMs: env.DEXPAPRIKA_CACHE_TTL_MS,
+            },
+          }),
+        )
+      : wrapProviderWithHealthLogging(
+          "mock-stock-token",
+          new MockStockTokenProvider(),
+        );
+
   return {
     marketData,
-    stockToken: wrapProviderWithHealthLogging(
-      "mock-stock-token",
-      new MockStockTokenProvider(),
-    ),
+    stockToken,
     narrative,
     social: wrapProviderWithHealthLogging(
       "mock-social",
