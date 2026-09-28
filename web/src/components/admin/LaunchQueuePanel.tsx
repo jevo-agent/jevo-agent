@@ -23,7 +23,7 @@ export function LaunchQueuePanel({ launch, pairing }: LaunchQueuePanelProps) {
         <PanelHead title="Launch queue" meta="Autonomous execution / standby" />
         <div className="p-6">
           <p className="font-mono text-xs uppercase text-[var(--jevo-accent)]">Standby / No Active Launch</p>
-          <p className="mt-2 text-sm text-[var(--jevo-muted)]">No pairing candidate is currently staged for autonomous execution in the active cycle.</p>
+          <p className="mt-2 text-sm text-[var(--jevo-muted)]">No launches scheduled. A launch appears here after an operator approves a pairing and schedules it.</p>
         </div>
       </div>
     );

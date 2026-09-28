@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 
 import type { AgentRuntime } from "@/types/agent";
 import { formatCycle } from "@/lib/format";
+import { getDeploymentSummary } from "@/lib/deployments";
 
 interface AppSidebarProps { agent: AgentRuntime; activeSection?: string; }
 
@@ -18,6 +19,7 @@ const sections = [
   { id: "pairings", label: "Pairings", icon: "pairing" },
   { id: "launch", label: "Launch", icon: "launch" },
   { id: "memory", label: "Memory", icon: "memory" },
+  { id: "contracts", label: "Contracts", icon: "contracts" },
 ] as const;
 
 function NavIcon({ name }: { name: (typeof sections)[number]["icon"] }) {
@@ -27,6 +29,7 @@ function NavIcon({ name }: { name: (typeof sections)[number]["icon"] }) {
   if (name === "pairing") return <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="4.5" cy="8" r="3" /><circle cx="11.5" cy="4.5" r="2.2" /><circle cx="11.5" cy="11.5" r="2.2" /><path d="M7 6.8 9.6 5.2M7 9.2l2.6 1.6" /></svg>;
   if (name === "launch") return <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5c2.2 1.6 3 3.7 3 6 0 1.6-.5 3-1 4l-2 2.5-2-2.5c-.5-1-1-2.4-1-4 0-2.3.8-4.4 3-6Z" /><circle cx="8" cy="7" r="1.3" /><path d="M5.5 12 3 14.5M10.5 12 13 14.5" /></svg>;
   if (name === "memory") return <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5a6.5 6.5 0 1 0 6.5 6.5" /><path d="M8 4.5V8l2.8 1.6M8 1.5v2.2M1.8 8H4" /></svg>;
+  if (name === "contracts") return <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2.5h10v11H3z" /><path d="M5.5 5.5h5M5.5 8h5M5.5 10.5h3" /></svg>;
   return <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="6" height="6" /><rect x="8.5" y="1.5" width="6" height="9" /><rect x="1.5" y="9.5" width="6" height="5" /></svg>;
 }
 
@@ -39,6 +42,7 @@ export function AppSidebar({ agent, activeSection: activeSectionProp }: AppSideb
     if (pathname.startsWith("/pairing")) return "pairings";
     if (pathname.startsWith("/launch")) return "launch";
     if (pathname.startsWith("/memory")) return "memory";
+    if (pathname.startsWith("/contracts")) return "contracts";
     const hash = window.location.hash.slice(1);
     return sections.some((section) => section.id === hash) ? hash : "overview";
   });
@@ -55,6 +59,8 @@ export function AppSidebar({ agent, activeSection: activeSectionProp }: AppSideb
       ? "launch"
       : pathname.startsWith("/memory")
       ? "memory"
+      : pathname.startsWith("/contracts")
+      ? "contracts"
       : activeSection);
 
   useEffect(() => {
@@ -115,6 +121,7 @@ export function AppSidebar({ agent, activeSection: activeSectionProp }: AppSideb
     if (id === "pairings") return "/pairing";
     if (id === "launch") return "/launch";
     if (id === "memory") return "/memory";
+    if (id === "contracts") return "/contracts";
     return `/app#${id}`;
   };
   const linkClass = (id: string) => (effectiveSection === id ? "is-active" : undefined);
@@ -149,23 +156,25 @@ export function AppSidebar({ agent, activeSection: activeSectionProp }: AppSideb
           <div className="side-net">
             <span className="label">Network context</span>
             <div className="row">
-              <span className="label">Robinhood Chain (Target)</span>
-              <span className="label">Phase 0</span>
+              <span className="label">Target</span>
+              <span className="label"><b>Robinhood Chain · Phase 0</b></span>
             </div>
             <div className="row">
-              <span className="label">Network</span>
-              <span className="label"><b>{agent.networkLabel ?? "Robinhood Chain"}</b></span>
+              <span className="label">Connection</span>
+              <span className="label"><b>{agent.networkLabel ?? "UNAVAILABLE"}</b></span>
             </div>
             <div className="row">
               <span className="label">Chain ID</span>
-              <span className="label"><b>Phase 0 (Staging)</b></span>
+              <span className="label"><b>—</b></span>
             </div>
             <div className="row">
-              <span className="label">State</span>
-              <span className="label"><b>{agent.networkLabel ? "ONLINE" : "STANDBY (PHASE 0)"}</b></span>
+              <span className="label">Contracts</span>
+              <Link href="/contracts" className="side-net-link" aria-label="View registered contracts">
+                <b>{getDeploymentSummary()}</b> ↗
+              </Link>
             </div>
           </div>
-          <span className="sr-only">{agent.networkLabel ?? "Robinhood Chain"} / cycle {formatCycle(agent.activeCycle)}</span>
+          <span className="sr-only">{agent.networkLabel ?? "UNAVAILABLE"} / cycle {formatCycle(agent.activeCycle)}</span>
         </div>
       </aside>
 

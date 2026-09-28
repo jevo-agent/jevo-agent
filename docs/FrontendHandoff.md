@@ -408,6 +408,36 @@ Four independent frontend enhancements and bugfixes were executed, verified, and
 
 ---
 
+---
+
+## Robinhood Chain Contracts Registry & Verified Public Architecture
+
+- **Public Deployments Registry (`web/src/data/deployments.json`)**:
+  - Human-managed canonical on-chain registry strictly initialized as empty `{ "deployments": [] }`.
+  - Enforces hard validation rules via `web/src/lib/deployments.ts`: address (`^0x[0-9a-fA-F]{40}$`), txHash (`^0x[0-9a-fA-F]{64}$`), and strict network-to-chainId correspondence (`testnet` -> `46630`, `mainnet` -> `4663`). Invalid records are silently excluded from production rendering (with developer warnings in development).
+  - Centralized single-constant explorer base URLs:
+    - Testnet: `https://explorer.testnet.chain.robinhood.com`
+    - Mainnet: `https://robinhoodchain.blockscout.com`
+- **Dedicated Contracts Page (`/contracts`)**:
+  - Encapsulated within `AppShell` with `activeSection="contracts"`.
+  - Network tabs for `TESTNET` (Chain ID 46630) and `MAINNET` (Chain ID 4663).
+  - Displays contract name, full address with copy-to-clipboard, explorer links, deployment tx hash, date, and notes.
+  - Truthful empty state when unpopulated: `"No contracts registered on <network> yet."`
+  - Integrated "PLANNED · NOT DEPLOYED" architectural pipeline listing components specified in `docs/BRIEF.md §23` and `docs/BackendHandoff.md §21` (`JEVO Agent Registry`, `JEVO Policy Controller`, `JEVO Launch Executor`, `Token Factory`, `Launch Adapter`, `Pons Adapter`, `Emergency Pause / Guardian`, `Event Logger`).
+  - Mandatory static disclaimer: `"Addresses are public records. Verify on the explorer before relying on them. Contracts are not audited."`
+- **Sidebar Integration (`AppSidebar.tsx`)**:
+  - Added persistent `Contracts` navigation item with dedicated SVG icon and route detection.
+  - Standardized `Network context`:
+    - `TARGET`: `Robinhood Chain · Phase 0`
+    - `CONNECTION`: `agent.networkLabel ?? "UNAVAILABLE"` (aligned with top bar)
+    - `CHAIN ID`: `—` (no phase strings)
+    - `CONTRACTS`: Dynamic registry summary link (e.g., `NONE REGISTERED ↗` or `2 TESTNET · 1 MAINNET ↗`).
+- **Admin Workspace Panels**:
+  - `Wallet & Contracts`: Added live registry summary with `"Open Contracts ↗"` link; Phase 0 production renders `"No agent wallet configured (Phase 0)"`; demo mode enforces `"DEMO PLACEHOLDER · NOT A REAL ADDRESS"` badge and removes the misleading `"AUTHORIZED"` status.
+  - `Launch Queue`: Honest empty state `"No launches scheduled. A launch appears here after an operator approves a pairing and schedules it."` without unpopulated layout blanks.
+
+---
+
 ### Remaining work (priority order)
 
 1. Select and verify real market/provider sources for `PROVIDER_MODE=real`.
@@ -432,5 +462,6 @@ The next agent should begin by auditing and selecting the real provider
 sources required for `PROVIDER_MODE=real`.
 
 Do NOT start blockchain work yet.
+
 
 
