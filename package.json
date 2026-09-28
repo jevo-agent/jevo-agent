@@ -10,6 +10,7 @@
   "scripts": {
     "dev:web": "bun --filter web dev",
     "dev:worker": "bun --filter worker dev",
-    "test:worker": "bun --filter worker test"
+    "test:worker": "bun --filter worker test",
+    "deploy:show": "./scripts/jevo-banner.sh && ./scripts/jevo-deploy-replay.sh"
   }
 }
