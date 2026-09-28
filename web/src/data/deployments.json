@@ -1,3 +1,14 @@
 {
-  "deployments": []
+  "deployments": [
+    {
+      "network": "testnet",
+      "chainId": 46630,
+      "name": "JevoPairingRegistry",
+      "address": "0x90278dFC0F8cFdbb4d4a013f90f60964D54b87f4",
+      "txHash": "0xadeea5a4b164000f1be3d39b1de1fb26de6e50850a006d7dd45b8c2e6ccc9a64",
+      "deployer": "0xd7FBb958184338c960F8B6ad6c778256501C4dBC",
+      "deployedAt": "2026-09-29T03:29:03+07:00",
+      "note": "Records operator-approved pairings. Owner-only, does not hold funds. Not audited."
+    }
+  ]
 }
