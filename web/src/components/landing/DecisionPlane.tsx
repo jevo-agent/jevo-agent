@@ -18,10 +18,11 @@ interface DecisionPlaneProps {
   asset: Stock;
   assets?: Stock[];
   pairing?: Pairing | null;
+  allPairings?: Pairing[];
   launch?: Launch | null;
 }
 
-export function DecisionPlane({ asset, assets, pairing = null, launch = null }: DecisionPlaneProps) {
+export function DecisionPlane({ asset, assets, pairing = null, allPairings = [], launch = null }: DecisionPlaneProps) {
   const [autoStage, setAutoStage] = useState(0);
   const [autoAssetIndex, setAutoAssetIndex] = useState(0);
   const [hoverAsset, setHoverAsset] = useState<string | null>(null);
@@ -169,12 +170,42 @@ export function DecisionPlane({ asset, assets, pairing = null, launch = null }: 
   const rankTransition = asset.previousRank === null
     ? `#${String(asset.currentRank).padStart(2, "0")}`
     : `#${String(asset.previousRank).padStart(2, "0")} → #${String(asset.currentRank).padStart(2, "0")}`;
-  const pairLabels = pairing
-    ? [
-        { symbol: pairing.symbol, label: `${pairing.stockSymbol} × ${pairing.symbol}`, detail: `${pairing.pairScore.toFixed(1)} / ${pairing.jevDecision.replaceAll("_", " ")}` },
-        ...pairing.alternatives.slice(0, 2).map((alternative) => ({ symbol: alternative.symbol, label: alternative.symbol, detail: `${alternative.pairScore.toFixed(1)} / ALTERNATIVE` })),
-      ]
-    : [];
+
+  const rawWhyPair = pairing?.thesis?.whyPair?.trim() ?? "";
+  const truncatedThesis = rawWhyPair.length > 90 ? `${rawWhyPair.slice(0, 87).trimEnd()}…` : rawWhyPair;
+  const thesisWords = truncatedThesis ? truncatedThesis.split(/\s+/) : [];
+  let thesisLine1 = "";
+  let thesisLine2 = "";
+  for (const w of thesisWords) {
+    if ((thesisLine1 + " " + w).trim().length <= 40) {
+      thesisLine1 = (thesisLine1 + " " + w).trim();
+    } else {
+      thesisLine2 = (thesisLine2 + " " + w).trim();
+    }
+  }
+
+  const alternativeCandidates = (() => {
+    if (!pairing) return [];
+    const siblings = (allPairings ?? [])
+      .filter((p) => p.stockSymbol === pairing.stockSymbol && p.symbol !== pairing.symbol);
+    const altList = [
+      ...siblings.map((s) => ({ symbol: s.symbol, score: s.pairScore, decision: s.jevDecision })),
+      ...(pairing.alternatives ?? []).map((a) => ({ symbol: a.symbol, score: a.pairScore, decision: "ALTERNATIVE" })),
+    ];
+    const seen = new Set<string>();
+    return altList.filter((a) => {
+      if (a.symbol === pairing.symbol || seen.has(a.symbol)) return false;
+      seen.add(a.symbol);
+      return true;
+    }).slice(0, 3);
+  })();
+
+  const pairingLifecycleStage = pairing?.lifecycle?.find((l) => l.status === "ACTIVE")?.stage ?? pairing?.status ?? "PROPOSED";
+  const nextStateLabel = pairingLifecycleStage === "PROPOSED"
+    ? "AWAITING CURATION"
+    : pairingLifecycleStage === "CURATED"
+      ? "LAUNCH PREPARATION"
+      : pairingLifecycleStage.replaceAll("_", " ");
   const description = pairing
     ? `Market signals enter from the left, pass through the JEV decision gate, rank into an opportunity list, branch into ${pairing.stockSymbol} × ${pairing.symbol}, and resolve into the launch lane. ${launch ? `Launch state: ${launch.readiness}.` : "No launch candidate this cycle."}`
     : "Market signals enter from the left, pass through the JEV decision gate, rank into an opportunity list, and resolve with no qualified pair or launch candidate this cycle.";
@@ -601,13 +632,69 @@ export function DecisionPlane({ asset, assets, pairing = null, launch = null }: 
         </g>
 
         {pairing ? <g className="plane-pair-routes">
-          <path className={`decision-route pair-route gpu-route${activePair && activePair !== pairing.symbol ? " is-dimmed" : ""}`} pathLength={1} d="M610 162 C660 162 670 88 714 88 L782 88 C820 88 828 120 828 176 L828 246" />
-          {pairLabels.slice(1).map((pair, index) => <path key={`pair-route-${pair.symbol}`} className={`decision-route pair-route pair-alt-route${activePair && activePair !== pair.symbol ? " is-dimmed" : ""}`} pathLength={1} d={`M610 162 C660 162 678 ${144 + index * 66} 714 ${144 + index * 66}`} />)}
+          <path className={`decision-route pair-route gpu-route${activePair && activePair !== pairing.symbol ? " is-dimmed" : ""}`} pathLength={1} d="M610 162 C660 162 670 88 704 88 L782 88 C820 88 828 120 828 176 L828 246" />
           <path className="decision-route launch-route" pathLength={1} d="M828 246 C828 304 814 354 772 382 L690 382" />
         </g> : null}
 
         <g className="plane-pair-labels">
-          {pairing ? pairLabels.map((pair, index) => <g key={pair.symbol} className={pairClass(pair.symbol)} aria-hidden="true" onMouseEnter={() => setHoverPair(pair.symbol)} onMouseLeave={() => setHoverPair(null)}><text className={pair.symbol === pairing.symbol ? "plane-pair-symbol selected" : "plane-pair-symbol"} x="714" y={94 + index * 62}>{pair.label}</text><text className="plane-note" x="714" y={111 + index * 62}>{pair.detail}</text></g>) : <g className="plane-pair-empty" aria-label="No qualified pair this cycle"><text className="plane-note" x="714" y="94">PAIR</text><text className="plane-accent" x="714" y="111">NO QUALIFIED PAIR</text><text className="plane-note" x="714" y="128">THIS CYCLE</text></g>}
+          {pairing ? (
+            <g className={pairClass(pairing.symbol)} aria-hidden="true" onMouseEnter={() => setHoverPair(pairing.symbol)} onMouseLeave={() => setHoverPair(null)}>
+              {/* 1. Primary candidate header */}
+              <text className="plane-pair-symbol selected" x="704" y="95">{pairing.stockSymbol} × {pairing.symbol}</text>
+              <text className="plane-note" x="704" y="110">{pairing.pairScore.toFixed(1)} / {pairing.jevDecision.replaceAll("_", " ")}</text>
+
+              {/* 2. One concise thesis snippet (truncated from whyPair, max ~90 chars) */}
+              {thesisLine1 ? (
+                <>
+                  <text className="plane-note" x="704" y="126" style={{ fontSize: "7px", letterSpacing: "0.08em", fill: "var(--dim)" }}>PAIR THESIS</text>
+                  <text className="plane-note" x="704" y="137" style={{ fontSize: "7.5px", fill: "var(--text-2)", fontFamily: "var(--mono)", textTransform: "none" }}>
+                    {thesisLine1}
+                  </text>
+                  {thesisLine2 ? (
+                    <text className="plane-note" x="704" y="147" style={{ fontSize: "7.5px", fill: "var(--text-2)", fontFamily: "var(--mono)", textTransform: "none" }}>
+                      {thesisLine2}
+                    </text>
+                  ) : null}
+                </>
+              ) : null}
+
+              {/* 3. Alternatives (max 3, hidden if none) */}
+              {alternativeCandidates.length > 0 ? (
+                <>
+                  <text className="plane-note" x="704" y={thesisLine2 ? 162 : 152} style={{ fontSize: "7px", letterSpacing: "0.08em", fill: "var(--dim)" }}>ALTERNATIVES</text>
+                  {alternativeCandidates.map((alt, i) => {
+                    const rowY = (thesisLine2 ? 162 : 152) + 12 + i * 13;
+                    return (
+                      <g key={alt.symbol}>
+                        <text className="plane-accent" x="704" y={rowY} style={{ fontSize: "8.5px", fontFamily: "var(--mono)" }}>{alt.symbol}</text>
+                        <text className="plane-note" x="764" y={rowY} style={{ fontSize: "8px", fontFamily: "var(--mono)" }}>{alt.score.toFixed(1)}</text>
+                        <text className="plane-note" x="804" y={rowY} style={{ fontSize: "7px", fill: "var(--dim)", fontFamily: "var(--mono)" }}>{alt.decision.replaceAll("_", " ")}</text>
+                      </g>
+                    );
+                  })}
+                </>
+              ) : null}
+
+              {/* 4. Next state from lifecycleState (PROPOSED -> "AWAITING CURATION") */}
+              {(() => {
+                const altBaseY = thesisLine2 ? 162 : 152;
+                const nextY = alternativeCandidates.length > 0
+                  ? altBaseY + 14 + alternativeCandidates.length * 13
+                  : (thesisLine2 ? 162 : 152);
+                return (
+                  <text className="plane-note" x="704" y={nextY} style={{ fontSize: "7px", letterSpacing: "0.08em", fill: "var(--dim)" }}>
+                    NEXT STATE / <tspan className="plane-accent" style={{ fontWeight: 600, fill: "var(--accent)" }}>{nextStateLabel}</tspan>
+                  </text>
+                );
+              })()}
+            </g>
+          ) : (
+            <g className="plane-pair-empty" aria-label="No qualified pair this cycle">
+              <text className="plane-note" x="704" y="95">PAIR</text>
+              <text className="plane-accent" x="704" y="112">NO QUALIFIED PAIR</text>
+              <text className="plane-note" x="704" y="129">THIS CYCLE</text>
+            </g>
+          )}
         </g>
 
         <g className="plane-launch-label">

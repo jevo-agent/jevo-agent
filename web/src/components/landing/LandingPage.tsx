@@ -50,6 +50,7 @@ export function LandingPage(data: LandingPageProps) {
           asset={data.featuredAsset}
           assets={data.assets}
           pairing={data.featuredPairing}
+          pairings={data.pairings}
           launch={data.launch}
         />
         <AgentSection
@@ -65,6 +66,7 @@ export function LandingPage(data: LandingPageProps) {
         {data.featuredPairing ? (
           <PairingSection
             pairing={data.featuredPairing}
+            pairings={data.pairings}
             asset={data.assets.find((asset) => asset.symbol === data.featuredPairing?.stockSymbol) ?? data.featuredAsset}
           />
         ) : (
@@ -450,12 +452,14 @@ function LandingHero({
   asset,
   assets,
   pairing,
+  pairings,
   launch,
 }: {
   agent: AgentRuntime;
   asset: Stock;
   assets?: Stock[];
   pairing: Pairing | null;
+  pairings?: Pairing[];
   launch: Launch | null;
 }) {
   return (
@@ -492,7 +496,7 @@ function LandingHero({
             State → Jev → Decision → Action <span>Phase 0</span>
           </p>
         </div>
-        <DecisionPlane asset={asset} assets={assets} pairing={pairing} launch={launch} />
+        <DecisionPlane asset={asset} assets={assets} pairing={pairing} allPairings={pairings} launch={launch} />
       </div>
       <div className="hero-status">
         <div className="wrap">
@@ -1120,7 +1124,15 @@ function OpportunitySection({
   );
 }
 
-function PairingSection({ pairing, asset }: { pairing: Pairing; asset: Stock }) {
+function PairingSection({
+  pairing,
+  asset,
+  pairings = [],
+}: {
+  pairing: Pairing;
+  asset: Stock;
+  pairings?: Pairing[];
+}) {
   const storyRef = useRef<HTMLElement | null>(null);
   const stickyRef = useRef<HTMLDivElement | null>(null);
   const manualTimer = useRef<number | null>(null);
@@ -1129,19 +1141,38 @@ function PairingSection({ pairing, asset }: { pairing: Pairing; asset: Stock }) 
   const [manualCandidate, setManualCandidate] = useState<number | null>(null);
   const [displayedCandidate, setDisplayedCandidate] = useState(0);
   const [factorPhase, setFactorPhase] = useState<FactorPhase>("idle");
-  const candidates: PairCandidate[] = [
-    {
+
+  const candidates: PairCandidate[] = useMemo(() => {
+    const primary: PairCandidate = {
       symbol: pairing.symbol,
       score: pairing.pairScore,
-      label: "strong pair",
+      label: pairing.jevDecision === "STRONG_PAIR" ? "strong pair" : pairing.jevDecision.replaceAll("_", " ").toLowerCase(),
       pairing,
-    },
-    ...pairing.alternatives.map((alternative) => ({
-      symbol: alternative.symbol,
-      score: alternative.pairScore,
-      label: "alternative",
-    })),
-  ];
+    };
+    const siblings = (pairings ?? [])
+      .filter((p) => p.stockSymbol === pairing.stockSymbol && p.symbol !== pairing.symbol)
+      .map((p): PairCandidate => ({
+        symbol: p.symbol,
+        score: p.pairScore,
+        label: p.jevDecision === "STRONG_PAIR" ? "strong pair" : p.jevDecision.replaceAll("_", " ").toLowerCase(),
+        pairing: p,
+      }));
+    const embedded = (pairing.alternatives ?? [])
+      .filter((alt) => alt.symbol !== pairing.symbol && !siblings.some((s) => s.symbol === alt.symbol))
+      .map((alt): PairCandidate => ({
+        symbol: alt.symbol,
+        score: alt.pairScore,
+        label: "alternative",
+      }));
+    const all = [primary, ...siblings, ...embedded];
+    const seen = new Set<string>();
+    return all.filter((c) => {
+      if (seen.has(c.symbol)) return false;
+      seen.add(c.symbol);
+      return true;
+    });
+  }, [pairing, pairings]);
+
   const selectedIndex = manualCandidate ?? scrollCandidate;
   useEffect(() => {
     const section = storyRef.current;
@@ -1164,9 +1195,10 @@ function PairingSection({ pairing, asset }: { pairing: Pairing; asset: Stock }) 
           0,
           Math.min(1, (window.scrollY - sectionTop) / travel),
         );
+        const count = Math.max(candidates.length, 1);
         const nextCandidate = Math.min(
-          2,
-          Math.floor(Math.min(progress, 0.999999) * 3),
+          count - 1,
+          Math.floor(Math.min(progress, 0.999999) * count),
         );
         setScrollCandidate((current) =>
           current === nextCandidate ? current : nextCandidate,
@@ -1181,7 +1213,7 @@ function PairingSection({ pairing, asset }: { pairing: Pairing; asset: Stock }) 
       window.removeEventListener("resize", updateFromScroll);
       if (frame !== null) window.cancelAnimationFrame(frame);
     };
-  }, []);
+  }, [candidates.length]);
 
   useEffect(
     () => () => {
@@ -1269,31 +1301,46 @@ function PairingSection({ pairing, asset }: { pairing: Pairing; asset: Stock }) 
               </div>
               <div className="pair-links" aria-hidden="true">
                 <svg viewBox="0 0 100 300" preserveAspectRatio="none">
-                  {candidates.map((candidate, index) => (
-                    <path
-                      key={candidate.symbol}
-                      className={selectedIndex === index ? "on" : undefined}
-                      d={`M0,150 C50,150 50,${50 + index * 100} 100,${50 + index * 100}`}
-                    />
-                  ))}
+                  {/* Stock origin node */}
+                  <circle cx="2" cy="150" r="3" fill="var(--accent)" />
+                  {candidates.map((candidate, index) => {
+                    const count = Math.max(candidates.length, 1);
+                    const targetY = count === 1 ? 150 : (index + 0.5) * (300 / count);
+                    const isSelected = selectedIndex === index;
+                    return (
+                      <g key={candidate.symbol}>
+                        <path
+                          className={isSelected ? "on" : "off"}
+                          d={`M2,150 C48,150 52,${targetY} 98,${targetY}`}
+                        />
+                        <circle
+                          cx="98"
+                          cy={targetY}
+                          r={isSelected ? 3.5 : 2}
+                          fill={isSelected ? "var(--accent)" : "rgb(220 235 215 / 35%)"}
+                        />
+                      </g>
+                    );
+                  })}
                 </svg>
               </div>
               <div
                 className="cands"
                 role="group"
                 aria-label={`Meme candidates for ${pairing.stockSymbol}`}
+                style={{ gridTemplateRows: `repeat(${candidates.length}, 1fr)` }}
               >
                 {candidates.map((candidate, index) => (
                   <button
                     key={candidate.symbol}
-                    className="cand"
+                    className={`cand${selectedIndex === index ? " is-active" : ""}`}
                     type="button"
                     aria-pressed={selectedIndex === index}
                     onClick={() => selectCandidate(index)}
                   >
                     <b>{candidate.symbol}</b>
                     <span className="label">
-                      {candidate.score} / {candidate.label}
+                      {candidate.score.toFixed(1)} / {candidate.label}
                     </span>
                   </button>
                 ))}

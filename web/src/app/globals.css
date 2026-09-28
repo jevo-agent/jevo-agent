@@ -410,8 +410,38 @@ a, button { touch-action: manipulation; }
   animation-delay: var(--factor-delay, 0ms);
 }
 .landing-root .pair-links path {
-  transition: stroke .3s ease-in-out, stroke-width .3s ease-in-out;
+  transition: stroke .3s ease-in-out, stroke-width .3s ease-in-out, opacity .3s ease-in-out;
 }
+.landing-root .pair-links path.on {
+  stroke: var(--accent);
+  stroke-width: 2.2;
+  opacity: 1;
+  filter: drop-shadow(0 0 6px var(--accent));
+}
+.landing-root .pair-links path.off,
+.landing-root .pair-links path:not(.on) {
+  stroke: rgb(220 235 215 / 18%);
+  stroke-width: 1.2;
+  opacity: 0.35;
+}
+.landing-root .cand {
+  transition: opacity .2s, border-color .2s;
+}
+.landing-root .cand:not([aria-pressed="true"]):not(.is-active) {
+  opacity: 0.45;
+}
+.landing-root .cand:not([aria-pressed="true"]):hover {
+  opacity: 0.85;
+}
+.landing-root .cand[aria-pressed="true"],
+.landing-root .cand.is-active {
+  opacity: 1;
+}
+.landing-root .cand[aria-pressed="true"] b,
+.landing-root .cand.is-active b {
+  color: var(--accent);
+}
+
 @keyframes pairing-thesis-enter {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
