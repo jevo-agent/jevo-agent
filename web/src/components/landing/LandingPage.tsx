@@ -552,12 +552,19 @@ function HeroEdgeUtilities() {
     [],
   );
 
+  const rawCa =
+    (typeof process !== "undefined"
+      ? (process.env.NEXT_PUBLIC_JEVO_TOKEN_ADDRESS || process.env.NEXT_PUBLIC_CA)
+      : "") || "";
+  const isValidCa = /^0x[0-9a-fA-F]{40}$/.test(rawCa.trim());
+
   async function copyCa() {
+    if (!isValidCa) return;
     try {
       let copiedWithClipboard = false;
       if (navigator.clipboard?.writeText) {
         try {
-          await navigator.clipboard.writeText("jevoca");
+          await navigator.clipboard.writeText(rawCa.trim());
           copiedWithClipboard = true;
         } catch {
           copiedWithClipboard = false;
@@ -565,7 +572,7 @@ function HeroEdgeUtilities() {
       }
       if (!copiedWithClipboard) {
         const textarea = document.createElement("textarea");
-        textarea.value = "jevoca";
+        textarea.value = rawCa.trim();
         textarea.setAttribute("readonly", "true");
         textarea.style.position = "fixed";
         textarea.style.opacity = "0";
@@ -593,22 +600,34 @@ function HeroEdgeUtilities() {
         DECISION&nbsp;&nbsp;/&nbsp;&nbsp;SYS.9841
       </div>
       <button
-        className="hero-ca"
+        className={`hero-ca${!isValidCa ? " is-disabled" : ""}`}
         type="button"
-        onClick={copyCa}
+        onClick={isValidCa ? copyCa : undefined}
+        disabled={!isValidCa}
         aria-label={
-          copied
-            ? "JEVO CA placeholder copied"
-            : "Copy JEVO CA placeholder jevoca"
+          !isValidCa
+            ? "Contract address TBA"
+            : copied
+              ? "Contract address copied"
+              : `Copy contract address ${rawCa.trim()}`
         }
       >
-        <span className="hero-ca-prefix">CA</span>
-        <code>jevoca</code>
-        <span aria-hidden="true">↗</span>
-        <span className="hero-ca-copy">[{copied ? "COPIED" : "COPY"}]</span>
+        {isValidCa ? (
+          <>
+            <span className="hero-ca-prefix">CA</span>
+            <code>{rawCa.trim().slice(0, 6)}...{rawCa.trim().slice(-4)}</code>
+            <span aria-hidden="true">↗</span>
+            <span className="hero-ca-copy">[{copied ? "COPIED" : "COPY"}]</span>
+          </>
+        ) : (
+          <>
+            <span className="hero-ca-prefix">CA</span>
+            <code>· TBA</code>
+          </>
+        )}
       </button>
       <span className="hero-ca-feedback" aria-live="polite">
-        {copied ? "CA placeholder copied" : ""}
+        {copied ? "Contract address copied" : ""}
       </span>
       <div className="hero-edge-rail hero-edge-rail-right" aria-hidden="true">
         <span>AUTONOMOUS // JEV // AGENT</span>

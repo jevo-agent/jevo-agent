@@ -186,17 +186,41 @@ export function DecisionPlane({ asset, assets, pairing = null, allPairings = [],
   const isTied = featuredSelection.isTied;
 
   const rawWhyPair = activePairing?.thesis?.whyPair?.trim() ?? "";
-  const truncatedThesis = rawWhyPair.length > 90 ? `${rawWhyPair.slice(0, 87).trimEnd()}…` : rawWhyPair;
-  const thesisWords = truncatedThesis ? truncatedThesis.split(/\s+/) : [];
-  let thesisLine1 = "";
-  let thesisLine2 = "";
-  for (const w of thesisWords) {
-    if ((thesisLine1 + " " + w).trim().length <= 40) {
-      thesisLine1 = (thesisLine1 + " " + w).trim();
-    } else {
-      thesisLine2 = (thesisLine2 + " " + w).trim();
+
+  const controlledRows = useMemo(() => {
+    const rows: Array<{ label: string; value: string }> = [];
+    const proposedCount = allPairings.filter(
+      (p) => p.status === "AGENT_PROPOSED",
+    ).length;
+    const curatedCount = allPairings.filter((p) => p.status === "CURATED").length;
+    const inQueueCount = allPairings.filter((p) => p.status === "LAUNCH_CANDIDATE").length;
+
+    if (proposedCount > 0) {
+      rows.push({
+        label: "PROPOSED",
+        value: `${proposedCount} CANDIDATE${proposedCount > 1 ? "S" : ""}`,
+      });
     }
-  }
+    if (curatedCount > 0) {
+      rows.push({
+        label: "CURATED",
+        value: `${curatedCount} APPROVED`,
+      });
+    }
+    if (inQueueCount > 0) {
+      rows.push({
+        label: "IN LAUNCH QUEUE",
+        value: `${inQueueCount} SCHEDULED`,
+      });
+    }
+    if (launch && rows.length < 3) {
+      rows.push({
+        label: "LAUNCH ACTIVE",
+        value: `${launch.stage.replaceAll("_", " ")} · ${launch.readiness}`,
+      });
+    }
+    return rows.slice(0, 3);
+  }, [allPairings, launch]);
 
   const alternativeCandidates = useMemo(() => {
     if (!activePairing) return [];
@@ -630,91 +654,106 @@ export function DecisionPlane({ asset, assets, pairing = null, allPairings = [],
           {signals.filter((signal) => Boolean(signal.symbol)).map((signal) => <g key={`asset-${signal.symbol}`} className={`${assetClass(signal.symbol)}${signal.symbol === asset.symbol ? " is-primary" : ""}`} aria-hidden="true" onMouseEnter={() => setHoverAsset(signal.symbol)} onMouseLeave={() => setHoverAsset(null)}><text x="48" y={signal.sourceY + 4}>{signal.symbol}</text><circle cx="36" cy={signal.sourceY} r="2.5" /></g>)}
         </g>
 
+        {pairing ? (
+          <g className="plane-pair-routes">
+            <path className={`decision-route pair-route gpu-route${activePair && activePair !== pairing.symbol ? " is-dimmed" : ""}`} pathLength={1} d="M610 162 C660 162 670 88 704 88 L782 88 C820 88 828 120 828 176 L828 246" />
+            <path className="decision-route launch-route" pathLength={1} d="M828 246 C828 304 814 354 772 382 L690 382" />
+          </g>
+        ) : null}
+
         {/* High-Precision JEV Output Register (Solid institutional status card) */}
-        <g className="plane-output-frame" aria-hidden="true">
-          <rect className="output-backdrop" x="676" y="48" width="220" height="410" rx="3" pathLength={1} />
-          <rect className="output-header-bar" x="676" y="48" width="220" height="26" rx="3" />
-          <circle className="output-status-led" cx="688" cy="61" r="2.8" />
-          <text className="output-title" x="698" y="65">JEV OUTPUT REGISTER</text>
-          <line x1="676" y1="74" x2="896" y2="74" />
-          <line x1="676" y1="238" x2="896" y2="238" />
-          <text className="output-subheading" x="694" y="255">CONTROLLED STATE // ACT</text>
-        </g>
+        <foreignObject x="670" y="44" width="250" height="490" className="plane-output-foreign">
+          <div className="output-register-card" role="region" aria-label="JEV Output Register">
+            <div className="output-header-bar">
+              <span className="output-status-led" />
+              <span className="output-title">JEV OUTPUT REGISTER</span>
+            </div>
 
-        {pairing ? <g className="plane-pair-routes">
-          <path className={`decision-route pair-route gpu-route${activePair && activePair !== pairing.symbol ? " is-dimmed" : ""}`} pathLength={1} d="M610 162 C660 162 670 88 704 88 L782 88 C820 88 828 120 828 176 L828 246" />
-          <path className="decision-route launch-route" pathLength={1} d="M828 246 C828 304 814 354 772 382 L690 382" />
-        </g> : null}
+            {pairing ? (
+              <div
+                className={`output-body ${pairClass(pairing.symbol)}`}
+                onMouseEnter={() => setHoverPair(pairing.symbol)}
+                onMouseLeave={() => setHoverPair(null)}
+              >
+                <div className="output-pair-heading">
+                  <div className="output-pair-symbol">{pairing.stockSymbol} × {pairing.symbol}</div>
+                  <div className="output-pair-score-row">
+                    <span className="output-pair-score">
+                      {pairing.pairScore.toFixed(1)} / {pairing.jevDecision.replaceAll("_", " ")}
+                    </span>
+                    {isTied ? (
+                      <span className="output-tied-badge">· TIED · {tiedCount} CANDIDATES</span>
+                    ) : null}
+                  </div>
+                </div>
 
-        <g className="plane-pair-labels">
-          {pairing ? (
-            <g className={pairClass(pairing.symbol)} aria-hidden="true" onMouseEnter={() => setHoverPair(pairing.symbol)} onMouseLeave={() => setHoverPair(null)}>
-              <text className="plane-pair-symbol selected" x="704" y="95">{pairing.stockSymbol} × {pairing.symbol}</text>
-              <text className="plane-note" x="704" y="110">
-                {pairing.pairScore.toFixed(1)} / {pairing.jevDecision.replaceAll("_", " ")}
-                {isTied ? (
-                  <tspan style={{ fill: "var(--accent)", fontWeight: 600 }}> · TIED · {tiedCount} CANDIDATES</tspan>
+                {rawWhyPair ? (
+                  <div className="output-section">
+                    <div className="output-section-label">PAIR THESIS</div>
+                    <p className="output-thesis-text" title={rawWhyPair}>
+                      {rawWhyPair}
+                    </p>
+                  </div>
                 ) : null}
-              </text>
 
-              {/* 2. One concise thesis snippet (truncated from whyPair, max ~90 chars) */}
-              {thesisLine1 ? (
-                <>
-                  <text className="plane-note" x="704" y="126" style={{ fontSize: "7px", letterSpacing: "0.08em", fill: "var(--dim)" }}>PAIR THESIS</text>
-                  <text className="plane-note" x="704" y="137" style={{ fontSize: "7.5px", fill: "var(--text-2)", fontFamily: "var(--mono)", textTransform: "none" }}>
-                    {thesisLine1}
-                  </text>
-                  {thesisLine2 ? (
-                    <text className="plane-note" x="704" y="147" style={{ fontSize: "7.5px", fill: "var(--text-2)", fontFamily: "var(--mono)", textTransform: "none" }}>
-                      {thesisLine2}
-                    </text>
-                  ) : null}
-                </>
-              ) : null}
+                {alternativeCandidates.length > 0 ? (
+                  <div className="output-section">
+                    <div className="output-section-label">ALTERNATIVES</div>
+                    <div className="output-alts-list">
+                      {alternativeCandidates.map((alt) => (
+                        <div key={alt.symbol} className="output-alt-row">
+                          <span className="output-alt-symbol">{alt.symbol}</span>
+                          <span className="output-alt-score">{alt.score.toFixed(1)}</span>
+                          <span className="output-alt-decision">{alt.decision.replaceAll("_", " ")}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
 
-              {/* 3. Alternatives (max 3, hidden if none) */}
-              {alternativeCandidates.length > 0 ? (
-                <>
-                  <text className="plane-note" x="704" y={thesisLine2 ? 162 : 152} style={{ fontSize: "7px", letterSpacing: "0.08em", fill: "var(--dim)" }}>ALTERNATIVES</text>
-                  {alternativeCandidates.map((alt, i) => {
-                    const rowY = (thesisLine2 ? 162 : 152) + 12 + i * 13;
-                    return (
-                      <g key={alt.symbol}>
-                        <text className="plane-accent" x="704" y={rowY} style={{ fontSize: "8.5px", fontFamily: "var(--mono)" }}>{alt.symbol}</text>
-                        <text className="plane-note" x="764" y={rowY} style={{ fontSize: "8px", fontFamily: "var(--mono)" }}>{alt.score.toFixed(1)}</text>
-                        <text className="plane-note" x="804" y={rowY} style={{ fontSize: "7px", fill: "var(--dim)", fontFamily: "var(--mono)" }}>{alt.decision.replaceAll("_", " ")}</text>
-                      </g>
-                    );
-                  })}
-                </>
-              ) : null}
+                <div className="output-next-state">
+                  <span className="output-section-label">NEXT STATE / </span>
+                  <span className="output-next-state-value">{nextStateLabel}</span>
+                </div>
 
-              {/* 4. Next state from lifecycleState (PROPOSED -> "AWAITING CURATION") */}
-              {(() => {
-                const altBaseY = thesisLine2 ? 162 : 152;
-                const nextY = alternativeCandidates.length > 0
-                  ? altBaseY + 14 + alternativeCandidates.length * 13
-                  : (thesisLine2 ? 162 : 152);
-                return (
-                  <text className="plane-note" x="704" y={nextY} style={{ fontSize: "7px", letterSpacing: "0.08em", fill: "var(--dim)" }}>
-                    NEXT STATE / <tspan className="plane-accent" style={{ fontWeight: 600, fill: "var(--accent)" }}>{nextStateLabel}</tspan>
-                  </text>
-                );
-              })()}
-            </g>
-          ) : (
-            <g className="plane-pair-empty" aria-label="No qualified pair this cycle">
-              <text className="plane-note" x="704" y="95">PAIR</text>
-              <text className="plane-accent" x="704" y="112">NO QUALIFIED PAIR</text>
-              <text className="plane-note" x="704" y="129">THIS CYCLE</text>
-            </g>
-          )}
-        </g>
-
-        <g className="plane-launch-label">
-          <line x1="690" y1="366" x2="690" y2="454" />
-          {launch && pairing ? <><text className="plane-note" x="708" y="388">LAUNCH / {launch.stage.replaceAll("_", " ")}</text><text className="plane-accent" x="708" y="414">{pairing.stockSymbol} × {pairing.symbol}</text><text className="plane-note" x="708" y="438">{launch.readiness} · TX / {launch.transactionState.replaceAll("_", " ")}</text></> : <><text className="plane-note" x="708" y="388">LAUNCH</text><text className="plane-accent" x="708" y="414">NO LAUNCH CANDIDATE</text><text className="plane-note" x="708" y="438">THIS CYCLE</text></>}
-        </g>
+                {controlledRows.length > 0 ? (
+                  <div className="output-controlled-block">
+                    <div className="output-divider" />
+                    <div className="output-section-label output-controlled-heading">CONTROLLED STATE // ACT</div>
+                    <div className="output-controlled-rows">
+                      {controlledRows.map((row) => (
+                        <div key={row.label} className="output-controlled-row">
+                          <span className="output-controlled-label">{row.label}</span>
+                          <span className="output-controlled-value">{row.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <div className="output-body output-empty">
+                <div className="output-section-label">PAIR</div>
+                <div className="output-pair-symbol">NO QUALIFIED PAIR</div>
+                <div className="output-section-label">THIS CYCLE</div>
+                {controlledRows.length > 0 ? (
+                  <div className="output-controlled-block">
+                    <div className="output-divider" />
+                    <div className="output-section-label output-controlled-heading">CONTROLLED STATE // ACT</div>
+                    <div className="output-controlled-rows">
+                      {controlledRows.map((row) => (
+                        <div key={row.label} className="output-controlled-row">
+                          <span className="output-controlled-label">{row.label}</span>
+                          <span className="output-controlled-value">{row.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </div>
+        </foreignObject>
 
         {/* Interactive Cursor Reticle (tracks mouse dynamically across decision plane) */}
         {cursorPos ? (
