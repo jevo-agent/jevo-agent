@@ -10,6 +10,8 @@ import { opportunitiesRoutes } from "./routes/opportunities";
 import { pairingsRoutes } from "./routes/pairings";
 import { stocksRoutes } from "./routes/stocks";
 import { adminRoutes } from "./routes/admin";
+import { cronRoutes } from "./routes/cron";
+import { internalRoutes } from "./routes/internal";
 
 export async function createServer(): Promise<FastifyInstance> {
   const app = fastify({
@@ -56,6 +58,10 @@ export async function createServer(): Promise<FastifyInstance> {
     exposedHeaders: ["Last-Event-ID"],
   });
 
+  // Vercel Cron is a short-lived producer. It never executes a cycle inline;
+  // the handler publishes a bounded job to the configured queue transport.
+  await app.register(cronRoutes);
+
   // Register all API routes under /api/v1 prefix
   await app.register(
     async (v1) => {
@@ -68,6 +74,7 @@ export async function createServer(): Promise<FastifyInstance> {
       await v1.register(cyclesRoutes);
       await v1.register(eventsRoutes);
       await v1.register(adminRoutes, { prefix: "/admin" });
+      await v1.register(internalRoutes);
     },
     { prefix: "/api/v1" },
   );

@@ -14,6 +14,7 @@ import {
   stopLaunchProgressionWorker,
 } from "./jobs/launchProgression";
 import { closeEventBus } from "./events";
+import { shouldStartPersistentWorkers, isVercelRuntime } from "./runtime";
 
 async function main() {
   logger.info(
@@ -27,6 +28,16 @@ async function main() {
     },
     "JEVO worker & API booting (BACKEND 08 - Realtime SSE & Composed Entrypoint)",
   );
+
+  // Vercel detects src/index.ts as a Fastify entrypoint as well. Keep this
+  // guard so an accidental entrypoint change can never start a persistent
+  // BullMQ consumer or repeat scheduler inside a Function instance.
+  if (!shouldStartPersistentWorkers()) {
+    const server = await createServer();
+    await server.listen({ port: env.PORT, host: env.HOST });
+    logger.info({ port: env.PORT }, "JEVO stateless API service listening");
+    return;
+  }
 
   // 1. Seed initial stock assets and curated meme concepts into Postgres
   try {
@@ -98,7 +109,9 @@ async function main() {
   process.on("SIGTERM", () => shutdown("SIGTERM"));
 }
 
-main().catch((err) => {
-  logger.fatal({ err }, "Fatal crash during worker & API startup");
-  process.exit(1);
-});
+if (import.meta.main || isVercelRuntime()) {
+  main().catch((err) => {
+    logger.fatal({ err }, "Fatal crash during worker & API startup");
+    process.exit(1);
+  });
+}

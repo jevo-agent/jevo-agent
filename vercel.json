@@ -1,0 +1,63 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "web": {
+      "root": "web/",
+      "framework": "nextjs",
+      "functions": {
+        "src/app/api/queues/jevo-cycle/route.ts": {
+          "experimentalTriggers": [
+            {
+              "type": "queue/v2beta",
+              "topic": "jevo-agent-cycles",
+              "retryAfterSeconds": 60
+            }
+          ]
+        },
+        "src/app/api/queues/jevo-launch/route.ts": {
+          "experimentalTriggers": [
+            {
+              "type": "queue/v2beta",
+              "topic": "jevo-launch-progression",
+              "retryAfterSeconds": 60
+            }
+          ]
+        }
+      },
+      "bindings": [
+        {
+          "type": "service",
+          "service": "api",
+          "format": "url",
+          "env": "JEVO_API_SERVICE_URL"
+        }
+      ]
+    },
+    "api": {
+      "root": "worker/",
+      "framework": "fastify",
+      "entrypoint": "src/app.ts"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/v1/(.*)",
+      "destination": { "service": "api" }
+    },
+    {
+      "source": "/api/cron/(.*)",
+      "destination": { "service": "api" }
+    },
+    {
+      "source": "/(.*)",
+      "destination": { "service": "web" }
+    }
+  ],
+  "crons": [
+    { "path": "/api/cron/jevo/delta", "schedule": "* * * * *" },
+    { "path": "/api/cron/jevo/ranking", "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/jevo/full", "schedule": "0,30 * * * *" },
+    { "path": "/api/cron/jevo/narrative", "schedule": "0 * * * *" },
+    { "path": "/api/cron/jevo/launch", "schedule": "* * * * *" }
+  ]
+}

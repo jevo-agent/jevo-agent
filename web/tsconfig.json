@@ -19,7 +19,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@jevo/protocol-types": ["../packages/protocol-types/src/index.ts"]
     }
   },
   "include": [

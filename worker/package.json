@@ -15,6 +15,7 @@
   "dependencies": {
     "@fastify/cors": "^11.3.0",
     "@jevo/protocol-types": "workspace:*",
+    "@vercel/queue": "^0.7.0",
     "ai": "^7.0.116",
     "bullmq": "^6.3.8",
     "dotenv": "^16.4.7",

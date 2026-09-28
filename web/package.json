@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.103.2",
+    "@jevo/protocol-types": "workspace:*",
+    "@vercel/queue": "^0.7.0",
     "framer-motion": "^13.4.2",
     "next": "16.3.6",
     "react": "19.2.8",

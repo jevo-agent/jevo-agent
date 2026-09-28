@@ -34,6 +34,10 @@ export const envSchema = z.object({
   DEXPAPRIKA_API_URL: z.string().url().default("https://api.dexpaprika.com"),
   DEXPAPRIKA_CACHE_TTL_MS: z.coerce.number().int().positive().default(60_000),
   ADMIN_API_TOKENS: z.string().optional(),
+  /** Secret shared by the Vercel Queue consumer and the internal worker route. */
+  VERCEL_INTERNAL_JOB_TOKEN: z.string().optional(),
+  /** Secret used by Vercel Cron's Authorization header. */
+  CRON_SECRET: z.string().optional(),
   NEXT_PUBLIC_APP_URL: z.string().optional(),
 });
 

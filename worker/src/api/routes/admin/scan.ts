@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
-import { enqueueCycleJob } from "../../../jobs/queues";
+import { enqueueCycleForRuntime } from "../../../jobs/vercelQueue";
 import { formatResponse } from "../../envelope";
 import { recordOperatorProtocolEvent } from "./common";
 
@@ -24,8 +24,8 @@ export const adminScanRoutes: FastifyPluginAsync = async (fastify) => {
 
     const { kind } = parsed.data;
 
-    // Enqueue manual job via existing BullMQ helper
-    const job = await enqueueCycleJob(kind, { isManual: true });
+    // Local development uses BullMQ; Vercel publishes a durable Queue message.
+    const job = await enqueueCycleForRuntime(kind, { isManual: true });
 
     // Record operator protocol event
     await recordOperatorProtocolEvent("AGENT_SCAN_TRIGGERED", {
