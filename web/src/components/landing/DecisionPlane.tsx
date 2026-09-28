@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 
+import { formatNextState, selectFeaturedPairing } from "@/lib/pairings";
 import type { Launch } from "@/types/launch";
 import type { Pairing } from "@/types/pairing";
 import type { Stock } from "@/types/stock";
@@ -171,7 +172,20 @@ export function DecisionPlane({ asset, assets, pairing = null, allPairings = [],
     ? `#${String(asset.currentRank).padStart(2, "0")}`
     : `#${String(asset.previousRank).padStart(2, "0")} → #${String(asset.currentRank).padStart(2, "0")}`;
 
-  const rawWhyPair = pairing?.thesis?.whyPair?.trim() ?? "";
+  const featuredSelection = useMemo(
+    () =>
+      selectFeaturedPairing(
+        allPairings.length > 0 ? allPairings : pairing ? [pairing] : [],
+        asset.symbol,
+      ),
+    [allPairings, asset.symbol, pairing],
+  );
+
+  const activePairing = pairing ?? featuredSelection.pairing;
+  const tiedCount = featuredSelection.tiedCount;
+  const isTied = featuredSelection.isTied;
+
+  const rawWhyPair = activePairing?.thesis?.whyPair?.trim() ?? "";
   const truncatedThesis = rawWhyPair.length > 90 ? `${rawWhyPair.slice(0, 87).trimEnd()}…` : rawWhyPair;
   const thesisWords = truncatedThesis ? truncatedThesis.split(/\s+/) : [];
   let thesisLine1 = "";
@@ -184,30 +198,26 @@ export function DecisionPlane({ asset, assets, pairing = null, allPairings = [],
     }
   }
 
-  const alternativeCandidates = (() => {
-    if (!pairing) return [];
-    const siblings = (allPairings ?? [])
-      .filter((p) => p.stockSymbol === pairing.stockSymbol && p.symbol !== pairing.symbol);
-    const altList = [
-      ...siblings.map((s) => ({ symbol: s.symbol, score: s.pairScore, decision: s.jevDecision })),
-      ...(pairing.alternatives ?? []).map((a) => ({ symbol: a.symbol, score: a.pairScore, decision: "ALTERNATIVE" })),
-    ];
-    const seen = new Set<string>();
-    return altList.filter((a) => {
-      if (a.symbol === pairing.symbol || seen.has(a.symbol)) return false;
-      seen.add(a.symbol);
-      return true;
-    }).slice(0, 3);
-  })();
+  const alternativeCandidates = useMemo(() => {
+    if (!activePairing) return [];
+    if (featuredSelection.alternatives.length > 0) {
+      return featuredSelection.alternatives.slice(0, 3).map((a) => ({
+        symbol: a.symbol,
+        score: a.pairScore,
+        decision: a.jevDecision,
+      }));
+    }
+    return (activePairing.alternatives ?? []).slice(0, 3).map((a) => ({
+      symbol: a.symbol,
+      score: a.pairScore,
+      decision: "ALTERNATIVE",
+    }));
+  }, [activePairing, featuredSelection.alternatives]);
 
-  const pairingLifecycleStage = pairing?.lifecycle?.find((l) => l.status === "ACTIVE")?.stage ?? pairing?.status ?? "PROPOSED";
-  const nextStateLabel = pairingLifecycleStage === "PROPOSED"
-    ? "AWAITING CURATION"
-    : pairingLifecycleStage === "CURATED"
-      ? "LAUNCH PREPARATION"
-      : pairingLifecycleStage.replaceAll("_", " ");
-  const description = pairing
-    ? `Market signals enter from the left, pass through the JEV decision gate, rank into an opportunity list, branch into ${pairing.stockSymbol} × ${pairing.symbol}, and resolve into the launch lane. ${launch ? `Launch state: ${launch.readiness}.` : "No launch candidate this cycle."}`
+  const pairingLifecycleStage = activePairing?.lifecycle?.find((l) => l.status === "ACTIVE")?.stage ?? activePairing?.status ?? "PROPOSED";
+  const nextStateLabel = formatNextState(pairingLifecycleStage);
+  const description = activePairing
+    ? `Market signals enter from the left, pass through the JEV decision gate, rank into an opportunity list, branch into ${activePairing.stockSymbol} × ${activePairing.symbol}, and resolve into the launch lane. ${launch ? `Launch state: ${launch.readiness}.` : "No launch candidate this cycle."}`
     : "Market signals enter from the left, pass through the JEV decision gate, rank into an opportunity list, and resolve with no qualified pair or launch candidate this cycle.";
 
   return (
@@ -639,9 +649,13 @@ export function DecisionPlane({ asset, assets, pairing = null, allPairings = [],
         <g className="plane-pair-labels">
           {pairing ? (
             <g className={pairClass(pairing.symbol)} aria-hidden="true" onMouseEnter={() => setHoverPair(pairing.symbol)} onMouseLeave={() => setHoverPair(null)}>
-              {/* 1. Primary candidate header */}
               <text className="plane-pair-symbol selected" x="704" y="95">{pairing.stockSymbol} × {pairing.symbol}</text>
-              <text className="plane-note" x="704" y="110">{pairing.pairScore.toFixed(1)} / {pairing.jevDecision.replaceAll("_", " ")}</text>
+              <text className="plane-note" x="704" y="110">
+                {pairing.pairScore.toFixed(1)} / {pairing.jevDecision.replaceAll("_", " ")}
+                {isTied ? (
+                  <tspan style={{ fill: "var(--accent)", fontWeight: 600 }}> · TIED · {tiedCount} CANDIDATES</tspan>
+                ) : null}
+              </text>
 
               {/* 2. One concise thesis snippet (truncated from whyPair, max ~90 chars) */}
               {thesisLine1 ? (
@@ -725,7 +739,7 @@ export function DecisionPlane({ asset, assets, pairing = null, allPairings = [],
 
       </svg>
 
-      <div className="decision-plane-rail" aria-hidden="true"><span>Observe / Stock Tokens</span><span>Jev / Decision Gate</span><span>Pair / <b>{pairing ? `${pairing.stockSymbol} × ${pairing.symbol}` : "No qualified pair"}</b></span><span>Launch / <b>{launch ? launch.transactionState.replaceAll("_", " ") : "No launch candidate"}</b></span></div>
+      <div className="decision-plane-rail" aria-hidden="true"><span>Observe / Stock Tokens</span><span>Jev / Decision Gate</span><span>Pair / <b>{pairing ? `${pairing.stockSymbol} × ${pairing.symbol}${isTied ? ` (TIED · ${tiedCount})` : ""}` : "No qualified pair"}</b></span><span>Launch / <b>{launch ? launch.transactionState.replaceAll("_", " ") : "No launch candidate"}</b></span></div>
       <span className="decision-plane-lock-status" aria-live="polite">{hoverAsset ? `Focusing ${hoverAsset} telemetry trajectory.` : "Autonomous decision sequence active."}</span>
     </div>
   );

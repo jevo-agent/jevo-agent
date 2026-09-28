@@ -7,6 +7,7 @@ import type { AppData, DomainStatus } from "@/components/app/types";
 import type { Launch } from "@/types/launch";
 import type { Pairing } from "@/types/pairing";
 import type { Stock } from "@/types/stock";
+import { selectFeaturedPairing } from "@/lib/pairings";
 import {
   agentApiSchema,
   cycleApiSchema,
@@ -376,10 +377,8 @@ export function createProtocolData(input: {
     .filter((launch): launch is Launch => Boolean(launch));
   const launch = candidateLaunches[0] ?? null;
   const featuredPairing =
-    (launch ? pairings.find((pairing) => pairing.slug === launch.selectedPairingSlug) : null) ??
-    pairings.find((pairing) => pairing.stockSymbol === featuredAsset.symbol) ??
-    pairings[0] ??
-    null;
+    (launch ? pairings.find((pairing) => pairing.slug === launch.selectedPairingSlug && pairing.status !== "ARCHIVED") : null) ??
+    selectFeaturedPairing(pairings, featuredAsset.symbol).pairing;
 
   const agent = adaptAgent(input.agent);
 
@@ -416,7 +415,10 @@ export function createProtocolData(input: {
 
 export function demoProtocolData(): AppData {
   const featuredAsset = mockAgentState.assets.find((asset) => asset.symbol === "NVDA") ?? mockAgentState.assets[0];
-  const featuredPairing = mockAgentState.pairings.find((pairing) => pairing.slug === mockAgentState.launch.selectedPairingSlug) ?? mockAgentState.pairings[0];
+  const featuredPairing =
+    (mockAgentState.launch ? mockAgentState.pairings.find((pairing) => pairing.slug === mockAgentState.launch.selectedPairingSlug && pairing.status !== "ARCHIVED") : null) ??
+    selectFeaturedPairing(mockAgentState.pairings, featuredAsset?.symbol).pairing ??
+    mockAgentState.pairings[0];
   if (!featuredAsset || !featuredPairing) {
     throw new Error("Demo protocol fixture is missing its featured asset or pairing.");
   }

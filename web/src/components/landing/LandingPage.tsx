@@ -19,6 +19,7 @@ import type { AgentRuntime, MemoryRecord } from "@/types/agent";
 import type { Launch } from "@/types/launch";
 import type { Pairing } from "@/types/pairing";
 import type { Stock } from "@/types/stock";
+import { selectFeaturedPairing } from "@/lib/pairings";
 
 interface LandingPageProps {
   agent: AgentRuntime;
@@ -40,6 +41,12 @@ type FactorPhase = "idle" | "out" | "in";
 type AgentStoryStage = 0 | 1 | 2 | 3;
 
 export function LandingPage(data: LandingPageProps) {
+  const featuredSelection = useMemo(
+    () => selectFeaturedPairing(data.pairings, data.featuredAsset?.symbol),
+    [data.pairings, data.featuredAsset?.symbol],
+  );
+  const featuredPairing = featuredSelection.pairing ?? data.featuredPairing;
+
   return (
     <LandingScroll>
       <div className="landing-progress" aria-hidden="true" />
@@ -49,25 +56,25 @@ export function LandingPage(data: LandingPageProps) {
           agent={data.agent}
           asset={data.featuredAsset}
           assets={data.assets}
-          pairing={data.featuredPairing}
+          pairing={featuredPairing}
           pairings={data.pairings}
           launch={data.launch}
         />
         <AgentSection
           agent={data.agent}
           asset={data.featuredAsset}
-          pairing={data.featuredPairing}
+          pairing={featuredPairing}
         />
         <OpportunitySection
           assets={data.assets}
           ranking={data.ranking}
           cycle={data.agent.activeCycle}
         />
-        {data.featuredPairing ? (
+        {featuredPairing ? (
           <PairingSection
-            pairing={data.featuredPairing}
+            pairing={featuredPairing}
             pairings={data.pairings}
-            asset={data.assets.find((asset) => asset.symbol === data.featuredPairing?.stockSymbol) ?? data.featuredAsset}
+            asset={data.assets.find((asset) => asset.symbol === featuredPairing?.stockSymbol) ?? data.featuredAsset}
           />
         ) : (
           <LandingPairingStandbySection
@@ -76,11 +83,11 @@ export function LandingPage(data: LandingPageProps) {
             featuredAsset={data.featuredAsset}
           />
         )}
-        {data.launch && data.featuredPairing ? (
+        {data.launch && featuredPairing ? (
           <PipelineSection
             launch={data.launch}
-            pairing={data.featuredPairing}
-            asset={data.assets.find((asset) => asset.symbol === data.featuredPairing?.stockSymbol) ?? data.featuredAsset}
+            pairing={featuredPairing}
+            asset={data.assets.find((asset) => asset.symbol === featuredPairing?.stockSymbol) ?? data.featuredAsset}
           />
         ) : (
           <LandingPipelineStandbySection
@@ -1142,23 +1149,29 @@ function PairingSection({
   const [displayedCandidate, setDisplayedCandidate] = useState(0);
   const [factorPhase, setFactorPhase] = useState<FactorPhase>("idle");
 
+  const featuredSelection = useMemo(
+    () => selectFeaturedPairing(pairings.length > 0 ? pairings : [pairing], asset.symbol),
+    [pairings, asset.symbol, pairing],
+  );
+  const effectivePairing = featuredSelection.pairing ?? pairing;
+  const isTied = featuredSelection.isTied;
+  const tiedCount = featuredSelection.tiedCount;
+
   const candidates: PairCandidate[] = useMemo(() => {
     const primary: PairCandidate = {
-      symbol: pairing.symbol,
-      score: pairing.pairScore,
-      label: pairing.jevDecision === "STRONG_PAIR" ? "strong pair" : pairing.jevDecision.replaceAll("_", " ").toLowerCase(),
-      pairing,
+      symbol: effectivePairing.symbol,
+      score: effectivePairing.pairScore,
+      label: effectivePairing.jevDecision === "STRONG_PAIR" ? "strong pair" : effectivePairing.jevDecision.replaceAll("_", " ").toLowerCase(),
+      pairing: effectivePairing,
     };
-    const siblings = (pairings ?? [])
-      .filter((p) => p.stockSymbol === pairing.stockSymbol && p.symbol !== pairing.symbol)
-      .map((p): PairCandidate => ({
-        symbol: p.symbol,
-        score: p.pairScore,
-        label: p.jevDecision === "STRONG_PAIR" ? "strong pair" : p.jevDecision.replaceAll("_", " ").toLowerCase(),
-        pairing: p,
-      }));
-    const embedded = (pairing.alternatives ?? [])
-      .filter((alt) => alt.symbol !== pairing.symbol && !siblings.some((s) => s.symbol === alt.symbol))
+    const siblings = featuredSelection.alternatives.map((p): PairCandidate => ({
+      symbol: p.symbol,
+      score: p.pairScore,
+      label: p.jevDecision === "STRONG_PAIR" ? "strong pair" : p.jevDecision.replaceAll("_", " ").toLowerCase(),
+      pairing: p,
+    }));
+    const embedded = (effectivePairing.alternatives ?? [])
+      .filter((alt) => alt.symbol !== effectivePairing.symbol && !siblings.some((s) => s.symbol === alt.symbol))
       .map((alt): PairCandidate => ({
         symbol: alt.symbol,
         score: alt.pairScore,
@@ -1171,7 +1184,7 @@ function PairingSection({
       seen.add(c.symbol);
       return true;
     });
-  }, [pairing, pairings]);
+  }, [effectivePairing, featuredSelection.alternatives]);
 
   const selectedIndex = manualCandidate ?? scrollCandidate;
   useEffect(() => {
@@ -1341,6 +1354,7 @@ function PairingSection({
                     <b>{candidate.symbol}</b>
                     <span className="label">
                       {candidate.score.toFixed(1)} / {candidate.label}
+                      {isTied && Math.abs(candidate.score - effectivePairing.pairScore) < 0.001 ? " · TIED" : ""}
                     </span>
                   </button>
                 ))}
@@ -1352,9 +1366,16 @@ function PairingSection({
                 key={active.symbol}
               >
                 <div className="thesis-top">
-                  <h3>
-                    {pairing.stockSymbol} × {active.symbol}
-                  </h3>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: "8px", flexWrap: "wrap" }}>
+                    <h3>
+                      {effectivePairing.stockSymbol} × {active.symbol}
+                    </h3>
+                    {isTied && active.symbol === effectivePairing.symbol ? (
+                      <span className="label on" style={{ fontSize: "10px", padding: "2px 6px", border: "1px solid var(--accent)", color: "var(--accent)" }}>
+                        TIED · {tiedCount} CANDIDATES
+                      </span>
+                    ) : null}
+                  </div>
                   <span className="label">
                     Jev pairing{" "}
                     <b className="on">

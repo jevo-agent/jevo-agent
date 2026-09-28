@@ -12,6 +12,7 @@ import type { AgentEvent, AgentRuntime, MemoryRecord } from "@/types/agent";
 import type { Launch } from "@/types/launch";
 import type { Pairing } from "@/types/pairing";
 import type { Stock } from "@/types/stock";
+import { selectFeaturedPairing } from "@/lib/pairings";
 
 interface OverviewViewProps {
   agent: AgentRuntime;
@@ -97,9 +98,32 @@ export function OverviewView({
 
   const selectedAsset = mergedAssets.find((asset) => asset.symbol === selectedSymbol) ?? ordered[0] ?? mergedAssets[0];
   const topOpportunity = ordered[0] ?? selectedAsset;
+
+  const featuredSelection = useMemo(
+    () => selectFeaturedPairing(pairings, topOpportunity?.symbol),
+    [pairings, topOpportunity?.symbol],
+  );
+  const effectiveFeaturedPairing = featuredPairing ?? featuredSelection.pairing;
+  const isTied = featuredSelection.isTied;
+  const tiedCount = featuredSelection.tiedCount;
+
   const activeSymbol = hoveredSymbol ?? selectedSymbol;
   const inspectedAsset = mergedAssets.find((asset) => asset.symbol === activeSymbol) ?? selectedAsset;
-  const inspectedPairing = inspectedAsset ? pairings.find((pairing) => pairing.stockSymbol === inspectedAsset.symbol) : undefined;
+
+  const inspectedSelection = useMemo(() => {
+    if (!inspectedAsset) return { pairing: null, alternatives: [], isTied: false, tiedCount: 0 };
+    return selectFeaturedPairing(pairings, inspectedAsset.symbol);
+  }, [inspectedAsset, pairings]);
+
+  const inspectedPairing = inspectedAsset
+    ? (inspectedAsset.symbol === topOpportunity.symbol ? effectiveFeaturedPairing : inspectedSelection.pairing)
+    : undefined;
+
+  const currentAlternatives = useMemo(() => {
+    if (!inspectedAsset) return [];
+    return inspectedSelection.alternatives.slice(0, 3);
+  }, [inspectedAsset, inspectedSelection.alternatives]);
+
   const passedChecks = launch?.policyChecks?.filter((check) => check.status === "PASSED").length ?? 0;
 
   if (!selectedAsset || !inspectedAsset) return null;
@@ -188,9 +212,13 @@ export function OverviewView({
               <div>
                 <dt>QUALIFIED PAIRING</dt>
                 <dd>
-                  {featuredPairing ? (
+                  {effectiveFeaturedPairing ? (
                     <>
-                      <b>{featuredPairing.stockSymbol} × {featuredPairing.symbol}</b> <small className="accent">{featuredPairing.pairScore.toFixed(1)} / STRONG PAIR</small>
+                      <b>{effectiveFeaturedPairing.stockSymbol} × {effectiveFeaturedPairing.symbol}</b>{" "}
+                      <small className="accent">
+                        {effectiveFeaturedPairing.pairScore.toFixed(1)} / {effectiveFeaturedPairing.jevDecision.replaceAll("_", " ")}
+                        {isTied ? ` · TIED · ${tiedCount} CANDIDATES` : ""}
+                      </small>
                     </>
                   ) : (
                     <b>NONE</b>
@@ -233,13 +261,14 @@ export function OverviewView({
           </div>
           <div className="summary-cell">
             <span className="label">PAIRING</span>
-            {featuredPairing ? (
+            {effectiveFeaturedPairing ? (
               <>
                 <strong className="summary-val">
-                  {featuredPairing.stockSymbol} × {featuredPairing.symbol}
+                  {effectiveFeaturedPairing.stockSymbol} × {effectiveFeaturedPairing.symbol}
                 </strong>
                 <small className="summary-sub accent">
-                  {featuredPairing.pairScore.toFixed(1)} / STRONG PAIR
+                  {effectiveFeaturedPairing.pairScore.toFixed(1)} / {effectiveFeaturedPairing.jevDecision.replaceAll("_", " ")}
+                  {isTied ? ` · TIED · ${tiedCount} CANDIDATES` : ""}
                 </small>
               </>
             ) : (
@@ -281,9 +310,10 @@ export function OverviewView({
             <span className="rail-item highlight">
               <b>{topOpportunity.jevDecision.replaceAll("_", " ")} {topOpportunity.confidence === null ? "—" : `${topOpportunity.confidence}%`}</b>
             </span>
-            {featuredPairing ? (
+            {effectiveFeaturedPairing ? (
               <span className="rail-item highlight">
-                PAIR <b>{featuredPairing.stockSymbol} × {featuredPairing.symbol}</b> / STRONG PAIR
+                PAIR <b>{effectiveFeaturedPairing.stockSymbol} × {effectiveFeaturedPairing.symbol}</b> / {effectiveFeaturedPairing.jevDecision.replaceAll("_", " ")}
+                {isTied ? ` · TIED · ${tiedCount} CANDIDATES` : ""}
               </span>
             ) : (
               <span className="rail-item">
@@ -438,13 +468,16 @@ export function OverviewView({
           </div>
         ) : (
           <div className="app-action-layout">
-            <PairingAction pairing={inspectedPairing} selectedSymbol={inspectedAsset.symbol} />
+            <PairingAction
+              pairing={inspectedPairing}
+              selectedSymbol={inspectedAsset.symbol}
+              isTied={inspectedAsset.symbol === topOpportunity.symbol ? isTied : inspectedSelection.isTied}
+              tiedCount={inspectedAsset.symbol === topOpportunity.symbol ? tiedCount : inspectedSelection.tiedCount}
+            />
             <aside className="app-alternatives" aria-label="Pairing alternatives">
-              <span className="label">Alternatives / worker state</span>
-              {pairings
-                .filter((pairing) => pairing.slug !== inspectedPairing?.slug)
-                .slice(0, 3)
-                .map((pairing) => (
+              <span className="label">Alternatives / {inspectedAsset.symbol}</span>
+              {currentAlternatives.length > 0 ? (
+                currentAlternatives.map((pairing) => (
                   <Link href={`/pairing/${pairing.slug}`} key={pairing.slug}>
                     <b>
                       {pairing.stockSymbol} × {pairing.symbol}
@@ -454,7 +487,12 @@ export function OverviewView({
                     </span>
                     <i>↗</i>
                   </Link>
-                ))}
+                ))
+              ) : (
+                <p className="side-copy" style={{ marginTop: "12px" }}>
+                  No alternative pairings registered for {inspectedAsset.symbol}.
+                </p>
+              )}
             </aside>
           </div>
         )}
@@ -1012,7 +1050,7 @@ function OpportunityField({
 
   const activeSymbol = hoveredSymbol ?? selectedAsset.symbol;
   const inspectedAsset = assets.find((asset) => asset.symbol === activeSymbol) ?? selectedAsset;
-  const inspectedPairing = pairings?.find((pairing) => pairing.stockSymbol === inspectedAsset.symbol) ?? selectedPairing;
+  const inspectedPairing = selectFeaturedPairing(pairings ?? [], inspectedAsset.symbol).pairing ?? selectedPairing;
   const activePosition = positions.find((p) => p.asset.symbol === activeSymbol);
 
   const labelPlacements = computeLabelPlacements(positions, PLOT);
@@ -1821,7 +1859,17 @@ function DecisionTrace({ agent, memory }: { agent: AgentRuntime; memory: MemoryR
   );
 }
 
-function PairingAction({ pairing, selectedSymbol }: { pairing?: Pairing; selectedSymbol: string }) {
+function PairingAction({
+  pairing,
+  selectedSymbol,
+  isTied,
+  tiedCount,
+}: {
+  pairing?: Pairing | null;
+  selectedSymbol: string;
+  isTied?: boolean;
+  tiedCount?: number;
+}) {
   if (!pairing) {
     return (
       <div className="app-pairing-focus empty-state">
@@ -1841,12 +1889,17 @@ function PairingAction({ pairing, selectedSymbol }: { pairing?: Pairing; selecte
         <span className="label">Pairing candidate / {selectedSymbol}</span>
         <span className="label on">{pairing.status.replaceAll("_", " ")}</span>
       </div>
-      <div className="pairname">
-        {pairing.stockSymbol} × {pairing.symbol}
+      <div className="pairname" style={{ display: "flex", alignItems: "baseline", gap: "8px", flexWrap: "wrap" }}>
+        <span>{pairing.stockSymbol} × {pairing.symbol}</span>
+        {isTied ? (
+          <span className="label on" style={{ fontSize: "10px", padding: "2px 6px", border: "1px solid var(--accent)", color: "var(--accent)" }}>
+            TIED · {tiedCount} CANDIDATES
+          </span>
+        ) : null}
       </div>
       <div className="side-score">
         <b>{pairing.pairScore.toFixed(1)}</b>
-        <span>STRONG PAIR / CONF {pairing.confidence === null ? "—" : `${pairing.confidence}%`}</span>
+        <span>{pairing.jevDecision.replaceAll("_", " ")} / CONF {pairing.confidence === null ? "—" : `${pairing.confidence}%`}</span>
       </div>
       <div className="srow">
         <span>JEV decision</span>
