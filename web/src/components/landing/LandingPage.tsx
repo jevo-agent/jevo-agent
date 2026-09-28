@@ -761,6 +761,9 @@ function LandingHero({
   pairings?: Pairing[];
   launch: Launch | null;
 }) {
+  const cleanCycleId =
+    String(agent.activeCycle ?? "").replace(/^cycle[-_\s]*/i, "") || "—";
+
   return (
     <section className="hero" id="top">
       <div className="hero-frame">
@@ -768,7 +771,9 @@ function LandingHero({
         <div className="hero-copy">
           <p className="label hero-plane-meta">
             <b>JEVO / Decision plane</b>
-            <span>cycle {formatCycle(agent.activeCycle)}</span>
+            <span title={String(agent.activeCycle ?? "")}>
+              cycle {cleanCycleId}
+            </span>
           </p>
           <p className="label">Autonomous market intelligence protocol</p>
           <h1>
@@ -802,29 +807,41 @@ function LandingHero({
           <div className="cell">
             <div className="label">Jev</div>
             <div className="label">
-              <b className="on">Active</b>
+              <b className={agent.status === "ONLINE" ? "on" : undefined}>
+                {agent.status === "ONLINE" ? "Active" : "Standby"}
+              </b>
             </div>
           </div>
           <div className="cell">
             <div className="label">Cycle</div>
-            <div className="label">
-              <b>{formatCycle(agent.activeCycle)}</b> / last decision{" "}
-              <b>{agent.lastDecisionAgeSeconds}s</b> ago
+            <div className="label" title={String(agent.activeCycle ?? "")}>
+              <b>{cleanCycleId}</b> / last decision{" "}
+              <b>
+                {agent.lastDecisionAgeSeconds !== null &&
+                agent.lastDecisionAgeSeconds !== undefined
+                  ? `${agent.lastDecisionAgeSeconds}s`
+                  : "—"}
+              </b>{" "}
+              ago
             </div>
           </div>
           <div className="cell">
             <div className="label">Network</div>
             <div className="label">
-              <b>{agent.networkLabel ?? "UNAVAILABLE"}</b>
+              <b>
+                {agent.networkLabel && agent.networkLabel !== "UNAVAILABLE"
+                  ? agent.networkLabel
+                  : "TARGET ROBINHOOD CHAIN · CONNECTION —"}
+              </b>
             </div>
           </div>
           <div className="cell">
             <div className="label">State</div>
             <div className="label">
-              <b>Decision loop</b>
+              <b>{agent.currentOperation ? agent.currentOperation : "Decision loop"}</b>
             </div>
           </div>
-          <a className="label scroll-hint" href="#agent">
+          <a className="label scroll-hint" href="#core-features">
             Scroll to inspect ↓
           </a>
         </div>
@@ -834,54 +851,6 @@ function LandingHero({
 }
 
 function HeroEdgeUtilities() {
-  const [copied, setCopied] = useState(false);
-  const copyTimer = useRef<number | null>(null);
-
-  useEffect(
-    () => () => {
-      if (copyTimer.current) window.clearTimeout(copyTimer.current);
-    },
-    [],
-  );
-
-  const rawCa =
-    (typeof process !== "undefined"
-      ? (process.env.NEXT_PUBLIC_JEVO_TOKEN_ADDRESS || process.env.NEXT_PUBLIC_CA)
-      : "") || "";
-  const isValidCa = /^0x[0-9a-fA-F]{40}$/.test(rawCa.trim());
-
-  async function copyCa() {
-    if (!isValidCa) return;
-    try {
-      let copiedWithClipboard = false;
-      if (navigator.clipboard?.writeText) {
-        try {
-          await navigator.clipboard.writeText(rawCa.trim());
-          copiedWithClipboard = true;
-        } catch {
-          copiedWithClipboard = false;
-        }
-      }
-      if (!copiedWithClipboard) {
-        const textarea = document.createElement("textarea");
-        textarea.value = rawCa.trim();
-        textarea.setAttribute("readonly", "true");
-        textarea.style.position = "fixed";
-        textarea.style.opacity = "0";
-        document.body.appendChild(textarea);
-        textarea.select();
-        if (!document.execCommand("copy"))
-          throw new Error("Clipboard unavailable");
-        textarea.remove();
-      }
-      setCopied(true);
-      if (copyTimer.current) window.clearTimeout(copyTimer.current);
-      copyTimer.current = window.setTimeout(() => setCopied(false), 1800);
-    } catch {
-      setCopied(false);
-    }
-  }
-
   return (
     <>
       <div
@@ -891,39 +860,8 @@ function HeroEdgeUtilities() {
         JEVO / AGENT&nbsp;&nbsp;/&nbsp;&nbsp;JEV /
         DECISION&nbsp;&nbsp;/&nbsp;&nbsp;SYS.9841
       </div>
-      <button
-        className={`hero-ca${!isValidCa ? " is-disabled" : ""}`}
-        type="button"
-        onClick={isValidCa ? copyCa : undefined}
-        disabled={!isValidCa}
-        aria-label={
-          !isValidCa
-            ? "Contract address TBA"
-            : copied
-              ? "Contract address copied"
-              : `Copy contract address ${rawCa.trim()}`
-        }
-      >
-        {isValidCa ? (
-          <>
-            <span className="hero-ca-prefix">CA</span>
-            <code>{rawCa.trim().slice(0, 6)}...{rawCa.trim().slice(-4)}</code>
-            <span aria-hidden="true">↗</span>
-            <span className="hero-ca-copy">[{copied ? "COPIED" : "COPY"}]</span>
-          </>
-        ) : (
-          <>
-            <span className="hero-ca-prefix">CA</span>
-            <code>· TBA</code>
-          </>
-        )}
-      </button>
-      <span className="hero-ca-feedback" aria-live="polite">
-        {copied ? "Contract address copied" : ""}
-      </span>
       <div className="hero-edge-rail hero-edge-rail-right" aria-hidden="true">
-        <span>AUTONOMOUS // JEV // AGENT</span>
-        <span>INTERFACE: ONLINE</span>
+        AUTONOMOUS // JEV // AGENT&nbsp;&nbsp;/&nbsp;&nbsp;INTERFACE: ONLINE
       </div>
     </>
   );

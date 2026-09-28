@@ -136,9 +136,9 @@ export function DecisionPlane({ asset, assets, pairing = null, allPairings = [],
     const targetY = selectedSignal.rank && rankY[selectedSignal.rank] ? rankY[selectedSignal.rank] : sourceY;
 
     if (selectedSignal.symbol === asset.symbol && pairing) {
-      return `M48 ${sourceY} C164 ${sourceY} 250 ${gateY} 348 ${gateY} L372 ${gateY} C430 ${gateY} 452 ${targetY} 510 ${targetY} L610 ${targetY} C660 ${targetY} 670 88 714 88 L782 88 C820 88 828 120 828 176 L828 246 C828 304 814 354 772 382 L690 382`;
+      return `M36 ${sourceY} C110 ${sourceY} 170 ${gateY} 238 ${gateY} L262 ${gateY} C300 ${gateY} 315 ${targetY} 335 ${targetY} L470 ${targetY} C515 ${targetY} 530 88 565 88 L630 88 C665 88 672 120 672 176 L672 246 C672 304 658 354 620 382 L550 382`;
     }
-    return `M48 ${sourceY} C164 ${sourceY} 250 ${gateY} 348 ${gateY} L372 ${gateY} C430 ${gateY} 452 ${targetY} 510 ${targetY} L610 ${targetY}`;
+    return `M36 ${sourceY} C110 ${sourceY} 170 ${gateY} 238 ${gateY} L262 ${gateY} C300 ${gateY} 315 ${targetY} 335 ${targetY} L470 ${targetY}`;
   }, [selectedSignal, asset.symbol, pairing]);
 
   function handleMouseMove(event: MouseEvent<SVGSVGElement>) {
@@ -254,97 +254,98 @@ export function DecisionPlane({ asset, assets, pairing = null, allPairings = [],
         })}
       </div>
 
-      <svg
-        className="decision-plane-svg"
-        viewBox="0 0 940 560"
-        role="img"
-        aria-label="JEVO autonomous decision plane"
-        aria-describedby="decision-plane-description"
-        onMouseMove={handleMouseMove}
-        onMouseLeave={() => setCursorPos(null)}
-      >
-        <desc id="decision-plane-description">{description}</desc>
-        <g className="plane-guides" aria-hidden="true">
-          {[...Array(22)].map((_, index) => <path className="field-trajectory" key={index} pathLength={1} d={`M48 ${48 + index * 23} C180 ${48 + index * 23} 260 ${225 + index * 4.5} 348 ${225 + index * 4.5}`} style={{ "--signal-delay": `${index * -0.65}s` } as CSSProperties} />)}
-          <line x1="244" y1="24" x2="244" y2="530" />
-          <line x1="392" y1="24" x2="392" y2="530" />
-          <line x1="548" y1="24" x2="548" y2="530" />
-          <line x1="728" y1="24" x2="728" y2="530" />
-        </g>
-
-        <g className="plane-scan" aria-hidden="true">
-          <line className="plane-scan-sweep" x1="420" y1="24" x2="420" y2="530" />
-        </g>
-
-        {/* Grounded Autonomous Orbit Field (BRIEF.md Layer A: Observe / Multi-Signal Scanning Universe) */}
-        <g className="plane-orbit-field" aria-hidden="true">
-          <defs>
-            {/* Smooth glowing filter for prominent foreground particle nodes */}
-            <filter id="orbit-glow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="1.8" result="blur" />
-              <feComposite in="SourceGraphic" in2="blur" operator="over" />
-            </filter>
-
-            {/* Gradient for Decision Gate aperture column */}
-            <linearGradient id="gate-glow-gradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="rgb(2, 198, 165)" stopOpacity="0.04" />
-              <stop offset="25%" stopColor="rgb(2, 198, 165)" stopOpacity="0.12" />
-              <stop offset="50%" stopColor="rgb(2, 198, 165)" stopOpacity="0.22" />
-              <stop offset="75%" stopColor="rgb(2, 198, 165)" stopOpacity="0.12" />
-              <stop offset="100%" stopColor="rgb(2, 198, 165)" stopOpacity="0.04" />
-            </linearGradient>
-
-            {/* Soft radial aura for interactive cursor hover */}
-            <radialGradient id="cursor-aura-gradient" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="rgb(2, 198, 165)" stopOpacity="0.14" />
-              <stop offset="50%" stopColor="rgb(2, 198, 165)" stopOpacity="0.04" />
-              <stop offset="100%" stopColor="rgb(2, 198, 165)" stopOpacity="0" />
-            </radialGradient>
-
-            {/* Orbit paths: continuous closed orbits around Decision Core (x: 360, y: 280) */}
-            <path id="orbit-ring-inner" d="M 285 280 C 285 220, 435 215, 435 280 C 435 345, 285 340, 285 280 Z" />
-            <path id="orbit-ring-mid" d="M 220 280 C 220 185, 500 180, 500 280 C 500 380, 220 375, 220 280 Z" />
-            <path id="orbit-ring-outer" d="M 170 295 C 170 150, 565 140, 565 275 C 565 410, 170 420, 170 295 Z" />
-            <path id="orbit-ring-scanning" d="M 195 315 C 195 125, 740 115, 740 265 C 740 425, 195 445, 195 315 Z" />
-            <path id="orbit-ring-counter" d="M 680 285 C 680 155, 250 170, 250 275 C 250 395, 680 415, 680 285 Z" />
-
-            {/* Topographical Wave Contours (Continuous asset scanning streams across market coordinate planes) */}
-            <path id="topo-wave-1" d="M 140 110 C 260 55, 380 145, 510 75 C 640 25, 750 115, 890 65" />
-            <path id="topo-wave-2" d="M 120 150 C 250 95, 390 195, 530 115 C 660 60, 770 160, 910 110" />
-            <path id="topo-wave-3" d="M 110 190 C 240 145, 370 235, 510 160 C 640 100, 760 205, 920 155" />
-            <path id="topo-wave-4" d="M 130 235 C 260 190, 400 275, 535 205 C 665 145, 785 245, 905 195" />
-            <path id="topo-wave-5" d="M 145 280 C 275 240, 410 320, 545 255 C 675 195, 795 285, 915 245" />
-            <path id="topo-wave-6" d="M 135 330 C 270 285, 415 370, 550 305 C 680 250, 800 340, 925 295" />
-            <path id="topo-wave-7" d="M 150 380 C 285 330, 425 425, 560 360 C 690 305, 810 400, 930 350" />
-            <path id="topo-wave-8" d="M 170 435 C 305 380, 445 475, 580 410 C 705 360, 815 450, 915 405" />
-            <path id="topo-wave-9" d="M 190 480 C 330 435, 470 515, 605 460 C 725 415, 825 495, 920 455" />
-            <path id="topo-wave-10" d="M 215 525 C 360 485, 490 545, 630 495 C 750 455, 840 520, 930 490" />
-
-            {/* Counter-directional flow paths */}
-            <path id="topo-wave-4-rev" d="M 905 195 C 785 245, 665 145, 535 205 C 400 275, 260 190, 130 235" />
-            <path id="topo-wave-7-rev" d="M 930 350 C 810 400, 690 305, 560 360 C 425 425, 285 330, 150 380" />
-          </defs>
-
-          {/* 1. Dotted Point-Cloud Topography Mesh (Micro-Dots via stroke-dasharray) */}
-          <g className="plane-orbit-tracks">
-            <path d="M 140 110 C 260 55, 380 145, 510 75 C 640 25, 750 115, 890 65" className="orbit-contour-faint" />
-            <path d="M 120 150 C 250 95, 390 195, 530 115 C 660 60, 770 160, 910 110" className="orbit-contour" />
-            <path d="M 110 190 C 240 145, 370 235, 510 160 C 640 100, 760 205, 920 155" className="orbit-contour-accent" />
-            <path d="M 130 235 C 260 190, 400 275, 535 205 C 665 145, 785 245, 905 195" className="orbit-contour" />
-            <path d="M 145 280 C 275 240, 410 320, 545 255 C 675 195, 795 285, 915 245" className="orbit-contour-accent" />
-            <path d="M 135 330 C 270 285, 415 370, 550 305 C 680 250, 800 340, 925 295" className="orbit-contour" />
-            <path d="M 150 380 C 285 330, 425 425, 560 360 C 690 305, 810 400, 930 350" className="orbit-contour-accent" />
-            <path d="M 170 435 C 305 380, 445 475, 580 410 C 705 360, 815 450, 915 405" className="orbit-contour" />
-            <path d="M 190 480 C 330 435, 470 515, 605 460 C 725 415, 825 495, 920 455" className="orbit-contour-faint" />
-            <path d="M 215 525 C 360 485, 490 545, 630 495 C 750 455, 840 520, 930 490" className="orbit-contour-faint" />
-
-            {/* Inclined orbital rings encircling the JEV Decision Core */}
-            <path d="M 285 280 C 285 220, 435 215, 435 280 C 435 345, 285 340, 285 280 Z" className="orbit-contour-accent" />
-            <path d="M 220 280 C 220 185, 500 180, 500 280 C 500 380, 220 375, 220 280 Z" className="orbit-contour" />
-            <path d="M 170 295 C 170 150, 565 140, 565 275 C 565 410, 170 420, 170 295 Z" className="orbit-contour-accent" />
-            <path d="M 195 315 C 195 125, 740 115, 740 265 C 740 425, 195 445, 195 315 Z" className="orbit-contour" />
-            <path d="M 680 285 C 680 155, 250 170, 250 275 C 250 395, 680 415, 680 285 Z" className="orbit-contour-faint" />
+      <div className="decision-plane-stage">
+        <svg
+          className="decision-plane-svg"
+          viewBox="0 0 940 560"
+          role="img"
+          aria-label="JEVO autonomous decision plane"
+          aria-describedby="decision-plane-description"
+          onMouseMove={handleMouseMove}
+          onMouseLeave={() => setCursorPos(null)}
+        >
+          <desc id="decision-plane-description">{description}</desc>
+          <g className="plane-guides" aria-hidden="true">
+            {[...Array(22)].map((_, index) => <path className="field-trajectory" key={index} pathLength={1} d={`M48 ${48 + index * 23} C120 ${48 + index * 23} 180 ${225 + index * 4.5} 238 ${225 + index * 4.5}`} style={{ "--signal-delay": `${index * -0.65}s` } as CSSProperties} />)}
+            <line x1="140" y1="24" x2="140" y2="530" />
+            <line x1="250" y1="24" x2="250" y2="530" />
+            <line x1="360" y1="24" x2="360" y2="530" />
+            <line x1="480" y1="24" x2="480" y2="530" />
           </g>
+
+          <g className="plane-scan" aria-hidden="true">
+            <line className="plane-scan-sweep" x1="250" y1="24" x2="250" y2="530" />
+          </g>
+
+          {/* Grounded Autonomous Orbit Field (BRIEF.md Layer A: Observe / Multi-Signal Scanning Universe) */}
+          <g className="plane-orbit-field" aria-hidden="true">
+            <defs>
+              {/* Smooth glowing filter for prominent foreground particle nodes */}
+              <filter id="orbit-glow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="1.8" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
+
+              {/* Gradient for Decision Gate aperture column */}
+              <linearGradient id="gate-glow-gradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="rgb(2, 198, 165)" stopOpacity="0.04" />
+                <stop offset="25%" stopColor="rgb(2, 198, 165)" stopOpacity="0.12" />
+                <stop offset="50%" stopColor="rgb(2, 198, 165)" stopOpacity="0.22" />
+                <stop offset="75%" stopColor="rgb(2, 198, 165)" stopOpacity="0.12" />
+                <stop offset="100%" stopColor="rgb(2, 198, 165)" stopOpacity="0.04" />
+              </linearGradient>
+
+              {/* Soft radial aura for interactive cursor hover */}
+              <radialGradient id="cursor-aura-gradient" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="rgb(2, 198, 165)" stopOpacity="0.14" />
+                <stop offset="50%" stopColor="rgb(2, 198, 165)" stopOpacity="0.04" />
+                <stop offset="100%" stopColor="rgb(2, 198, 165)" stopOpacity="0" />
+              </radialGradient>
+
+              {/* Orbit paths: continuous closed orbits around Decision Core (x: 250, y: 280) */}
+              <path id="orbit-ring-inner" d="M 175 280 C 175 220, 325 215, 325 280 C 325 345, 175 340, 175 280 Z" />
+              <path id="orbit-ring-mid" d="M 110 280 C 110 185, 390 180, 390 280 C 390 380, 110 375, 110 280 Z" />
+              <path id="orbit-ring-outer" d="M 60 295 C 60 150, 455 140, 455 275 C 455 410, 60 420, 60 295 Z" />
+              <path id="orbit-ring-scanning" d="M 85 315 C 85 125, 630 115, 630 265 C 630 425, 85 445, 85 315 Z" />
+              <path id="orbit-ring-counter" d="M 570 285 C 570 155, 140 170, 140 275 C 140 395, 570 415, 570 285 Z" />
+
+              {/* Topographical Wave Contours (Continuous asset scanning streams across market coordinate planes) */}
+              <path id="topo-wave-1" d="M 140 110 C 260 55, 380 145, 510 75 C 640 25, 750 115, 890 65" />
+              <path id="topo-wave-2" d="M 120 150 C 250 95, 390 195, 530 115 C 660 60, 770 160, 910 110" />
+              <path id="topo-wave-3" d="M 110 190 C 240 145, 370 235, 510 160 C 640 100, 760 205, 920 155" />
+              <path id="topo-wave-4" d="M 130 235 C 260 190, 400 275, 535 205 C 665 145, 785 245, 905 195" />
+              <path id="topo-wave-5" d="M 145 280 C 275 240, 410 320, 545 255 C 675 195, 795 285, 915 245" />
+              <path id="topo-wave-6" d="M 135 330 C 270 285, 415 370, 550 305 C 680 250, 800 340, 925 295" />
+              <path id="topo-wave-7" d="M 150 380 C 285 330, 425 425, 560 360 C 690 305, 810 400, 930 350" />
+              <path id="topo-wave-8" d="M 170 435 C 305 380, 445 475, 580 410 C 705 360, 815 450, 915 405" />
+              <path id="topo-wave-9" d="M 190 480 C 330 435, 470 515, 605 460 C 725 415, 825 495, 920 455" />
+              <path id="topo-wave-10" d="M 215 525 C 360 485, 490 545, 630 495 C 750 455, 840 520, 930 490" />
+
+              {/* Counter-directional flow paths */}
+              <path id="topo-wave-4-rev" d="M 905 195 C 785 245, 665 145, 535 205 C 400 275, 260 190, 130 235" />
+              <path id="topo-wave-7-rev" d="M 930 350 C 810 400, 690 305, 560 360 C 425 425, 285 330, 150 380" />
+            </defs>
+
+            {/* 1. Dotted Point-Cloud Topography Mesh (Micro-Dots via stroke-dasharray) */}
+            <g className="plane-orbit-tracks">
+              <path d="M 140 110 C 260 55, 380 145, 510 75 C 640 25, 750 115, 890 65" className="orbit-contour-faint" />
+              <path d="M 120 150 C 250 95, 390 195, 530 115 C 660 60, 770 160, 910 110" className="orbit-contour" />
+              <path d="M 110 190 C 240 145, 370 235, 510 160 C 640 100, 760 205, 920 155" className="orbit-contour-accent" />
+              <path d="M 130 235 C 260 190, 400 275, 535 205 C 665 145, 785 245, 905 195" className="orbit-contour" />
+              <path d="M 145 280 C 275 240, 410 320, 545 255 C 675 195, 795 285, 915 245" className="orbit-contour-accent" />
+              <path d="M 135 330 C 270 285, 415 370, 550 305 C 680 250, 800 340, 925 295" className="orbit-contour" />
+              <path d="M 150 380 C 285 330, 425 425, 560 360 C 690 305, 810 400, 930 350" className="orbit-contour-accent" />
+              <path d="M 170 435 C 305 380, 445 475, 580 410 C 705 360, 815 450, 915 405" className="orbit-contour" />
+              <path d="M 190 480 C 330 435, 470 515, 605 460 C 725 415, 825 495, 920 455" className="orbit-contour-faint" />
+              <path d="M 215 525 C 360 485, 490 545, 630 495 C 750 455, 840 520, 930 490" className="orbit-contour-faint" />
+
+              {/* Inclined orbital rings encircling the JEV Decision Core */}
+              <path d="M 175 280 C 175 220, 325 215, 325 280 C 325 345, 175 340, 175 280 Z" className="orbit-contour-accent" />
+              <path d="M 110 280 C 110 185, 390 180, 390 280 C 390 380, 110 375, 110 280 Z" className="orbit-contour" />
+              <path d="M 60 295 C 60 150, 455 140, 455 275 C 455 410, 60 420, 60 295 Z" className="orbit-contour-accent" />
+              <path d="M 85 315 C 85 125, 630 115, 630 265 C 630 425, 85 445, 85 315 Z" className="orbit-contour" />
+              <path d="M 570 285 C 570 155, 140 170, 140 275 C 140 395, 570 415, 570 285 Z" className="orbit-contour-faint" />
+            </g>
 
           {/* 3. Autonomous Orbiting & Streaming Micro-Particles (Monitored Asset Signals) */}
           {/* Each particle has a coprime duration and unique phase offset so motion is smooth, asynchronous & organic */}
@@ -534,7 +535,7 @@ export function DecisionPlane({ asset, assets, pairing = null, allPairings = [],
           {signals.map((signal, index) => {
             const gateY = 280 + (signal.sourceY - 280) * 0.47;
             const isSelected = effectiveSymbol === signal.symbol;
-            return <path key={`signal-input-${index}`} className={`decision-route signal-route${isSelected ? " is-focused" : ""}${focused && !isSelected ? " is-dimmed" : ""}`} pathLength={1} d={`M48 ${signal.sourceY} C164 ${signal.sourceY} 250 ${gateY} 348 ${gateY}`} style={{ "--signal-delay": `${index * -0.22}s` } as CSSProperties} />;
+            return <path key={`signal-input-${index}`} className={`decision-route signal-route${isSelected ? " is-focused" : ""}${focused && !isSelected ? " is-dimmed" : ""}`} pathLength={1} d={`M48 ${signal.sourceY} C120 ${signal.sourceY} 180 ${gateY} 238 ${gateY}`} style={{ "--signal-delay": `${index * -0.22}s` } as CSSProperties} />;
           })}
         </g>
 
@@ -543,7 +544,7 @@ export function DecisionPlane({ asset, assets, pairing = null, allPairings = [],
             const gateY = 280 + (signal.sourceY - 280) * 0.47;
             const rank = rankY[signal.rank];
             const isSelected = effectiveSymbol === signal.symbol;
-            return <path key={`signal-output-${signal.symbol}`} className={`decision-route signal-route output-route${isSelected ? " is-focused" : ""}${focused && !isSelected ? " is-dimmed" : ""}`} pathLength={1} d={`M372 ${gateY} C430 ${gateY} 452 ${rank} 510 ${rank} L610 ${rank}`} style={{ "--signal-delay": `${(index + signals.length) * -0.22}s` } as CSSProperties} />;
+            return <path key={`signal-output-${signal.symbol}`} className={`decision-route signal-route output-route${isSelected ? " is-focused" : ""}${focused && !isSelected ? " is-dimmed" : ""}`} pathLength={1} d={`M262 ${gateY} C285 ${gateY} 305 ${rank} 335 ${rank} L460 ${rank}`} style={{ "--signal-delay": `${(index + signals.length) * -0.22}s` } as CSSProperties} />;
           })}
         </g>
 
@@ -577,7 +578,7 @@ export function DecisionPlane({ asset, assets, pairing = null, allPairings = [],
           {/* Containment Column with subtle glow fill */}
           <rect
             className={`plane-gate-column${activeStage === 1 ? " is-active" : ""}`}
-            x="346"
+            x="236"
             y="96"
             width="28"
             height="360"
@@ -585,40 +586,40 @@ export function DecisionPlane({ asset, assets, pairing = null, allPairings = [],
           />
 
           {/* Caliper brackets top & bottom */}
-          <path className="plane-gate-bracket" d="M342 110 L342 94 L378 94 L378 110" />
-          <path className="plane-gate-bracket" d="M342 442 L342 458 L378 458 L378 442" />
+          <path className="plane-gate-bracket" d="M232 110 L232 94 L268 94 L268 110" />
+          <path className="plane-gate-bracket" d="M232 442 L232 458 L268 458 L268 442" />
 
           {/* Precision calibration tick marks */}
-          <line x1="346" y1="162" x2="352" y2="162" className="plane-gate-tick" />
-          <text x="341" y="165" textAnchor="end" className="plane-gate-tick-label">0.95</text>
+          <line x1="236" y1="162" x2="242" y2="162" className="plane-gate-tick" />
+          <text x="231" y="165" textAnchor="end" className="plane-gate-tick-label">0.95</text>
 
-          <line x1="346" y1="226" x2="352" y2="226" className="plane-gate-tick" />
-          <text x="341" y="229" textAnchor="end" className="plane-gate-tick-label">0.90</text>
+          <line x1="236" y1="226" x2="242" y2="226" className="plane-gate-tick" />
+          <text x="231" y="229" textAnchor="end" className="plane-gate-tick-label">0.90</text>
 
-          <line x1="346" y1="280" x2="355" y2="280" className="plane-gate-tick is-threshold" />
-          <text x="341" y="283" textAnchor="end" className="plane-gate-tick-label is-threshold">0.85 GATE</text>
+          <line x1="236" y1="280" x2="245" y2="280" className="plane-gate-tick is-threshold" />
+          <text x="231" y="283" textAnchor="end" className="plane-gate-tick-label is-threshold">0.85 GATE</text>
 
-          <line x1="346" y1="354" x2="352" y2="354" className="plane-gate-tick" />
-          <text x="341" y="357" textAnchor="end" className="plane-gate-tick-label">0.80</text>
+          <line x1="236" y1="354" x2="242" y2="354" className="plane-gate-tick" />
+          <text x="231" y="357" textAnchor="end" className="plane-gate-tick-label">0.80</text>
 
-          <line x1="346" y1="418" x2="352" y2="418" className="plane-gate-tick" />
-          <text x="341" y="421" textAnchor="end" className="plane-gate-tick-label">0.75</text>
+          <line x1="236" y1="418" x2="242" y2="418" className="plane-gate-tick" />
+          <text x="231" y="421" textAnchor="end" className="plane-gate-tick-label">0.75</text>
 
           {/* Core vertical scanning laser */}
-          <line x1="360" y1="102" x2="360" y2="450" className="plane-gate-laser" />
+          <line x1="250" y1="102" x2="250" y2="450" className="plane-gate-laser" />
 
           {/* Dynamic Active Signal Gate Crossing */}
-          <g className="gate-crossing-active" transform={`translate(360, ${activeGateY})`}>
+          <g className="gate-crossing-active" transform={`translate(250, ${activeGateY})`}>
             <line x1="-14" y1="0" x2="14" y2="0" className="gate-crossing-beam" />
             <polygon points="0,-5 5,0 0,5 -5,0" className="gate-crossing-lens" />
             <circle r="1.8" fill="#ffffff" />
           </g>
 
           {/* Labels */}
-          <text className={`plane-gate-title${activeStage === 1 ? " is-active" : ""}`} x="360" y="80" textAnchor="middle">
+          <text className={`plane-gate-title${activeStage === 1 ? " is-active" : ""}`} x="250" y="80" textAnchor="middle">
             JEV DECISION CORE
           </text>
-          <text className="plane-note" x="360" y="478" textAnchor="middle">
+          <text className="plane-note" x="250" y="478" textAnchor="middle">
             DECISION GATE // 0.85 THRESHOLD
           </text>
         </g>
@@ -629,23 +630,23 @@ export function DecisionPlane({ asset, assets, pairing = null, allPairings = [],
             const focusedRank = effectiveSymbol === signal.symbol;
             const isPrimary = signal.symbol === asset.symbol;
             return <g key={`rank-${signal.symbol}`} className={`plane-rank-row${isPrimary ? " is-primary" : ""}${focusedRank ? " is-focused" : ""}${hoverAsset && !focusedRank ? " is-dimmed" : ""}`} onMouseEnter={() => setHoverAsset(signal.symbol)} onMouseLeave={() => setHoverAsset(null)}>
-              <text x="510" y={y - 9}>{String(signal.rank).padStart(2, "0")} {signal.symbol} {signal.score.toFixed(1)}</text>
+              <text x="335" y={y - 9}>{String(signal.rank).padStart(2, "0")} {signal.symbol} {signal.score.toFixed(1)}</text>
               {focusedRank ? (
                 isPrimary ? (
                   <>
-                    <text className="plane-accent" x="510" y={y + 16}>JEV / {decision} {rankTransition}{asset.confidence === null ? "" : ` / ${asset.confidence}%`}</text>
-                    <text className="plane-note" x="510" y={y + 34}>Opportunity / {asset.opportunityScore.toFixed(1)}</text>
+                    <text className="plane-accent" x="335" y={y + 16}>JEV / {decision} {rankTransition}{asset.confidence === null ? "" : ` / ${asset.confidence}%`}</text>
+                    <text className="plane-note" x="335" y={y + 34}>Opportunity / {asset.opportunityScore.toFixed(1)}</text>
                   </>
                 ) : (
                   <>
-                    <text className="plane-accent" x="510" y={y + 16}>JEV / ACTIVE EVALUATION #{String(signal.rank).padStart(2, "0")}{signal.delta ? ` · Δ ${signal.delta}` : ""}</text>
-                    <text className="plane-note" x="510" y={y + 32}>Opportunity / {signal.score.toFixed(1)}</text>
+                    <text className="plane-accent" x="335" y={y + 16}>JEV / ACTIVE EVALUATION #{String(signal.rank).padStart(2, "0")}{signal.delta ? ` · Δ ${signal.delta}` : ""}</text>
+                    <text className="plane-note" x="335" y={y + 32}>Opportunity / {signal.score.toFixed(1)}</text>
                   </>
                 )
               ) : (
-                <text className="plane-note" x="510" y={y + 17}>{signal.delta ? `Δ ${signal.delta}` : "—"}</text>
+                <text className="plane-note" x="335" y={y + 17}>{signal.delta ? `Δ ${signal.delta}` : "—"}</text>
               )}
-              <line x1="510" y1={y + 28} x2="684" y2={y + 28} />
+              <line x1="335" y1={y + 26} x2="480" y2={y + 26} />
             </g>;
           })}
         </g>
@@ -656,104 +657,9 @@ export function DecisionPlane({ asset, assets, pairing = null, allPairings = [],
 
         {pairing ? (
           <g className="plane-pair-routes">
-            <path className={`decision-route pair-route gpu-route${activePair && activePair !== pairing.symbol ? " is-dimmed" : ""}`} pathLength={1} d="M610 162 C660 162 670 88 704 88 L782 88 C820 88 828 120 828 176 L828 246" />
-            <path className="decision-route launch-route" pathLength={1} d="M828 246 C828 304 814 354 772 382 L690 382" />
+            <path className={`decision-route pair-route gpu-route${activePair && activePair !== pairing.symbol ? " is-dimmed" : ""}`} pathLength={1} d="M460 162 C490 162 510 88 530 88 L550 88" />
           </g>
         ) : null}
-
-        {/* High-Precision JEV Output Register (Solid institutional status card) */}
-        <foreignObject x="670" y="44" width="250" height="490" className="plane-output-foreign">
-          <div className="output-register-card" role="region" aria-label="JEV Output Register">
-            <div className="output-header-bar">
-              <span className="output-status-led" />
-              <span className="output-title">JEV OUTPUT REGISTER</span>
-            </div>
-
-            {pairing ? (
-              <div
-                className={`output-body ${pairClass(pairing.symbol)}`}
-                onMouseEnter={() => setHoverPair(pairing.symbol)}
-                onMouseLeave={() => setHoverPair(null)}
-              >
-                <div className="output-pair-heading">
-                  <div className="output-pair-symbol">{pairing.stockSymbol} × {pairing.symbol}</div>
-                  <div className="output-pair-score-row">
-                    <span className="output-pair-score">
-                      {pairing.pairScore.toFixed(1)} / {pairing.jevDecision.replaceAll("_", " ")}
-                    </span>
-                    {isTied ? (
-                      <span className="output-tied-badge">· TIED · {tiedCount} CANDIDATES</span>
-                    ) : null}
-                  </div>
-                </div>
-
-                {rawWhyPair ? (
-                  <div className="output-section">
-                    <div className="output-section-label">PAIR THESIS</div>
-                    <p className="output-thesis-text" title={rawWhyPair}>
-                      {rawWhyPair}
-                    </p>
-                  </div>
-                ) : null}
-
-                {alternativeCandidates.length > 0 ? (
-                  <div className="output-section">
-                    <div className="output-section-label">ALTERNATIVES</div>
-                    <div className="output-alts-list">
-                      {alternativeCandidates.map((alt) => (
-                        <div key={alt.symbol} className="output-alt-row">
-                          <span className="output-alt-symbol">{alt.symbol}</span>
-                          <span className="output-alt-score">{alt.score.toFixed(1)}</span>
-                          <span className="output-alt-decision">{alt.decision.replaceAll("_", " ")}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-
-                <div className="output-next-state">
-                  <span className="output-section-label">NEXT STATE / </span>
-                  <span className="output-next-state-value">{nextStateLabel}</span>
-                </div>
-
-                {controlledRows.length > 0 ? (
-                  <div className="output-controlled-block">
-                    <div className="output-divider" />
-                    <div className="output-section-label output-controlled-heading">CONTROLLED STATE // ACT</div>
-                    <div className="output-controlled-rows">
-                      {controlledRows.map((row) => (
-                        <div key={row.label} className="output-controlled-row">
-                          <span className="output-controlled-label">{row.label}</span>
-                          <span className="output-controlled-value">{row.value}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            ) : (
-              <div className="output-body output-empty">
-                <div className="output-section-label">PAIR</div>
-                <div className="output-pair-symbol">NO QUALIFIED PAIR</div>
-                <div className="output-section-label">THIS CYCLE</div>
-                {controlledRows.length > 0 ? (
-                  <div className="output-controlled-block">
-                    <div className="output-divider" />
-                    <div className="output-section-label output-controlled-heading">CONTROLLED STATE // ACT</div>
-                    <div className="output-controlled-rows">
-                      {controlledRows.map((row) => (
-                        <div key={row.label} className="output-controlled-row">
-                          <span className="output-controlled-label">{row.label}</span>
-                          <span className="output-controlled-value">{row.value}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            )}
-          </div>
-        </foreignObject>
 
         {/* Interactive Cursor Reticle (tracks mouse dynamically across decision plane) */}
         {cursorPos ? (
@@ -775,11 +681,190 @@ export function DecisionPlane({ asset, assets, pairing = null, allPairings = [],
             </text>
           </g>
         ) : null}
-
       </svg>
+
+      {/* Cluster Right: JEV Output Register Card & CA Pill */}
+      <div className="plane-card-column">
+        <div className="output-register-card" role="region" aria-label="JEV Output Register">
+          <div className="output-header-bar">
+            <span className="output-status-led" />
+            <span className="output-title">JEV OUTPUT REGISTER</span>
+          </div>
+
+          {pairing ? (
+            <div
+              className={`output-body ${pairClass(pairing.symbol)}`}
+              onMouseEnter={() => setHoverPair(pairing.symbol)}
+              onMouseLeave={() => setHoverPair(null)}
+            >
+              <div className="output-pair-heading">
+                <div className="output-pair-symbol">{pairing.stockSymbol} × {pairing.symbol}</div>
+                <div className="output-pair-score-row">
+                  <span className="output-pair-score">
+                    {pairing.pairScore.toFixed(1)} / {pairing.jevDecision.replaceAll("_", " ")}
+                  </span>
+                  {isTied ? (
+                    <span className="output-tied-badge">· TIED · {tiedCount} CANDIDATES</span>
+                  ) : null}
+                </div>
+              </div>
+
+              {rawWhyPair ? (
+                <div className="output-section">
+                  <div className="output-section-label">PAIR THESIS</div>
+                  <p className="output-thesis-text" title={rawWhyPair}>
+                    {rawWhyPair}
+                  </p>
+                </div>
+              ) : null}
+
+              {alternativeCandidates.length > 0 ? (
+                <div className="output-section">
+                  <div className="output-section-label">ALTERNATIVES</div>
+                  <div className="output-alts-list">
+                    {alternativeCandidates.map((alt) => (
+                      <div key={alt.symbol} className="output-alt-row">
+                        <span className="output-alt-symbol">{alt.symbol}</span>
+                        <span className="output-alt-score">{alt.score.toFixed(1)}</span>
+                        <span className="output-alt-decision">{alt.decision.replaceAll("_", " ")}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="output-next-state">
+                <span className="output-section-label">NEXT STATE / </span>
+                <span className="output-next-state-value">{nextStateLabel}</span>
+              </div>
+
+              {controlledRows.length > 0 ? (
+                <div className="output-controlled-block">
+                  <div className="output-divider" />
+                  <div className="output-section-label output-controlled-heading">CONTROLLED STATE // ACT</div>
+                  <div className="output-controlled-rows">
+                    {controlledRows.map((row) => (
+                      <div key={row.label} className="output-controlled-row">
+                        <span className="output-controlled-label">{row.label}</span>
+                        <span className="output-controlled-value">{row.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="output-body output-empty">
+              <div className="output-section-label">PAIR</div>
+              <div className="output-pair-symbol">NO QUALIFIED PAIR</div>
+              <div className="output-section-label">THIS CYCLE</div>
+              {controlledRows.length > 0 ? (
+                <div className="output-controlled-block">
+                  <div className="output-divider" />
+                  <div className="output-section-label output-controlled-heading">CONTROLLED STATE // ACT</div>
+                  <div className="output-controlled-rows">
+                    {controlledRows.map((row) => (
+                      <div key={row.label} className="output-controlled-row">
+                        <span className="output-controlled-label">{row.label}</span>
+                        <span className="output-controlled-value">{row.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )}
+        </div>
+
+        <HeroCaPill />
+      </div>
+    </div>
 
       <div className="decision-plane-rail" aria-hidden="true"><span>Observe / Stock Tokens</span><span>Jev / Decision Gate</span><span>Pair / <b>{pairing ? `${pairing.stockSymbol} × ${pairing.symbol}${isTied ? ` (TIED · ${tiedCount})` : ""}` : "No qualified pair"}</b></span><span>Launch / <b>{launch ? launch.transactionState.replaceAll("_", " ") : "No launch candidate"}</b></span></div>
       <span className="decision-plane-lock-status" aria-live="polite">{hoverAsset ? `Focusing ${hoverAsset} telemetry trajectory.` : "Autonomous decision sequence active."}</span>
+    </div>
+  );
+}
+
+export function HeroCaPill() {
+  const [copied, setCopied] = useState(false);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    };
+  }, []);
+
+  const rawCa =
+    (typeof process !== "undefined"
+      ? (process.env.NEXT_PUBLIC_JEVO_TOKEN_ADDRESS || process.env.NEXT_PUBLIC_CA)
+      : "") || "";
+  const isValidCa = /^0x[0-9a-fA-F]{40}$/.test(rawCa.trim());
+
+  async function copyCa() {
+    if (!isValidCa) return;
+    try {
+      let copiedWithClipboard = false;
+      if (navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(rawCa.trim());
+          copiedWithClipboard = true;
+        } catch {
+          copiedWithClipboard = false;
+        }
+      }
+      if (!copiedWithClipboard) {
+        const textarea = document.createElement("textarea");
+        textarea.value = rawCa.trim();
+        textarea.setAttribute("readonly", "true");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+      setCopied(true);
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <div className="hero-ca-wrapper">
+      <button
+        className={`hero-ca${!isValidCa ? " is-disabled" : ""}`}
+        type="button"
+        onClick={isValidCa ? copyCa : undefined}
+        disabled={!isValidCa}
+        aria-label={
+          !isValidCa
+            ? "Contract address TBA"
+            : copied
+              ? "Contract address copied"
+              : `Copy contract address ${rawCa.trim()}`
+        }
+      >
+        {isValidCa ? (
+          <>
+            <span className="hero-ca-prefix">CA</span>
+            <code>{rawCa.trim().slice(0, 6)}...{rawCa.trim().slice(-4)}</code>
+            <span aria-hidden="true">↗</span>
+            <span className="hero-ca-copy">[{copied ? "COPIED" : "COPY"}]</span>
+          </>
+        ) : (
+          <>
+            <span className="hero-ca-prefix">CA</span>
+            <code>· TBA</code>
+          </>
+        )}
+      </button>
+      <span className="hero-ca-feedback" aria-live="polite">
+        {copied ? "Contract address copied" : ""}
+      </span>
     </div>
   );
 }
