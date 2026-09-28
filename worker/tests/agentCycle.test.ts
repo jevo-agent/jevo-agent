@@ -24,6 +24,7 @@ describe("Agent Cycle Orchestration (BACKEND 05)", () => {
   const crashCycleId = "cycle-crash-test-01";
   const skipGateCycleAId = "cycle-skip-gate-test-01";
   const skipGateCycleBId = "cycle-skip-gate-test-02";
+  const narrativeDeltaCycleId = "cycle-narrative-delta-test-01";
 
   const testCycleIds = [
     integrationCycleId,
@@ -31,6 +32,7 @@ describe("Agent Cycle Orchestration (BACKEND 05)", () => {
     crashCycleId,
     skipGateCycleAId,
     skipGateCycleBId,
+    narrativeDeltaCycleId,
   ];
 
   beforeAll(async () => {
@@ -327,6 +329,73 @@ describe("Agent Cycle Orchestration (BACKEND 05)", () => {
       expect(scoreB.cryptoAdjacency).toBe(scoreA.cryptoAdjacency);
       expect(scoreB.pairCompatibility).toBe(scoreA.pairCompatibility);
       expect(scoreB.score).toBe(scoreA.score);
+    });
+
+    it("triggers Jev evaluation when narrative delta occurs, and passes narrativeSignals/headlines in payload", async () => {
+      let decideCallsForNVDA = 0;
+      let capturedPayloadNVDA: any = null;
+
+      const mockJev = new MockJevProvider();
+      const customDecisionEngine = new DecisionEngine(mockJev);
+
+      const originalDecide = customDecisionEngine.decideForAsset.bind(customDecisionEngine);
+      customDecisionEngine.decideForAsset = async (cycleId, symbol, context) => {
+        if (symbol === "NVDA") {
+          decideCallsForNVDA++;
+          capturedPayloadNVDA = context;
+        }
+        return originalDecide(cycleId, symbol, context);
+      };
+
+      // Mock narrative provider that produces changed magnitude for NVDA
+      const customNarrativeProvider = {
+        async getSignals(symbol: string) {
+          const isNVDA = symbol.toUpperCase() === "NVDA";
+          return [
+            {
+              id: `sig-nar-${symbol.toLowerCase()}-1`,
+              symbol: symbol.toUpperCase(),
+              kind: "NARRATIVE" as const,
+              // Force magnitude change for NVDA to trigger deltaNarrative > 0.001
+              magnitude: isNVDA ? 99.0 : 70.0,
+              label: isNVDA
+                ? "Nvidia unveils revolutionary next-gen AI superchip with unprecedented datacenter demand"
+                : `${symbol} baseline narrative`,
+              capturedAt: new Date().toISOString(),
+              source: "test-narrative-provider",
+            },
+          ];
+        },
+      };
+
+      const { createProvidersRegistry } = await import("../src/providers");
+      const providers = createProvidersRegistry("mock");
+      const customRegistry = {
+        ...providers,
+        narrative: customNarrativeProvider as any,
+      };
+
+      // Run cycle with skipGateCycleBId as previousCycleId
+      const result = await executeAgentCycle("DELTA", {
+        forcedCycleId: narrativeDeltaCycleId,
+        previousCycleId: skipGateCycleBId,
+        decisionEngine: customDecisionEngine,
+        providersRegistry: customRegistry,
+      });
+
+      expect(result.status).toBe("COMPLETED");
+
+      // Verify narrative change triggered re-evaluation for NVDA
+      expect(decideCallsForNVDA).toBeGreaterThan(0);
+
+      // Verify narrativeSignals and headlines are present and non-empty in payload
+      expect(capturedPayloadNVDA).toBeDefined();
+      expect(capturedPayloadNVDA.narrativeSignals).toBeArray();
+      expect(capturedPayloadNVDA.narrativeSignals.length).toBeGreaterThan(0);
+      expect(capturedPayloadNVDA.narrativeSignals[0]).toContain("superchip");
+      expect(capturedPayloadNVDA.headlines).toBeArray();
+      expect(capturedPayloadNVDA.headlines.length).toBeGreaterThan(0);
+      expect(capturedPayloadNVDA.headlines[0]).toContain("superchip");
     });
   });
 });

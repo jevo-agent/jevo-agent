@@ -6,6 +6,7 @@ import type {
   PairingDecisionAction,
   PairingThesisDetail,
 } from "@jevo/protocol-types";
+import { and, desc, eq } from "drizzle-orm";
 import { db } from "../db/client";
 import {
   pairingCandidates,
@@ -135,9 +136,63 @@ export async function evaluatePairing(
     record: PairingCandidateRecord;
     decision: PairingDecisionAction;
     confidence: number;
+    mode: "PRESERVE" | "UPDATE" | "INSERT";
+    previousScore?: number;
   }> = [];
 
   for (const concept of candidates) {
+    // Check for existing candidate for this (symbol, concept) pair
+    const [existing] = await client
+      .select()
+      .from(pairingCandidates)
+      .where(
+        and(
+          eq(pairingCandidates.symbol, symbol),
+          eq(pairingCandidates.memeSymbol, concept.name),
+        ),
+      )
+      .orderBy(desc(pairingCandidates.createdAt))
+      .limit(1);
+
+    if (existing) {
+      // ARCHIVED oleh operator: jangan dihidupkan lagi otomatis (reject harus tetap reject)
+      if (existing.lifecycleState === "ARCHIVED") {
+        logger.info(
+          { symbol, memeSymbol: concept.name },
+          "Pairing candidate was ARCHIVED by operator. Skipping evaluation.",
+        );
+        continue;
+      }
+
+      // Sudah CURATED / LAUNCH_CANDIDATE / LAUNCHED: JANGAN timpa thesis/skor operator, jangan bikin PROPOSED duplikat
+      if (
+        existing.lifecycleState === "CURATED" ||
+        existing.lifecycleState === "LAUNCH_CANDIDATE" ||
+        existing.lifecycleState === "LAUNCHED"
+      ) {
+        logger.info(
+          { symbol, memeSymbol: concept.name, state: existing.lifecycleState },
+          "Pairing candidate already curated/active. Preserving operator scores and thesis.",
+        );
+        evaluatedCandidates.push({
+          record: {
+            id: existing.id,
+            symbol: existing.symbol,
+            memeSymbol: existing.memeSymbol,
+            thesis: existing.thesis,
+            components: existing.components,
+            pairingScore: existing.pairingScore,
+            lifecycleState: existing.lifecycleState as any,
+            createdAt: existing.createdAt.toISOString(),
+          },
+          decision: "PROPOSED",
+          confidence: 1,
+          mode: "PRESERVE",
+        });
+        continue;
+      }
+    }
+
     // 3. Jev evaluates choice: strong_pair | proposed | rejected
     const thesisChoice = await jev.evaluateChoice<PairingDecisionAction>({
       context: {
@@ -195,25 +250,49 @@ export async function evaluatePairing(
       components,
     });
 
-    const candidateId = `pc-${symbol.toLowerCase()}-${concept.name.toLowerCase().replace(/[^a-z0-9]/g, "")}-${randomUUID().slice(0, 8)}`;
     const now = new Date();
 
-    const record: PairingCandidateRecord = {
-      id: candidateId,
-      symbol,
-      memeSymbol: concept.name,
-      thesis,
-      components,
-      pairingScore,
-      lifecycleState: "PROPOSED",
-      createdAt: now.toISOString(),
-    };
+    if (existing && existing.lifecycleState === "PROPOSED") {
+      // Ada PROPOSED untuk pasangan itu: UPDATE in place
+      const record: PairingCandidateRecord = {
+        id: existing.id,
+        symbol,
+        memeSymbol: concept.name,
+        thesis,
+        components,
+        pairingScore,
+        lifecycleState: "PROPOSED",
+        createdAt: existing.createdAt.toISOString(),
+      };
 
-    evaluatedCandidates.push({
-      record,
-      decision: thesisChoice.choice,
-      confidence: thesisChoice.confidence,
-    });
+      evaluatedCandidates.push({
+        record,
+        decision: thesisChoice.choice,
+        confidence: thesisChoice.confidence,
+        mode: "UPDATE",
+        previousScore: existing.pairingScore,
+      });
+    } else {
+      // New candidate: deterministic candidateId
+      const candidateId = `pc-${symbol.toLowerCase()}-${concept.name.toLowerCase().replace(/[^a-z0-9]/g, "")}`;
+      const record: PairingCandidateRecord = {
+        id: candidateId,
+        symbol,
+        memeSymbol: concept.name,
+        thesis,
+        components,
+        pairingScore,
+        lifecycleState: "PROPOSED",
+        createdAt: now.toISOString(),
+      };
+
+      evaluatedCandidates.push({
+        record,
+        decision: thesisChoice.choice,
+        confidence: thesisChoice.confidence,
+        mode: "INSERT",
+      });
+    }
   }
 
   // Sort candidates by pairingScore DESC (tie-breaker: memeSymbol ASC)
@@ -224,82 +303,160 @@ export async function evaluatePairing(
     return a.record.memeSymbol.localeCompare(b.record.memeSymbol);
   });
 
-  // Persist all candidates (both primary winner and alternates) in sorted order
+  // Persist candidates in sorted order
   let candidateTime = Date.now();
   for (const item of evaluatedCandidates) {
-    const { record, decision, confidence } = item;
+    const { record, decision, confidence, mode } = item;
     candidateTime += 1;
-    const createdAt = new Date(candidateTime);
-    record.createdAt = createdAt.toISOString();
+    const actionTime = new Date(candidateTime);
 
-    // Write to pairing_candidates
-    await client
-      .insert(pairingCandidates)
-      .values({
-        id: record.id,
-        symbol: record.symbol,
-        memeSymbol: record.memeSymbol,
-        thesis: record.thesis,
-        components: record.components,
-        pairingScore: record.pairingScore,
-        lifecycleState: record.lifecycleState,
-        createdAt,
-      })
-      .onConflictDoNothing();
+    if (mode === "PRESERVE") {
+      // Operator curated / launched: keep completely untouched in DB
+      continue;
+    }
 
-    // Write to pairing_decisions
-    await client
-      .insert(pairingDecisions)
-      .values({
-        id: `pd-${record.id}-${randomUUID().slice(0, 8)}`,
-        pairingCandidateId: record.id,
-        decision,
-        confidence,
-        createdAt,
-      })
-      .onConflictDoNothing();
+    if (mode === "UPDATE") {
+      // UPDATE in place (skor, komponen, thesis), jangan insert baru
+      await client
+        .update(pairingCandidates)
+        .set({
+          thesis: record.thesis,
+          components: record.components,
+          pairingScore: record.pairingScore,
+        })
+        .where(eq(pairingCandidates.id, record.id));
 
-    // Record initial transition in pairing_history
-    await client
-      .insert(pairingHistory)
-      .values({
-        id: `ph-${record.id}-${randomUUID().slice(0, 8)}`,
-        pairingCandidateId: record.id,
-        fromState: "PROPOSED",
-        toState: "PROPOSED",
-        actor: "JEVO_AGENT",
-        transitionedAt: createdAt,
-      })
-      .onConflictDoNothing();
+      // Update or insert latest decision
+      const [existingDecision] = await client
+        .select()
+        .from(pairingDecisions)
+        .where(eq(pairingDecisions.pairingCandidateId, record.id))
+        .limit(1);
 
-    // Emit Section 12 PAIRING_PROPOSED protocol event
-    const pairingEvt = {
-      eventId: `evt-pairing-proposed-${record.id}`,
-      eventType: "PAIRING_PROPOSED",
-      cycleId: cycleId ?? null,
-      subjectType: "pairing",
-      subjectId: record.id,
-      payload: {
-        candidateId: record.id,
-        symbol: record.symbol,
-        memeSymbol: record.memeSymbol,
-        pairingScore: record.pairingScore,
-        lifecycleState: record.lifecycleState,
-      },
-      schemaVersion: 1,
-      actor: "JEVO_AGENT" as const,
-      createdAt: createdAt.toISOString(),
-    };
+      if (existingDecision) {
+        await client
+          .update(pairingDecisions)
+          .set({
+            decision,
+            confidence,
+          })
+          .where(eq(pairingDecisions.id, existingDecision.id));
+      } else {
+        await client
+          .insert(pairingDecisions)
+          .values({
+            id: `pd-${record.id}-${randomUUID().slice(0, 8)}`,
+            pairingCandidateId: record.id,
+            decision,
+            confidence,
+            createdAt: actionTime,
+          })
+          .onConflictDoNothing();
+      }
 
-    await client
-      .insert(protocolEvents)
-      .values({
-        ...pairingEvt,
-        createdAt,
-      })
-      .onConflictDoNothing();
+      // jangan tulis history PROPOSED->PROPOSED!
+      // jangan re-emit PAIRING_PROPOSED kalau tidak ada perubahan berarti (threshold delta >= 1.0)
+      const scoreDelta = Math.abs((item.previousScore ?? record.pairingScore) - record.pairingScore);
+      if (scoreDelta >= 1.0) {
+        const pairingEvt = {
+          eventId: `evt-pairing-proposed-${record.id}-${actionTime.getTime()}`,
+          eventType: "PAIRING_PROPOSED",
+          cycleId: cycleId ?? null,
+          subjectType: "pairing",
+          subjectId: record.id,
+          payload: {
+            candidateId: record.id,
+            symbol: record.symbol,
+            memeSymbol: record.memeSymbol,
+            pairingScore: record.pairingScore,
+            lifecycleState: record.lifecycleState,
+          },
+          schemaVersion: 1,
+          actor: "JEVO_AGENT" as const,
+          createdAt: actionTime.toISOString(),
+        };
 
-    await publishProtocolEvent(pairingEvt);
+        await client
+          .insert(protocolEvents)
+          .values({
+            ...pairingEvt,
+            createdAt: actionTime,
+          })
+          .onConflictDoNothing();
+
+        await publishProtocolEvent(pairingEvt);
+      }
+    } else {
+      // mode === "INSERT"
+      record.createdAt = actionTime.toISOString();
+
+      await client
+        .insert(pairingCandidates)
+        .values({
+          id: record.id,
+          symbol: record.symbol,
+          memeSymbol: record.memeSymbol,
+          thesis: record.thesis,
+          components: record.components,
+          pairingScore: record.pairingScore,
+          lifecycleState: record.lifecycleState,
+          createdAt: actionTime,
+        })
+        .onConflictDoNothing();
+
+      await client
+        .insert(pairingDecisions)
+        .values({
+          id: `pd-${record.id}-${randomUUID().slice(0, 8)}`,
+          pairingCandidateId: record.id,
+          decision,
+          confidence,
+          createdAt: actionTime,
+        })
+        .onConflictDoNothing();
+
+      // Record initial transition in pairing_history
+      await client
+        .insert(pairingHistory)
+        .values({
+          id: `ph-${record.id}-${randomUUID().slice(0, 8)}`,
+          pairingCandidateId: record.id,
+          fromState: "PROPOSED",
+          toState: "PROPOSED",
+          actor: "JEVO_AGENT",
+          transitionedAt: actionTime,
+        })
+        .onConflictDoNothing();
+
+      // Emit Section 12 PAIRING_PROPOSED protocol event
+      const pairingEvt = {
+        eventId: `evt-pairing-proposed-${record.id}`,
+        eventType: "PAIRING_PROPOSED",
+        cycleId: cycleId ?? null,
+        subjectType: "pairing",
+        subjectId: record.id,
+        payload: {
+          candidateId: record.id,
+          symbol: record.symbol,
+          memeSymbol: record.memeSymbol,
+          pairingScore: record.pairingScore,
+          lifecycleState: record.lifecycleState,
+        },
+        schemaVersion: 1,
+        actor: "JEVO_AGENT" as const,
+        createdAt: actionTime.toISOString(),
+      };
+
+      await client
+        .insert(protocolEvents)
+        .values({
+          ...pairingEvt,
+          createdAt: actionTime,
+        })
+        .onConflictDoNothing();
+
+      await publishProtocolEvent(pairingEvt);
+    }
   }
 
   logger.info(

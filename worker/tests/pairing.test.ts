@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "../src/db/client";
 import {
   memeConcepts,
@@ -220,6 +220,124 @@ describe("Pairing Engine & Meme Concept Lookup (BACKEND 06)", () => {
         stockRelevance: -50,
       };
       expect(computePairingScore(underflown)).toBe(0);
+    });
+  });
+
+  describe("4. Multi-Cycle Pairing Idempotency & Operator Curation Preservation (STEP 3)", () => {
+    it("(a) running pairing 2x cycle keeps exactly 1 row per pair and does not insert duplicate history", async () => {
+      // Clear test pairings first
+      await db.delete(pairingHistory);
+      await db.delete(pairingDecisions);
+      await db.delete(pairingCandidates);
+
+      const narrativeSignals = [
+        "AI chip demand surges across datacenters",
+        "Record GPU supply allocations",
+      ];
+
+      // Cycle 1
+      const cycle1Candidates = await evaluatePairing({
+        stockSymbol: testSymbol,
+        narrativeSignals,
+        jev,
+      });
+      expect(cycle1Candidates.length).toBeGreaterThan(0);
+
+      const rowsCycle1 = await db
+        .select()
+        .from(pairingCandidates)
+        .where(eq(pairingCandidates.symbol, testSymbol));
+      const historyCycle1 = await db
+        .select()
+        .from(pairingHistory);
+
+      expect(rowsCycle1.length).toBe(cycle1Candidates.length);
+      expect(historyCycle1.length).toBe(cycle1Candidates.length);
+
+      // Cycle 2 with identical signals
+      const cycle2Candidates = await evaluatePairing({
+        stockSymbol: testSymbol,
+        narrativeSignals,
+        jev,
+      });
+
+      const rowsCycle2 = await db
+        .select()
+        .from(pairingCandidates)
+        .where(eq(pairingCandidates.symbol, testSymbol));
+      const historyCycle2 = await db
+        .select()
+        .from(pairingHistory);
+
+      // (a) Still exactly 1 row per pair! No duplicate candidates!
+      expect(rowsCycle2.length).toBe(rowsCycle1.length);
+      // No PROPOSED->PROPOSED history written on cycle 2!
+      expect(historyCycle2.length).toBe(historyCycle1.length);
+    });
+
+    it("(b) CURATED candidate is not overwritten by subsequent cycles and no duplicate is created", async () => {
+      // Find one candidate to curate
+      const [candidateToCurate] = await db
+        .select()
+        .from(pairingCandidates)
+        .where(eq(pairingCandidates.symbol, testSymbol))
+        .limit(1);
+
+      expect(candidateToCurate).toBeDefined();
+
+      const operatorThesis = {
+        whyStock: "Operator verified thesis for NVDA.",
+        whyMeme: "Operator curated token.",
+        whyPair: "Operator alignment.",
+        whyNow: "Operator catalyst timing.",
+      };
+      const operatorScore = 99.5;
+
+      // Operator curates candidate
+      await db
+        .update(pairingCandidates)
+        .set({
+          lifecycleState: "CURATED",
+          thesis: operatorThesis,
+          pairingScore: operatorScore,
+        })
+        .where(eq(pairingCandidates.id, candidateToCurate.id));
+
+      // Run pairing cycle again
+      const narrativeSignals = [
+        "AI chip demand surges across datacenters",
+        "Record GPU supply allocations",
+      ];
+
+      await evaluatePairing({
+        stockSymbol: testSymbol,
+        narrativeSignals,
+        jev,
+      });
+
+      // Verify operator curation was preserved:
+      const [curatedAfter] = await db
+        .select()
+        .from(pairingCandidates)
+        .where(eq(pairingCandidates.id, candidateToCurate.id));
+
+      expect(curatedAfter.lifecycleState).toBe("CURATED");
+      expect(curatedAfter.pairingScore).toBe(operatorScore);
+      expect(curatedAfter.thesis.whyStock).toBe("Operator verified thesis for NVDA.");
+
+      // Verify no duplicate PROPOSED candidate was created for this symbol & memeSymbol
+      const allMatching = await db
+        .select()
+        .from(pairingCandidates)
+        .where(
+          and(
+            eq(pairingCandidates.symbol, testSymbol),
+            eq(pairingCandidates.memeSymbol, candidateToCurate.memeSymbol),
+          ),
+        );
+
+      expect(allMatching.length).toBe(1);
+      expect(allMatching[0].lifecycleState).toBe("CURATED");
     });
   });
 });
