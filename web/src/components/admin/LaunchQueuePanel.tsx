@@ -7,7 +7,7 @@ import { useEmergencyPauseLaunch, useScheduleLaunch } from "@/lib/api/admin-hook
 import type { Launch } from "@/types/launch";
 import type { Pairing } from "@/types/pairing";
 
-interface LaunchQueuePanelProps { launch: Launch; pairing: Pairing; }
+interface LaunchQueuePanelProps { launch?: Launch | null; pairing?: Pairing | null; }
 
 export function LaunchQueuePanel({ launch, pairing }: LaunchQueuePanelProps) {
   const adminLaunchControl = useAgentStore((state) => state.adminLaunchControl);
@@ -16,6 +16,19 @@ export function LaunchQueuePanel({ launch, pairing }: LaunchQueuePanelProps) {
   const scheduleLaunch = useScheduleLaunch();
   const pauseLaunch = useEmergencyPauseLaunch();
   const demo = isJevoDemoMode();
+
+  if (!launch || !pairing) {
+    return (
+      <div>
+        <PanelHead title="Launch queue" meta="Autonomous execution / standby" />
+        <div className="p-6">
+          <p className="font-mono text-xs uppercase text-[var(--jevo-accent)]">Standby / No Active Launch</p>
+          <p className="mt-2 text-sm text-[var(--jevo-muted)]">No pairing candidate is currently staged for autonomous execution in the active cycle.</p>
+        </div>
+      </div>
+    );
+  }
+
   const passed = launch.policyChecks.filter((check) => check.status === "PASSED").length;
   const control = async (state: "SCHEDULED" | "PAUSED") => {
     if (demo) { setAdminLaunchControl(state); setAdminControlNotice(`${state === "SCHEDULED" ? "Schedule launch" : "Pause launch"} recorded in explicit demo mode. No canonical launch state was changed.`); return; }

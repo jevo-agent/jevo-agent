@@ -6,12 +6,25 @@ import { isJevoDemoMode } from "@/lib/api/client";
 import { useEmergencyPauseLaunch } from "@/lib/api/admin-hooks";
 import type { Launch } from "@/types/launch";
 
-interface WalletContractsPanelProps { launch: Launch; }
+interface WalletContractsPanelProps { launch?: Launch | null; }
 
 export function WalletContractsPanel({ launch }: WalletContractsPanelProps) {
   const setAdminControlNotice = useAgentStore((state) => state.setAdminControlNotice);
   const emergencyPause = useEmergencyPauseLaunch();
   const demo = isJevoDemoMode();
+
+  if (!launch) {
+    return (
+      <div>
+        <PanelHead title="Wallet & contracts" meta="Restricted execution surface / standby" />
+        <div className="p-6">
+          <p className="font-mono text-xs uppercase text-[var(--jevo-accent)]">Phase 0 Reference Surface</p>
+          <p className="mt-2 text-sm text-[var(--jevo-muted)]">No active launch contracts or transaction states are currently in flight for Phase 0.</p>
+        </div>
+      </div>
+    );
+  }
+
   const { wallet } = launch;
   const pause = async () => {
     if (demo) { setAdminControlNotice("Demo mode: emergency pause is disabled and no canonical launch state was changed."); return; }

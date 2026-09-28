@@ -32,7 +32,7 @@ function NavIcon({ name }: { name: (typeof sections)[number]["icon"] }) {
 
 export function AppSidebar({ agent, activeSection: activeSectionProp }: AppSidebarProps) {
   const pathname = usePathname();
-  const [activeSection, setActiveSection] = useState(() => {
+  const [activeSection, setActiveSection] = useState<string>(() => {
     if (activeSectionProp) return activeSectionProp;
     if (typeof window === "undefined") return "overview";
     if (pathname.startsWith("/stock/")) return "opportunities";
@@ -59,20 +59,40 @@ export function AppSidebar({ agent, activeSection: activeSectionProp }: AppSideb
 
   useEffect(() => {
     if (!appPage) return;
-    const observed = sections
-      .map((section) => document.getElementById(section.id))
-      .filter((element): element is HTMLElement => Boolean(element));
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((left, right) => Math.abs(left.boundingClientRect.top) - Math.abs(right.boundingClientRect.top));
-        if (visible[0]?.target.id) setActiveSection(visible[0].target.id);
-      },
-      { rootMargin: "-18% 0px -68% 0px", threshold: [0, 0.2, 0.6] }
-    );
-    observed.forEach((element) => observer.observe(element));
-    return () => observer.disconnect();
+
+    const updateActiveSection = () => {
+      // 140px offset accounts for fixed topbar and status strip
+      const topOffset = 140;
+      let current: string = sections[0].id;
+
+      for (const section of sections) {
+        const el = document.getElementById(section.id);
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        if (rect.top <= topOffset) {
+          current = section.id;
+        }
+      }
+      setActiveSection((prev) => (prev !== current ? current : prev));
+    };
+
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          updateActiveSection();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    updateActiveSection();
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
   }, [appPage]);
 
   useEffect(() => {
@@ -134,18 +154,18 @@ export function AppSidebar({ agent, activeSection: activeSectionProp }: AppSideb
             </div>
             <div className="row">
               <span className="label">Network</span>
-              <span className="label"><b>{agent.networkLabel ?? "—"}</b></span>
+              <span className="label"><b>{agent.networkLabel ?? "Robinhood Chain"}</b></span>
             </div>
             <div className="row">
               <span className="label">Chain ID</span>
-              <span className="label"><b>—</b></span>
+              <span className="label"><b>Phase 0 (Staging)</b></span>
             </div>
             <div className="row">
               <span className="label">State</span>
-              <span className="label"><b>{agent.networkLabel ? "ONLINE" : "STATUS UNAVAILABLE"}</b></span>
+              <span className="label"><b>{agent.networkLabel ? "ONLINE" : "STANDBY (PHASE 0)"}</b></span>
             </div>
           </div>
-          <span className="sr-only">{agent.networkLabel ?? "Network unavailable"} / cycle {formatCycle(agent.activeCycle)}</span>
+          <span className="sr-only">{agent.networkLabel ?? "Robinhood Chain"} / cycle {formatCycle(agent.activeCycle)}</span>
         </div>
       </aside>
 

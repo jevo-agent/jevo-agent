@@ -224,11 +224,11 @@ export function DecisionPlane({ asset, assets, pairing = null, allPairings = [],
         className="decision-plane-svg"
         viewBox="0 0 940 560"
         role="img"
-        aria-labelledby="decision-plane-title decision-plane-description"
+        aria-label="JEVO autonomous decision plane"
+        aria-describedby="decision-plane-description"
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setCursorPos(null)}
       >
-        <title id="decision-plane-title">JEVO autonomous decision plane</title>
         <desc id="decision-plane-description">{description}</desc>
         <g className="plane-guides" aria-hidden="true">
           {[...Array(22)].map((_, index) => <path className="field-trajectory" key={index} pathLength={1} d={`M48 ${48 + index * 23} C180 ${48 + index * 23} 260 ${225 + index * 4.5} 348 ${225 + index * 4.5}`} style={{ "--signal-delay": `${index * -0.65}s` } as CSSProperties} />)}

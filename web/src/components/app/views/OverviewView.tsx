@@ -757,9 +757,12 @@ function RankPanel({
           </tbody>
         </table>
       </div>
-      <div className="panel-foot">
+      <div className="panel-foot rank-table-foot">
         <span className="label">
-          Pairability measure, not an investment-return prediction. Select a row to inspect or open its stock workspace.
+          {rows.length} opportunities monitored · Select a row to inspect.
+        </span>
+        <span className="label rank-scroll-hint">
+          Scroll rows to end to advance page ↓
         </span>
       </div>
     </div>
@@ -1783,7 +1786,7 @@ function DecisionTrace({ agent, memory }: { agent: AgentRuntime; memory: MemoryR
       decision: record.decision,
       summary: record.summary,
     }));
-    return [...observed, ...remembered].sort((left, right) => right.timestamp.localeCompare(left.timestamp)).slice(0, 10);
+    return [...observed, ...remembered].sort((left, right) => right.timestamp.localeCompare(left.timestamp)).slice(0, 40);
   }, [agent.latestEvents, memory]);
 
   return (
@@ -1809,6 +1812,10 @@ function DecisionTrace({ agent, memory }: { agent: AgentRuntime; memory: MemoryR
             <span className="trace-decision">{entry.decision}</span>
           </div>
         ))}
+      </div>
+      <div className="trace-table-footer">
+        <span className="label">{entries.length} AUDITABLE TELEMETRY EVENTS</span>
+        <span className="label trace-scroll-hint">SCROLL DATA ROWS TO END TO ADVANCE ↓</span>
       </div>
     </div>
   );

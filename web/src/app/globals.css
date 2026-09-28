@@ -293,10 +293,42 @@ a, button { touch-action: manipulation; }
 .jevo-app .legend-float b { margin-bottom: 1px; }
 .jevo-app .legend-float span { display: block; color: var(--muted); }
 .jevo-app .map-foot { border-top: 1px solid var(--line); padding: 11px 16px 0; }
-.jevo-app .trace-table { overflow-x: auto; }
+.jevo-app .trace-table {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 480px;
+  overscroll-behavior-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(2, 198, 165, 0.28) transparent;
+}
+.jevo-app .trace-table::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.jevo-app .trace-table::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.25);
+}
+.jevo-app .trace-table::-webkit-scrollbar-thumb {
+  background: rgba(2, 198, 165, 0.28);
+  border-radius: 2px;
+}
+.jevo-app .trace-table::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
 .jevo-app .trace-row { display: grid; grid-template-columns: 68px minmax(190px, 1.5fr) minmax(150px, 1fr) minmax(120px, .8fr); gap: 12px; border-bottom: 1px solid var(--line); padding: 12px 16px; color: var(--text-2); font-family: var(--mono); font-size: 10.5px; }
 .jevo-app .trace-row > span { min-width: 0; }
-.jevo-app .trace-head { color: var(--muted); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+.jevo-app .trace-head {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #090b09;
+  border-bottom: 1px solid var(--line-strong);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.65);
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
 .jevo-app .trace-time { color: var(--dim); }
 .jevo-app .trace-row b, .jevo-app .trace-row small, .jevo-app .trace-row em { display: block; }
 .jevo-app .trace-row b { color: var(--muted); font-size: 9px; letter-spacing: .07em; text-transform: uppercase; }
@@ -305,6 +337,24 @@ a, button { touch-action: manipulation; }
 .jevo-app .trace-state { color: var(--muted); line-height: 1.5; }
 .jevo-app .trace-decision { color: var(--muted); text-transform: uppercase; }
 .jevo-app .trace-row.is-decision .trace-decision, .jevo-app .trace-row.is-decision b { color: var(--accent); }
+.jevo-app .trace-table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-top: 1px solid var(--line);
+  padding: 10px 16px;
+  background: rgba(9, 11, 9, 0.9);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .06em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.jevo-app .trace-scroll-hint {
+  color: var(--dim);
+  font-size: 9px;
+}
 .jevo-app .side-panel-body { min-height: 410px; padding: 20px; }
 .jevo-app .side-score { display: flex; align-items: baseline; gap: 10px; border-bottom: 1px solid var(--line); padding-bottom: 14px; }
 .jevo-app .side-score b { color: var(--accent); font-family: var(--mono); font-size: 38px; font-weight: 500; }
@@ -767,9 +817,9 @@ a, button { touch-action: manipulation; }
   position: relative;
   z-index: 4;
   display: flex;
-  width: 53%;
-  max-width: 680px;
-  flex: 0 0 53%;
+  width: 48%;
+  max-width: 640px;
+  flex: 0 0 48%;
   flex-direction: column;
   align-items: flex-start;
   gap: 18px;
@@ -777,17 +827,17 @@ a, button { touch-action: manipulation; }
 }
 .landing-root .hero-copy h1 {
   display: flex;
-  max-width: 700px;
+  max-width: 640px;
   flex-direction: column;
   margin: 0;
-  font-size: clamp(48px, 4.65vw, 78px);
+  font-size: clamp(38px, 4vw, 72px);
   font-stretch: 84%;
   font-weight: 850;
   letter-spacing: -.035em;
-  line-height: .91;
+  line-height: .92;
   text-transform: uppercase;
 }
-.landing-root .hero-copy h1 span { display: block; white-space: nowrap; }
+.landing-root .hero-copy h1 span { display: block; white-space: normal; }
 .landing-root .hero-copy h1 em { color: var(--accent); font-style: normal; }
 .landing-root .hero-copy .body { max-width: 530px; font-size: 16px; line-height: 1.6; }
 .landing-root .hero-copy-note {
@@ -876,12 +926,12 @@ a, button { touch-action: manipulation; }
   top: 30px;
   right: 0;
   display: flex;
-  width: 68%;
+  width: min(58%, 820px);
   height: calc(100% - 58px);
   flex-direction: column;
   gap: 6px;
 }
-.landing-root .decision-stage-controls { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; padding-left: 8%; }
+.landing-root .decision-stage-controls { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; padding-left: 10%; }
 .landing-root .decision-stage-controls button {
   min-height: 28px;
   border-bottom: 1px solid transparent;
@@ -2556,11 +2606,38 @@ a, button { touch-action: manipulation; }
 }
 .jevo-app .rank-panel .table-scroll {
   overflow-x: hidden;
+  overflow-y: auto;
+  max-height: 480px;
+  overscroll-behavior-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(2, 198, 165, 0.28) transparent;
+}
+.jevo-app .rank-panel .table-scroll::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.jevo-app .rank-panel .table-scroll::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.25);
+}
+.jevo-app .rank-panel .table-scroll::-webkit-scrollbar-thumb {
+  background: rgba(2, 198, 165, 0.28);
+  border-radius: 2px;
+}
+.jevo-app .rank-panel .table-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
 }
 .jevo-app .rank-panel .rtable {
   width: 100%;
   min-width: 0;
   table-layout: fixed;
+}
+.jevo-app .rank-panel .rtable thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #090b09;
+  border-bottom: 1px solid var(--line-strong);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.65);
 }
 .jevo-app .rank-panel .rtable .col-rank { width: 8%; }
 .jevo-app .rank-panel .rtable .col-asset { width: 20%; }
@@ -2573,6 +2650,24 @@ a, button { touch-action: manipulation; }
 .jevo-app .rank-panel .rtable td {
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.jevo-app .rank-table-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-top: 1px solid var(--line);
+  padding: 10px 16px;
+  background: rgba(9, 11, 9, 0.9);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .06em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.jevo-app .rank-scroll-hint {
+  color: var(--dim);
+  font-size: 9px;
 }
 .jevo-app .rank-panel .mbar {
   width: 100%;
