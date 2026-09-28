@@ -20,6 +20,7 @@ import type { Launch } from "@/types/launch";
 import type { Pairing } from "@/types/pairing";
 import type { Stock } from "@/types/stock";
 import { selectFeaturedPairing } from "@/lib/pairings";
+import { isJevoDemoMode } from "@/lib/api/client";
 
 interface LandingPageProps {
   agent: AgentRuntime;
@@ -41,6 +42,7 @@ type FactorPhase = "idle" | "out" | "in";
 type AgentStoryStage = 0 | 1 | 2 | 3;
 
 export function LandingPage(data: LandingPageProps) {
+  const isDemoMode = isJevoDemoMode();
   const featuredSelection = useMemo(
     () => selectFeaturedPairing(data.pairings, data.featuredAsset?.symbol),
     [data.pairings, data.featuredAsset?.symbol],
@@ -59,6 +61,12 @@ export function LandingPage(data: LandingPageProps) {
           pairing={featuredPairing}
           pairings={data.pairings}
           launch={data.launch}
+        />
+        <CoreFeaturesSection />
+        <LatestScanSection
+          agent={data.agent}
+          assets={data.assets}
+          isDemoMode={isDemoMode}
         />
         <AgentSection
           agent={data.agent}
@@ -124,11 +132,13 @@ function LandingHeader() {
           <span className="brand-sub">/ Autonomous market system</span>
         </Link>
         <nav className="nav" aria-label="Sections">
+          <Link href="/jev">JEV</Link>
           <a href="#agent">Agent</a>
           <a href="#market">Market</a>
           <a href="#pairings">Pairings</a>
           <a href="#pipeline">Architecture</a>
           <a href="#memory">Memory</a>
+          <Link href="/contracts">CONTRACTS</Link>
         </nav>
         <div className="header-actions">
           <span className="label">
@@ -313,6 +323,268 @@ function LandingPairingStandbySection({
   );
 }
 
+function CoreFeaturesSection() {
+  return (
+    <section className="section core-features-section" id="features">
+      <div className="wrap">
+        <div className="sec-head">
+          <div className="left">
+            <p className="label sec-index">CORE CAPABILITIES // PROTOCOL PILLARS</p>
+            <h2 className="h2">
+              Five core systems.
+              <br />
+              One <em>autonomous protocol.</em>
+            </h2>
+          </div>
+          <p className="body">
+            Grounded in verifiable state transitions, continuous market observation, and policy-bounded decision architecture.
+          </p>
+        </div>
+
+        <div className="core-features-grid">
+          <div className="core-feature-card">
+            <div className="card-top">
+              <span className="card-num">01</span>
+              <span className="card-badge">OBSERVE</span>
+            </div>
+            <h3>Autonomous Scan &amp; Ranking</h3>
+            <p>
+              Continuously ingests US equity signals and Stock Tokens to dynamically rank opportunities by market pairability rather than speculative returns.
+            </p>
+            <Link className="card-link" href="/app">
+              Explore Ranking →
+            </Link>
+          </div>
+
+          <div className="core-feature-card highlight-card">
+            <div className="card-top">
+              <span className="card-num">02</span>
+              <span className="card-badge highlight">DECIDE</span>
+            </div>
+            <h3>Jev Decisions with Confidence</h3>
+            <p>
+              Operates a dedicated server-side decision engine outputting typed classifications (PROMOTE, HOLD, DEMOTE) with explicit confidence scores.
+            </p>
+            <Link className="card-link" href="/jev">
+              About Jev →
+            </Link>
+          </div>
+
+          <div className="core-feature-card">
+            <div className="card-top">
+              <span className="card-num">03</span>
+              <span className="card-badge">PAIR</span>
+            </div>
+            <h3>Independent Pairing Thesis</h3>
+            <p>
+              Synthesizes real equity momentum with decentralized culture to formulate creative, thematic Stock × Meme pairing hypotheses.
+            </p>
+            <Link className="card-link" href="/pairing">
+              View Pairings →
+            </Link>
+          </div>
+
+          <div className="core-feature-card">
+            <div className="card-top">
+              <span className="card-num">04</span>
+              <span className="card-badge">GATE</span>
+            </div>
+            <h3>Human-Gated Controlled Launch</h3>
+            <p>
+              Enforces a strict 6-stage countdown and 8 pre-flight policy gates where no token deploys without explicit operator approval.
+            </p>
+            <Link className="card-link" href="/launch">
+              Launch Pipeline →
+            </Link>
+          </div>
+
+          <div className="core-feature-card">
+            <div className="card-top">
+              <span className="card-num">05</span>
+              <span className="card-badge">AUDIT</span>
+            </div>
+            <h3>Full Memory &amp; Audit Trail</h3>
+            <p>
+              Persists cryptographically auditable cycle histories, rank transitions, and memory snapshots across every evaluation loop.
+            </p>
+            <Link className="card-link" href="/memory">
+              Inspect Memory →
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function LatestScanSection({
+  agent,
+  assets,
+  isDemoMode,
+}: {
+  agent: AgentRuntime;
+  assets: Stock[];
+  isDemoMode?: boolean;
+}) {
+  const topAssets = assets.slice(0, 5);
+  const events = agent.latestEvents.slice(0, 4);
+
+  return (
+    <section className="section latest-scan-section" id="latest-scan">
+      <div className="wrap">
+        <div className="sec-head">
+          <div className="left">
+            <p className="label sec-index">LIVE SURVEILLANCE // 00 · LATEST SCAN &amp; DECISION FEED</p>
+            <h2 className="h2">
+              Continuous scan telemetry
+              <br />
+              and <em>Jev decision stream.</em>
+            </h2>
+          </div>
+          <div className="scan-head-meta">
+            <span className="scan-mode-badge">
+              {isDemoMode ? "DEMO DATA" : "PHASE 0 · SIMULATED DECISIONS"}
+            </span>
+            <p className="body">
+              Observation loop runs on scheduled and delta scans across the Stock Token universe.
+              Telemetry feeds directly into Jev classification and opportunity re-ranking.
+            </p>
+          </div>
+        </div>
+
+        {/* Telemetry Status Strip */}
+        <div className="scan-telemetry-strip" aria-label="Latest scan telemetry">
+          <div className="telemetry-cell">
+            <span className="label">ACTIVE CYCLE</span>
+            <span className="val">{formatCycle(agent.activeCycle)}</span>
+          </div>
+          <div className="telemetry-cell">
+            <span className="label">SCAN RECENCY</span>
+            <span className="val">{agent.lastDecisionAgeSeconds}s ago</span>
+          </div>
+          <div className="telemetry-cell">
+            <span className="label">ASSETS EVALUATED</span>
+            <span className="val">
+              {agent.assetsScanned} / {agent.assetsInUniverse ?? assets.length} in universe
+            </span>
+          </div>
+          <div className="telemetry-cell">
+            <span className="label">JEV ENGINE STATE</span>
+            <span className={`val ${agent.jevStatus === "ACTIVE" ? "on" : "standby"}`}>
+              {agent.jevStatus === "ACTIVE" ? (
+                <>
+                  <span className="dot on pulse" aria-hidden="true" /> ACTIVE · {agent.currentOperation}
+                </>
+              ) : (
+                <>
+                  <span className="dot off" aria-hidden="true" /> JEV STANDBY
+                </>
+              )}
+            </span>
+          </div>
+        </div>
+
+        <div className="scan-dual-grid">
+          {/* Top Ranked Assets Strip */}
+          <div className="scan-assets-col">
+            <div className="scan-col-head">
+              <h3>TOP SCANNED ASSETS</h3>
+              <span className="label">RANKED BY OPPORTUNITY</span>
+            </div>
+            <div className="scan-assets-list">
+              {topAssets.length === 0 ? (
+                <div className="scan-empty">No assets scanned in current cycle.</div>
+              ) : (
+                topAssets.map((asset) => (
+                  <Link
+                    key={asset.symbol}
+                    href={`/stock/${asset.symbol}`}
+                    className="scan-asset-row"
+                  >
+                    <div className="asset-left">
+                      <span className="asset-rank">#{String(asset.currentRank).padStart(2, "0")}</span>
+                      <span className="asset-sym">{asset.symbol}</span>
+                    </div>
+                    <div className="asset-center">
+                      <span className={`decision-pill pill-${asset.jevDecision.toLowerCase()}`}>
+                        {asset.jevDecision.replaceAll("_", " ")}
+                      </span>
+                      <span className="confidence-pill">
+                        {asset.confidence === null ? "—" : `${asset.confidence}% conf`}
+                      </span>
+                    </div>
+                    <div className="asset-right">
+                      <span className="score-val">{asset.opportunityScore.toFixed(1)}</span>
+                      <span className="label">SCORE</span>
+                    </div>
+                  </Link>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Jev Decision Feed & Event Log */}
+          <div className="scan-feed-col">
+            <div className="scan-col-head">
+              <h3>JEV DECISION FEED</h3>
+              <span className="label">REAL-TIME EVALUATION STREAM</span>
+            </div>
+
+            <div className="jev-feed-list">
+              {topAssets.map((asset) => (
+                <div key={`feed-${asset.symbol}`} className="jev-feed-item">
+                  <div className="feed-item-top">
+                    <span className="feed-sym">{asset.symbol}</span>
+                    <span className={`decision-badge badge-${asset.jevDecision.toLowerCase()}`}>
+                      {asset.jevDecision.replaceAll("_", " ")}
+                    </span>
+                    <span className="feed-conf">
+                      {asset.confidence === null ? "—" : `${asset.confidence}% confidence`}
+                    </span>
+                    <span className="feed-age">{agent.lastDecisionAgeSeconds}s ago</span>
+                  </div>
+                  <p className="feed-thesis" title={asset.decisionTrace[0]?.summary ?? `${asset.symbol} evaluated in cycle`}>
+                    {asset.decisionTrace[0]?.summary ?? `${asset.name} evaluated in cycle with ${asset.jevDecision.toLowerCase()} conviction.`}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {/* Protocol Events Log */}
+            {events.length > 0 ? (
+              <div className="scan-events-sub">
+                <div className="scan-events-head">
+                  <span className="label">RECENT PROTOCOL EVENTS</span>
+                </div>
+                <div className="scan-events-list">
+                  {events.map((evt) => (
+                    <div key={evt.id} className="scan-event-row">
+                      <span className="event-type">{evt.type}</span>
+                      <span className="event-subject">{evt.subject}</span>
+                      <span className="event-summary">{evt.summary}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const EIGHT_POLICY_GATES = [
+  { id: "policy-stock", label: "Valid Stock Token", desc: "Canonical asset identity verified on Robinhood Chain." },
+  { id: "policy-pair", label: "Approved Pairing Asset", desc: "Pairing asset permitted by protocol policy boundaries." },
+  { id: "policy-metadata", label: "Token Metadata", desc: "Token name, ticker symbol, and metadata payload valid." },
+  { id: "policy-contract", label: "Contract Parameters", desc: "Launch parameters within Phase 0 permission boundaries." },
+  { id: "policy-limits", label: "Launch Limits", desc: "Initial liquidity limits and volume thresholds respected." },
+  { id: "policy-duplicate", label: "Duplicate Check", desc: "Collision verification; no duplicate active tokens." },
+  { id: "policy-permission", label: "Agent Permission", desc: "Scoped executor permissions valid for approved action." },
+  { id: "policy-simulation", label: "Transaction Simulation", desc: "Zero-revert preflight simulation verified." },
+] as const;
+
 const STANDBY_PIPELINE_STAGES = [
   { id: "CANDIDATE_SELECTED", point: "T-24H", desc: "Opportunity and pair thesis locked for launch review." },
   { id: "NARRATIVE_VALIDATION", point: "T-18H", desc: "Narrative pressure and why-now context verified above launch threshold." },
@@ -336,15 +608,18 @@ function LandingPipelineStandbySection({
       <div className="wrap">
         <div className="sec-head">
           <div className="left">
-            <p className="label sec-index">04 / Autonomous pipeline</p>
+            <p className="label sec-index">04 / Autonomous Launch Pipeline</p>
             <h2 className="h2">
-              From signal
+              Autonomous launch.
               <br />
-              to <em>controlled launch.</em>
+              <em>Policy-bounded &amp; operator-gated.</em>
             </h2>
+            <div className="pipeline-phase-badge">
+              PHASE 0 · NO ON-CHAIN EXECUTION
+            </div>
           </div>
           <p className="body">
-            Autonomous does not mean unrestricted. The agent can only execute pre-approved actions through an 8-gate policy contract. When no pairing proposal has been approved and scheduled by the operator, execution remains strictly locked in standby.
+            Autonomous by design, policy-bounded, operator-gated in Phase 0. The agent can only execute pre-approved actions through an 8-gate policy contract. When no pairing proposal has been approved and scheduled by the operator, execution remains strictly locked in standby.
           </p>
         </div>
 
@@ -422,6 +697,21 @@ function LandingPipelineStandbySection({
               </div>
             </div>
 
+            <div className="pipeline-gates-wrap">
+              <span className="label">PRE-LAUNCH POLICY GATES (8 GATES) / STANDBY PREVIEW</span>
+              <div className="pipeline-gates-grid">
+                {EIGHT_POLICY_GATES.map((gate) => (
+                  <div key={gate.id} className="policy-gate-card">
+                    <div className="gate-top">
+                      <span className="gate-label">{gate.label}</span>
+                      <span className="gate-status">○ Standby</span>
+                    </div>
+                    <p className="gate-desc">{gate.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="perm">
               <Permission
                 title="Agent can"
@@ -435,8 +725,10 @@ function LandingPipelineStandbySection({
                 title="Agent cannot"
                 items={[
                   "Make arbitrary transfers",
+                  "Make arbitrary contract calls",
                   "Withdraw treasury",
-                  "Change launch parameters",
+                  "Change ownership",
+                  "Change launch parameters outside policy",
                 ]}
                 restricted
               />
@@ -446,7 +738,7 @@ function LandingPipelineStandbySection({
 
         <div className="pipeline-link">
           <Link className="btn btn-sm" href="/launch">
-            Open launch workspace →
+            Open launch pipeline →
           </Link>
         </div>
       </div>
@@ -1492,17 +1784,18 @@ function PipelineSection({
       <div className="wrap">
         <div className="sec-head">
           <div className="left">
-            <p className="label sec-index">04 / Autonomous pipeline</p>
+            <p className="label sec-index">04 / Autonomous Launch Pipeline</p>
             <h2 className="h2">
-              From signal
+              Autonomous launch.
               <br />
-              to <em>controlled launch.</em>
+              <em>Policy-bounded &amp; operator-gated.</em>
             </h2>
+            <div className="pipeline-phase-badge">
+              PHASE 0 · NO ON-CHAIN EXECUTION
+            </div>
           </div>
           <p className="body">
-            Autonomous does not mean unrestricted. The agent can only call
-            pre-approved actions through a policy contract, and Phase 0 keeps
-            the transaction state explicitly not submitted.
+            Autonomous by design, policy-bounded, operator-gated in Phase 0. A qualified pair moves through a verifiable 6-stage lifecycle and 8 mandatory policy gates before anything reaches Robinhood Chain.
           </p>
         </div>
         <ol className="stages">
@@ -1605,6 +1898,24 @@ function PipelineSection({
                 <span className="v accent">Not submitted</span>
               </div>
             </div>
+
+            <div className="pipeline-gates-wrap">
+              <span className="label">PRE-LAUNCH POLICY GATES (8 GATES) / SIMULATED AUDIT</span>
+              <div className="pipeline-gates-grid">
+                {launch.policyChecks.map((gate) => (
+                  <div key={gate.id} className="policy-gate-card">
+                    <div className="gate-top">
+                      <span className="gate-label">{gate.label}</span>
+                      <span className="gate-status">
+                        {gate.status === "PASSED" ? "✓ Passed" : "○ Pending"}
+                      </span>
+                    </div>
+                    <p className="gate-desc">{gate.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="perm">
               <Permission
                 title="Agent can"
@@ -1618,8 +1929,10 @@ function PipelineSection({
                 title="Agent cannot"
                 items={[
                   "Make arbitrary transfers",
+                  "Make arbitrary contract calls",
                   "Withdraw treasury",
-                  "Change launch parameters",
+                  "Change ownership",
+                  "Change launch parameters outside policy",
                 ]}
                 restricted
               />
@@ -1628,7 +1941,7 @@ function PipelineSection({
         </div>
         <div className="pipeline-link">
           <Link className="btn btn-sm" href="/launch">
-            Open launch workspace →
+            Open launch pipeline →
           </Link>
         </div>
       </div>
@@ -2439,9 +2752,11 @@ function LandingFooter({ agent }: { agent: AgentRuntime }) {
           </p>
         </div>
         <nav className="foot-links" aria-label="Footer">
+          <Link href="/jev">Jev</Link>
           <Link href="/app">App</Link>
           <Link href="/pairing">Pairings</Link>
           <Link href="/memory">Memory</Link>
+          <Link href="/contracts">Contracts</Link>
           <a href="#pipeline">Architecture</a>
         </nav>
         <div className="foot-note">
