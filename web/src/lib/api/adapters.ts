@@ -254,10 +254,10 @@ export function adaptPairing(raw: PairingApi): Pairing {
     confidence: raw.confidence ?? null,
     status,
     thesis: {
-      core: thesis.core ?? "Structured pairing thesis is not available from the worker response.",
+      core: thesis.core ?? thesis.whyPair ?? thesis.whyStock ?? "Structured pairing thesis is not available from the worker response.",
       whyStock: thesis.whyStock ?? "Structured stock rationale is not available from the worker response.",
       whyMeme: thesis.whyMeme ?? "Structured meme rationale is not available from the worker response.",
-      whyPair: thesis.whyPair ?? "Structured pairing rationale is not available from the worker response.",
+      whyPair: thesis.whyPair ?? thesis.core ?? "Structured pairing rationale is not available from the worker response.",
       whyNow: thesis.whyNow ?? "Structured timing rationale is not available from the worker response.",
     },
     factors: factors.length > 0 ? factors : [{ id: `${raw.id}-score`, label: "Pairing score", score: raw.pairingScore, delta: null, state: "OBSERVED", source: "Worker pairing score", explanation: "Persisted aggregate pairing score." }],

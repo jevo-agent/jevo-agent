@@ -16,7 +16,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 async function adminPost(path: string, body?: Record<string, unknown>) {
   const res = await fetch(`/api/admin${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: body ? { "Content-Type": "application/json" } : {},
     body: body ? JSON.stringify(body) : undefined,
   });
 

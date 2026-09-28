@@ -18,13 +18,19 @@ export async function proxyAdminPost(
 ): Promise<Response> {
   const token = process.env.ADMIN_API_TOKENS?.split(",")[0]?.trim() ?? "";
 
+  const headers: Record<string, string> = {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+
+  const hasBody = Boolean(body && Object.keys(body).length > 0);
+  if (hasBody) {
+    headers["Content-Type"] = "application/json";
+  }
+
   const res = await fetch(`${WORKER_BASE}/admin${path}`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
+    headers,
+    body: hasBody ? JSON.stringify(body) : undefined,
     // No Next.js caching for write operations
     cache: "no-store",
   });
