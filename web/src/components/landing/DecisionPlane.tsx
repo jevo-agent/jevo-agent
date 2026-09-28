@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 
 import type { Launch } from "@/types/launch";
 import type { Pairing } from "@/types/pairing";
@@ -93,6 +93,27 @@ export function DecisionPlane({ asset, assets, pairing = null, launch = null }: 
     const timer = window.setInterval(() => setAutoStage((stage) => stage >= lastAvailableStage ? 0 : stage + 1), LOOP_MS / STAGES.length);
     return () => window.clearInterval(timer);
   }, [lastAvailableStage]);
+
+  // Gate column: scroll-driven shrink — the gate compresses as user scrolls away from hero
+  const gateGroupRef = useRef<SVGGElement>(null);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const hero = document.getElementById("top");
+    if (!hero) return;
+
+    function onScroll() {
+      const heroHeight = hero!.offsetHeight;
+      const scrolled = window.scrollY;
+      // Full gate at scroll=0, collapsed to 0.08 at scroll >= heroHeight
+      const t = Math.min(1, Math.max(0, scrolled / (heroHeight * 0.72)));
+      const scale = 1 - t * 0.92; // 1.0 → 0.08
+      gateGroupRef.current?.style.setProperty("--gate-scroll-scale", String(scale.toFixed(4)));
+    }
+
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const activeStage = hoverStage ?? Math.min(autoStage, lastAvailableStage);
   const activePair = pairing ? hoverPair : null;
@@ -482,7 +503,12 @@ export function DecisionPlane({ asset, assets, pairing = null, launch = null }: 
         ) : null}
 
         {/* Cybernetic JEV Decision Gate & Containment Aperture */}
-        <g className="plane-gate-group" aria-hidden="true">
+        <g
+          ref={gateGroupRef}
+          className="plane-gate-group"
+          aria-hidden="true"
+          style={{ "--gate-scroll-scale": "1" } as CSSProperties}
+        >
           {/* Containment Column with subtle glow fill */}
           <rect
             className={`plane-gate-column${activeStage === 1 ? " is-active" : ""}`}
