@@ -49,23 +49,6 @@ fi
 GAS_DEC=$(printf "%d" "$GAS_HEX" 2>/dev/null || echo "$GAS_HEX")
 BLOCK_DEC=$(printf "%d" "$BLOCK_HEX" 2>/dev/null || echo "$BLOCK_HEX")
 
-# Display JEVO ASCII banner (reusing ASCII art from jevo-banner.sh)
-BANNER_SCRIPT="$SCRIPT_DIR/jevo-banner.sh"
-printf "${TEAL}${BOLD}"
-if [[ -f "$BANNER_SCRIPT" ]]; then
-    # Extract the JEVO portion from the banner script
-    sed -n '/cat << '\''EOF'\''/,/^EOF$/p' "$BANNER_SCRIPT" | sed '1d;$d' | cut -c 1-35
-else
-    cat << 'EOF'
-     ██╗███████╗██╗   ██╗ ██████╗ 
-     ██║██╔════╝██║   ██║██╔═══██╗
-     ██║█████╗  ██║   ██║██║   ██║
-██   ██║██╔══╝  ╚██╗ ██╔╝██║   ██║
-╚█████╔╝███████╗ ╚████╔╝ ╚██████╔╝
- ╚════╝ ╚══════╝  ╚═══╝   ╚═════╝ 
-EOF
-fi
-printf "${NC}\n"
 
 # Output deployment log lines progressively for video recording (~0.35s delay)
 sleep 0.35
