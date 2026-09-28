@@ -118,6 +118,22 @@ Jevo/
     - **Section 06 (Launch Readiness)**: Shows *"STANDBY / Belum ada launch aktif"* when `launch` is null.
     - Standalone `/launch` and `/pairing` pages render dedicated reference-view empty states gracefully.
 
+### E. Sticky Pinned Scroll Behavior & Sidebar Sync (`DecisionTrace` & `RankPanel`)
+- **Location**: `web/src/components/app/views/OverviewView.tsx`, `web/src/components/app/AppSidebar.tsx`, `web/src/app/globals.css`
+- **Mechanism & UX**:
+  1. **Pinned Sticky Headers & Internal Scroll**:
+     - Both `DecisionTrace` (`.trace-table`) and `RankPanel` (`.table-scroll`) now feature bounded vertical viewport constraints (`max-height: 480px`) with `overflow-y: auto`.
+     - The column headers (`.trace-head` and `.rtable thead th`) are pinned with `position: sticky; top: 0; z-index: 10;`, a solid institutional background (`#090b09`), and elevation drop shadows (`box-shadow: 0 4px 14px rgba(0, 0, 0, 0.65)`).
+     - When users scroll with wheel or touch, only the telemetry data rows scroll while the headers remain locked in place.
+  2. **Natural Scroll Chaining**:
+     - Enabled `overscroll-behavior-y: auto;` so that once the data rows scroll to the very bottom ("sampe mentok"), the browser naturally chains and resumes page progression down to subsequent sections.
+  3. **Custom Institutional Scrollbars & Footers**:
+     - Styled slim 5px scrollbars with subtle institutional teal accent tones (`rgba(2, 198, 165, 0.28)`) and hover states.
+     - Added dedicated status footers (`.trace-table-footer` and `.rank-table-foot`) showing audited event counts and scroll prompts (`SCROLL DATA ROWS TO END TO ADVANCE ↓`).
+  4. **Reliable Sidebar Scroll Spy Sync**:
+     - Upgraded `AppSidebar` from an unpredictable delta-based `IntersectionObserver` to a robust, window scroll-offset tracker using `requestAnimationFrame`.
+     - Completely eliminated the bug where scrolling through `Decision Trace` caused the sidebar active indicator to falsely flip to `Market Map`.
+
 ---
 
 ## 4. Verification & Health Check
