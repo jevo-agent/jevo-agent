@@ -1,4 +1,9 @@
 import rawDeploymentsData from "@/data/deployments.json";
+import rawDeps from "@/data/onchain-dependencies.json";
+
+const MONITORED_COUNT = (rawDeps as { monitored: Array<{ address: string }> }).monitored.filter(
+  (e) => /^0x[0-9a-fA-F]{40}$/.test(e.address),
+).length;
 
 export type NetworkType = "testnet" | "mainnet";
 export type SupportedChainId = 46630 | 4663;
@@ -196,19 +201,8 @@ export function getDeploymentsByNetwork(
 
 export function getDeploymentSummary(deployments?: ValidatedDeployment[]): string {
   const list = deployments ?? getValidatedDeployments();
-  const testnetCount = list.filter((item) => item.network === "testnet").length;
-  const mainnetCount = list.filter((item) => item.network === "mainnet").length;
-
-  if (testnetCount === 0 && mainnetCount === 0) {
-    return "NONE REGISTERED";
-  }
-  if (testnetCount > 0 && mainnetCount > 0) {
-    return `${testnetCount} TESTNET · ${mainnetCount} MAINNET`;
-  }
-  if (testnetCount > 0) {
-    return `${testnetCount} TESTNET`;
-  }
-  return `${mainnetCount} MAINNET`;
+  const jevoCount = list.length;
+  return `${jevoCount} JEVO · ${MONITORED_COUNT} MONITORED`;
 }
 
 export function getExplorerAddressUrl(network: NetworkType, address: string): string {

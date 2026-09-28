@@ -1,265 +1,615 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import {
-  EXPLORER_BASE,
-  PLANNED_CONTRACTS,
-  STATIC_CONTRACTS_DISCLAIMER,
-  getDeploymentsByNetwork,
-  getDeploymentSummary,
-  getExplorerAddressUrl,
-  getExplorerTxUrl,
-  type NetworkType,
-} from "@/lib/deployments";
+import { EXPLORER_BASE, PLANNED_CONTRACTS, getValidatedDeployments } from "@/lib/deployments";
+import rawDeps from "@/data/onchain-dependencies.json";
 
-interface ContractsViewProps {
-  customDeployments?: unknown[];
+/* -------------------------------------------------------------------------
+   Types
+   ----------------------------------------------------------------------- */
+interface MonitoredEntry {
+  name: string;
+  symbol: string;
+  address: string;
+  chainId: number;
+  network: string;
+  note: string;
 }
 
-export function ContractsView({ customDeployments }: ContractsViewProps) {
-  const [activeTab, setActiveTab] = useState<NetworkType>("testnet");
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+type CheckStatus = "ON-CHAIN" | "SOURCE VERIFIED" | "NOT FOUND" | "CHECK UNAVAILABLE" | "LOADING";
 
-  const testnetDeployments = useMemo(
-    () => getDeploymentsByNetwork("testnet", customDeployments ? { deployments: customDeployments } : undefined),
-    [customDeployments],
-  );
+interface CheckResult {
+  address: string;
+  status: CheckStatus;
+}
 
-  const mainnetDeployments = useMemo(
-    () => getDeploymentsByNetwork("mainnet", customDeployments ? { deployments: customDeployments } : undefined),
-    [customDeployments],
-  );
+type TabId = "deployed" | "monitored" | "planned";
 
-  const currentDeployments = activeTab === "testnet" ? testnetDeployments : mainnetDeployments;
-  const currentChainId = activeTab === "testnet" ? 46630 : 4663;
-  const summary = useMemo(() => getDeploymentSummary([...testnetDeployments, ...mainnetDeployments]), [testnetDeployments, mainnetDeployments]);
+/* -------------------------------------------------------------------------
+   Validation (same rules as deployments.ts)
+   ----------------------------------------------------------------------- */
+const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
 
-  const handleCopy = (text: string, key: string) => {
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      void navigator.clipboard.writeText(text);
-      setCopiedKey(key);
-      setTimeout(() => {
-        setCopiedKey((prev) => (prev === key ? null : prev));
-      }, 1500);
+function shortenAddr(addr: string): string {
+  return `${addr.slice(0, 8)}...${addr.slice(-6)}`;
+}
+
+function getStatusBadgeClass(status: CheckStatus): string {
+  if (status === "SOURCE VERIFIED") return "badge-verified";
+  if (status === "ON-CHAIN") return "badge-onchain";
+  if (status === "NOT FOUND") return "badge-notfound";
+  if (status === "LOADING") return "badge-loading";
+  return "badge-unavail";
+}
+
+function getStatusLabel(status: CheckStatus): string {
+  if (status === "LOADING") return "CHECKING...";
+  return status;
+}
+
+/* -------------------------------------------------------------------------
+   Clipboard helper
+   ----------------------------------------------------------------------- */
+async function copyToClipboard(text: string): Promise<void> {
+  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch {
+      /* fall through to execCommand */
     }
-  };
+  }
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.setAttribute("readonly", "true");
+  ta.style.cssText = "position:fixed;opacity:0";
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand("copy");
+  document.body.removeChild(ta);
+}
+
+/* -------------------------------------------------------------------------
+   Single-row component
+   ----------------------------------------------------------------------- */
+interface ContractRowProps {
+  name: string;
+  symbol?: string;
+  address: string;
+  note?: string | null;
+  explorerBase: string;
+  checkResult: CheckResult | undefined;
+  isWide: boolean; // >= 1024px → show full address
+}
+
+function ContractRow({
+  name,
+  symbol,
+  address,
+  note,
+  explorerBase,
+  checkResult,
+  isWide,
+}: ContractRowProps) {
+  const [copied, setCopied] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const handleCopy = useCallback(async () => {
+    await copyToClipboard(address);
+    setCopied(true);
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setCopied(false), 1500);
+  }, [address]);
+
+  useEffect(() => () => clearTimeout(timerRef.current), []);
+
+  const status = checkResult?.status ?? "LOADING";
+  const explorerUrl = `${explorerBase}/address/${address}`;
 
   return (
-    <div className="contracts-view">
-      {/* 01. App Hero */}
-      <section className="app-hero">
-        <div className="eyebrow">
-          <span className="live-dot" />
-          <span className="label">
-            Robinhood Chain · On-Chain Registry · <b>{summary}</b>
-          </span>
-        </div>
-        <h1>
-          Registered <span className="hl">Contracts</span>
-        </h1>
-        <p>
-          Canonical smart contracts registered for JEVO on Robinhood Chain. All addresses are public records on-chain.
-        </p>
-      </section>
+    <div className="cview-row" role="row">
+      {/* Status dot */}
+      <div className="cview-dot-col" role="cell" aria-label="Status">
+        <span
+          className={`cview-status-dot ${
+            status === "SOURCE VERIFIED" || status === "ON-CHAIN"
+              ? "dot-live"
+              : status === "LOADING"
+              ? "dot-loading"
+              : "dot-off"
+          }`}
+        />
+      </div>
 
-      {/* 02. Static Public Records Disclaimer */}
-      <aside className="mb-6 rounded border border-[var(--line-strong)] bg-[rgb(14_17_15_/_70%)] p-4" aria-label="Contracts disclaimer">
-        <div className="flex items-start gap-3">
-          <span className="font-mono text-xs font-bold text-[var(--accent)]">NOTICE</span>
-          <p className="font-mono text-xs leading-relaxed text-[var(--text-2)]">
-            {STATIC_CONTRACTS_DISCLAIMER}
+      {/* Name + symbol */}
+      <div className="cview-name-col" role="cell">
+        <span className="cview-name">{name}</span>
+        {symbol ? <span className="cview-symbol">{symbol}</span> : null}
+        {note ? <span className="cview-note">{note}</span> : null}
+      </div>
+
+      {/* Address */}
+      <div className="cview-addr-col" role="cell">
+        <code
+          className="cview-addr-code"
+          title={address}
+          aria-label={`Contract address: ${address}`}
+        >
+          {isWide ? address : shortenAddr(address)}
+        </code>
+      </div>
+
+      {/* Actions */}
+      <div className="cview-actions-col" role="cell">
+        <button
+          type="button"
+          className={`cview-copy-btn${copied ? " is-copied" : ""}`}
+          onClick={() => void handleCopy()}
+          aria-label={`Copy address for ${name}`}
+          title={copied ? "Copied!" : "Copy address"}
+        >
+          {copied ? "✓ Copied" : "Copy"}
+        </button>
+        <a
+          href={explorerUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="cview-explorer-btn"
+          aria-label={`View ${name} on explorer (opens in new tab)`}
+          title="View on explorer"
+        >
+          ↗
+        </a>
+      </div>
+
+      {/* Explorer check badge */}
+      <div className="cview-badge-col" role="cell">
+        {status === "LOADING" ? (
+          <span className={`cview-check-badge ${getStatusBadgeClass(status)}`}>
+            <span className="badge-skeleton" aria-hidden="true" />
+            <span className="sr-only">Checking explorer...</span>
+          </span>
+        ) : (
+          <span
+            className={`cview-check-badge ${getStatusBadgeClass(status)}`}
+            title={`Explorer check: ${status}`}
+            aria-label={`Explorer check result: ${status}`}
+          >
+            {getStatusLabel(status)}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------
+   Main ContractsView
+   ----------------------------------------------------------------------- */
+export function ContractsView() {
+  const [activeTab, setActiveTab] = useState<TabId>("deployed");
+  const [search, setSearch] = useState("");
+  const [checks, setChecks] = useState<CheckResult[]>([]);
+  const [isWide, setIsWide] = useState(false);
+
+  /* Validated deployments (JEVO DEPLOYED) */
+  const deployments = useMemo(() => getValidatedDeployments(), []);
+
+  /* Validated monitored entries */
+  const monitoredRaw = (rawDeps as { monitored: MonitoredEntry[] }).monitored;
+  const monitored = useMemo(
+    () => monitoredRaw.filter((e) => ADDRESS_RE.test(e.address)),
+    [monitoredRaw],
+  );
+
+  /* Counts for tab labels */
+  const plannedCount = PLANNED_CONTRACTS.length;
+
+  /* Width tracking for address display */
+  useEffect(() => {
+    const check = () => setIsWide(window.innerWidth >= 1024);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  /* --- Explorer checks (fire once on mount, per-address) --- */
+  useEffect(() => {
+    const allAddresses: Array<{ address: string; network: string }> = [
+      ...deployments.map((d) => ({ address: d.address, network: d.network })),
+      ...monitored.map((m) => ({ address: m.address, network: m.network })),
+    ];
+
+    // Initialize as LOADING (use updater to avoid synchronous overwrite)
+    queueMicrotask(() => {
+      setChecks(allAddresses.map(({ address }) => ({ address, status: "LOADING" as CheckStatus })));
+    });
+
+    // Fetch each address individually
+    const fetchCheck = async (address: string, network: string) => {
+      try {
+        const res = await fetch(
+          `/api/contracts/check?address=${encodeURIComponent(address)}&network=${encodeURIComponent(network)}`,
+        );
+        if (!res.ok) {
+          setChecks((prev) =>
+            prev.map((c) => (c.address === address ? { address, status: "CHECK UNAVAILABLE" as CheckStatus } : c)),
+          );
+          return;
+        }
+        const data = (await res.json()) as { status: CheckStatus };
+        setChecks((prev) =>
+          prev.map((c) =>
+            c.address === address ? { address, status: data.status ?? ("CHECK UNAVAILABLE" as CheckStatus) } : c,
+          ),
+        );
+      } catch {
+        setChecks((prev) =>
+          prev.map((c) => (c.address === address ? { address, status: "CHECK UNAVAILABLE" as CheckStatus } : c)),
+        );
+      }
+    };
+
+    for (const { address, network } of allAddresses) {
+      void fetchCheck(address, network);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* --- Search filter helpers --- */
+  const q = search.trim().toLowerCase();
+
+  const filteredDeployed = useMemo(
+    () =>
+      q
+        ? deployments.filter(
+            (d) =>
+              d.name.toLowerCase().includes(q) ||
+              d.address.toLowerCase().includes(q) ||
+              d.network.toLowerCase().includes(q),
+          )
+        : deployments,
+    [deployments, q],
+  );
+
+  const filteredMonitored = useMemo(
+    () =>
+      q
+        ? monitored.filter(
+            (m) =>
+              m.name.toLowerCase().includes(q) ||
+              m.symbol.toLowerCase().includes(q) ||
+              m.address.toLowerCase().includes(q),
+          )
+        : monitored,
+    [monitored, q],
+  );
+
+  const filteredPlanned = useMemo(
+    () =>
+      q
+        ? PLANNED_CONTRACTS.filter(
+            (p) =>
+              p.name.toLowerCase().includes(q) ||
+              p.purpose.toLowerCase().includes(q),
+          )
+        : PLANNED_CONTRACTS,
+    [q],
+  );
+
+  /* --- Explorer check summary for header --- */
+  const allChecks = useMemo(
+    () => [...deployments.map((d) => d.address), ...monitored.map((m) => m.address)],
+    [deployments, monitored],
+  );
+
+  const checkSummary = useMemo(() => {
+    if (allChecks.length === 0) return null;
+    const total = allChecks.length;
+    const results = allChecks.map((addr) => checks.find((c) => c.address === addr));
+    const loading = results.some((r) => !r || r.status === "LOADING");
+    if (loading) return null;
+    const onchain = results.filter(
+      (r) => r?.status === "ON-CHAIN" || r?.status === "SOURCE VERIFIED",
+    ).length;
+    if (onchain === total) return { label: `EXPLORER CHECK: ${onchain}/${total} ON-CHAIN`, variant: "ok" };
+    if (onchain === 0) return { label: "CHECK UNAVAILABLE", variant: "unavail" };
+    return { label: `CHECK PARTIAL: ${onchain}/${total} ON-CHAIN`, variant: "partial" };
+  }, [allChecks, checks]);
+
+  return (
+    <div className="cview-root">
+      {/* === Header === */}
+      <section className="cview-header">
+        <div className="cview-header-left">
+          <div className="eyebrow">
+            <span className="live-dot" />
+            <span className="label">
+              CONTRACT REGISTRY · ROBINHOOD CHAIN
+            </span>
+          </div>
+          <h1 className="cview-h1">
+            Contract <span className="hl">Registry</span>
+          </h1>
+          <p className="cview-lead">
+            Smart contracts JEVO reads or deploys on Robinhood Chain. All
+            addresses are public records. Verify each on the explorer.
           </p>
         </div>
+        {checkSummary ? (
+          <div
+            className={`cview-check-summary cview-check-summary--${checkSummary.variant}`}
+            aria-label={`Explorer check summary: ${checkSummary.label}`}
+          >
+            {checkSummary.label}
+          </div>
+        ) : null}
+      </section>
+
+      {/* === Notice === */}
+      <aside className="cview-notice" aria-label="Contracts notice">
+        <span className="cview-notice-tag">NOTICE</span>
+        <p>
+          Address mapping maintained by the JEVO team. Verify each on the
+          explorer before relying on them. Contracts are not audited.
+        </p>
       </aside>
 
-      {/* 03. Network Tabs (Chain ID as network fact) */}
-      <div className="panel mb-8">
-        <div className="tabs" role="tablist" aria-label="Contract networks">
+      {/* === Search + Tabs === */}
+      <div className="cview-toolbar">
+        <div
+          className="tabs"
+          role="tablist"
+          aria-label="Contract categories"
+        >
           <button
             type="button"
+            id="tab-deployed"
             role="tab"
-            aria-selected={activeTab === "testnet"}
-            aria-controls="panel-testnet"
-            id="tab-testnet"
-            onClick={() => setActiveTab("testnet")}
+            className={activeTab === "deployed" ? "is-active" : ""}
+            aria-selected={activeTab === "deployed"}
+            aria-controls="panel-deployed"
+            onClick={() => setActiveTab("deployed")}
           >
-            TESTNET <span className="text-[var(--dim)] font-mono ml-1.5">(Chain ID: 46630)</span>
-            <span className="ml-2 font-mono text-[9px] text-[var(--accent)]">[{testnetDeployments.length}]</span>
+            JEVO DEPLOYED
+            <span className="tab-count">{deployments.length}</span>
           </button>
           <button
             type="button"
+            id="tab-monitored"
             role="tab"
-            aria-selected={activeTab === "mainnet"}
-            aria-controls="panel-mainnet"
-            id="tab-mainnet"
-            onClick={() => setActiveTab("mainnet")}
+            className={activeTab === "monitored" ? "is-active" : ""}
+            aria-selected={activeTab === "monitored"}
+            aria-controls="panel-monitored"
+            onClick={() => setActiveTab("monitored")}
           >
-            MAINNET <span className="text-[var(--dim)] font-mono ml-1.5">(Chain ID: 4663)</span>
-            <span className="ml-2 font-mono text-[9px] text-[var(--accent)]">[{mainnetDeployments.length}]</span>
+            MONITORED STOCK TOKENS
+            <span className="tab-count">{monitored.length}</span>
+          </button>
+          <button
+            type="button"
+            id="tab-planned"
+            role="tab"
+            className={activeTab === "planned" ? "is-active" : ""}
+            aria-selected={activeTab === "planned"}
+            aria-controls="panel-planned"
+            onClick={() => setActiveTab("planned")}
+          >
+            PLANNED
+            <span className="tab-count">{plannedCount}</span>
           </button>
         </div>
 
-        <div
-          id={`panel-${activeTab}`}
-          role="tabpanel"
-          aria-labelledby={`tab-${activeTab}`}
-          className="tabpanel active p-6"
-        >
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-4 border-b border-[var(--line)] pb-4">
-            <div>
-              <span className="label">Active Environment</span>
-              <p className="font-mono text-sm font-semibold uppercase text-[var(--text)]">
-                {activeTab} · Chain ID {currentChainId}
-              </p>
-            </div>
-            <div>
-              <span className="label">Explorer Base</span>
-              <a
-                href={EXPLORER_BASE[activeTab]}
-                target="_blank"
-                rel="noreferrer"
-                className="block font-mono text-xs text-[var(--accent)] hover:underline"
-              >
-                {EXPLORER_BASE[activeTab]} ↗
-              </a>
-            </div>
-          </div>
-
-          {currentDeployments.length === 0 ? (
-            <div className="rounded border border-dashed border-[var(--line)] p-12 text-center">
-              <p className="font-mono text-xs uppercase tracking-wider text-[var(--dim)]">
-                Registry Empty
-              </p>
-              <p className="mt-2 text-sm text-[var(--muted)]">
-                No contracts registered on {activeTab} yet.
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              {currentDeployments.map((entry) => {
-                const addressKey = `${entry.network}-${entry.address}`;
-                const isCopied = copiedKey === addressKey;
-                return (
-                  <article
-                    key={addressKey}
-                    className="flex flex-col justify-between rounded border border-[var(--line)] bg-[var(--panel)] p-5 transition-colors hover:border-[var(--line-strong)]"
-                  >
-                    <div>
-                      <div className="flex items-start justify-between gap-3">
-                        <h2 className="text-lg font-semibold tracking-tight text-[var(--text)]">{entry.name}</h2>
-                        <span className="rounded border border-[var(--line)] px-2 py-0.5 font-mono text-[10px] text-[var(--accent)] uppercase">
-                          {entry.network}
-                        </span>
-                      </div>
-
-                      {entry.note ? (
-                        <p className="mt-2 text-xs text-[var(--muted)]">{entry.note}</p>
-                      ) : null}
-
-                      {/* Full Address + Copy */}
-                      <div className="mt-4 rounded border border-[var(--line)] bg-[var(--bg)] p-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="label">Contract Address</span>
-                          <button
-                            type="button"
-                            onClick={() => handleCopy(entry.address, addressKey)}
-                            className="font-mono text-[11px] text-[var(--accent)] hover:underline"
-                            aria-label={`Copy address for ${entry.name}`}
-                          >
-                            {isCopied ? "✓ Copied" : "Copy"}
-                          </button>
-                        </div>
-                        <p className="mt-1 break-all font-mono text-xs text-[var(--text)]">{entry.address}</p>
-                        <div className="mt-2 flex items-center justify-end">
-                          <a
-                            href={getExplorerAddressUrl(entry.network, entry.address)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="font-mono text-[11px] text-[var(--accent)] hover:underline"
-                          >
-                            View on Explorer ↗
-                          </a>
-                        </div>
-                      </div>
-
-                      {/* Optional Transaction Hash */}
-                      {entry.txHash ? (
-                        <div className="mt-3 text-xs">
-                          <span className="label">Deployment Tx: </span>
-                          <a
-                            href={getExplorerTxUrl(entry.network, entry.txHash)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="font-mono text-[11px] text-[var(--text-2)] hover:underline"
-                          >
-                            {entry.txHash.slice(0, 10)}...{entry.txHash.slice(-8)} ↗
-                          </a>
-                        </div>
-                      ) : null}
-
-                      {/* Optional Metadata */}
-                      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11px] text-[var(--dim)]">
-                        {entry.deployedAt ? (
-                          <span>Deployed: {new Date(entry.deployedAt).toLocaleDateString()}</span>
-                        ) : null}
-                        {entry.deployer ? (
-                          <span>Deployer: {entry.deployer.slice(0, 6)}...{entry.deployer.slice(-4)}</span>
-                        ) : null}
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          )}
+        <div className="cview-search-wrap">
+          <label htmlFor="cview-search" className="sr-only">
+            Search contracts
+          </label>
+          <input
+            id="cview-search"
+            type="search"
+            className="cview-search"
+            placeholder="Search name, symbol, address…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search contracts"
+          />
+          {search ? (
+            <button
+              type="button"
+              className="cview-search-clear"
+              aria-label="Clear search"
+              onClick={() => setSearch("")}
+            >
+              ×
+            </button>
+          ) : null}
         </div>
       </div>
 
-      {/* 04. Planned · Not Deployed Block */}
-      <section className="panel p-6" aria-labelledby="planned-contracts-title">
-        <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2 border-b border-[var(--line)] pb-4">
-          <div>
-            <span className="label">Architecture Pipeline</span>
-            <h2 id="planned-contracts-title" className="text-xl font-bold uppercase tracking-tight text-[var(--text)]">
-              Planned · Not Deployed
-            </h2>
-          </div>
-          <span className="rounded border border-[var(--line-strong)] bg-[rgb(255_122_92_/_12%)] px-2.5 py-1 font-mono text-[10px] tracking-wider text-[var(--down)] uppercase">
-            Phase 0 · Deferred Blockchain Phase
+      {/* === Tab: JEVO DEPLOYED === */}
+      <div
+        id="panel-deployed"
+        role="tabpanel"
+        aria-labelledby="tab-deployed"
+        hidden={activeTab !== "deployed"}
+        className="cview-panel"
+      >
+        <div className="cview-meta-bar">
+          <span className="cview-meta-item">
+            <span className="cview-meta-label">NETWORK</span>
+            <b>Mainnet + Testnet</b>
+          </span>
+          <span className="cview-meta-item">
+            <span className="cview-meta-label">CHAIN ID</span>
+            <b>4663 (mainnet) / 46630 (testnet)</b>
+          </span>
+          <span className="cview-meta-item">
+            <span className="cview-meta-label">EXPLORER</span>
+            <a
+              href={EXPLORER_BASE.mainnet}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="cview-explorer-link"
+            >
+              {EXPLORER_BASE.mainnet} ↗
+            </a>
           </span>
         </div>
 
-        <p className="mb-6 max-w-3xl text-sm leading-relaxed text-[var(--text-2)]">
-          The following contracts form the planned protocol execution architecture from{" "}
-          <span className="font-mono text-xs text-[var(--text)]">docs/BRIEF.md §23</span> and{" "}
-          <span className="font-mono text-xs text-[var(--text)]">docs/BackendHandoff.md §21</span>. Autonomous execution, agent signing, and token factory deployment remain deferred until Phase 0 autonomous market intelligence is fully verified.
+        {deployments.length === 0 ? (
+          <div className="cview-empty">
+            <span className="cview-empty-code">NO JEVO CONTRACTS REGISTERED YET.</span>
+            <p>
+              The JEVO deployment registry (
+              <code>web/src/data/deployments.json</code>) is currently
+              empty. Addresses will appear here once JEVO contracts are
+              deployed and manually registered.
+            </p>
+          </div>
+        ) : filteredDeployed.length === 0 ? (
+          <div className="cview-empty">
+            <span className="cview-empty-code">NO RESULTS</span>
+            <p>No JEVO deployed contracts match &ldquo;{search}&rdquo;.</p>
+          </div>
+        ) : (
+          <div className="cview-table" role="table" aria-label="JEVO deployed contracts">
+            <div className="cview-head" role="row">
+              <div role="columnheader" className="cview-dot-col" />
+              <div role="columnheader" className="cview-name-col">NAME</div>
+              <div role="columnheader" className="cview-addr-col">ADDRESS</div>
+              <div role="columnheader" className="cview-actions-col" />
+              <div role="columnheader" className="cview-badge-col">EXPLORER CHECK</div>
+            </div>
+            {filteredDeployed.map((d) => (
+              <ContractRow
+                key={d.address}
+                name={d.name}
+                address={d.address}
+                note={d.note}
+                explorerBase={EXPLORER_BASE[d.network]}
+                checkResult={checks.find((c) => c.address === d.address)}
+                isWide={isWide}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* === Tab: MONITORED STOCK TOKENS === */}
+      <div
+        id="panel-monitored"
+        role="tabpanel"
+        aria-labelledby="tab-monitored"
+        hidden={activeTab !== "monitored"}
+        className="cview-panel"
+      >
+        <div className="cview-monitored-notice">
+          <b>Stock Token contracts on Robinhood Chain Mainnet that JEVO reads. Read-only. Not deployed by JEVO.</b>
+          <p>Address mapping maintained by the JEVO team. Verify each on the explorer.</p>
+        </div>
+
+        <div className="cview-meta-bar">
+          <span className="cview-meta-item">
+            <span className="cview-meta-label">NETWORK</span>
+            <b>Mainnet</b>
+          </span>
+          <span className="cview-meta-item">
+            <span className="cview-meta-label">CHAIN ID</span>
+            <b>4663</b>
+          </span>
+          <span className="cview-meta-item">
+            <span className="cview-meta-label">EXPLORER</span>
+            <a
+              href={EXPLORER_BASE.mainnet}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="cview-explorer-link"
+            >
+              {EXPLORER_BASE.mainnet} ↗
+            </a>
+          </span>
+        </div>
+
+        {filteredMonitored.length === 0 ? (
+          <div className="cview-empty">
+            <span className="cview-empty-code">NO RESULTS</span>
+            <p>No monitored tokens match &ldquo;{search}&rdquo;.</p>
+          </div>
+        ) : (
+          <div className="cview-table" role="table" aria-label="Monitored stock tokens">
+            <div className="cview-head" role="row">
+              <div role="columnheader" className="cview-dot-col" />
+              <div role="columnheader" className="cview-name-col">NAME / SYMBOL</div>
+              <div role="columnheader" className="cview-addr-col">ADDRESS</div>
+              <div role="columnheader" className="cview-actions-col" />
+              <div role="columnheader" className="cview-badge-col">EXPLORER CHECK</div>
+            </div>
+            {filteredMonitored.map((m) => (
+              <ContractRow
+                key={m.address}
+                name={m.name}
+                symbol={m.symbol}
+                address={m.address}
+                note={m.note}
+                explorerBase={EXPLORER_BASE.mainnet}
+                checkResult={checks.find((c) => c.address === m.address)}
+                isWide={isWide}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* === Tab: PLANNED === */}
+      <div
+        id="panel-planned"
+        role="tabpanel"
+        aria-labelledby="tab-planned"
+        hidden={activeTab !== "planned"}
+        className="cview-panel"
+      >
+        <div className="cview-meta-bar">
+          <span className="cview-meta-item">
+            <span className="cview-meta-label">STATUS</span>
+            <b>Phase 0 · Deferred</b>
+          </span>
+          <span className="cview-meta-item">
+            <span className="cview-meta-label">DOCS</span>
+            <b>BRIEF.md §23, BackendHandoff §21</b>
+          </span>
+        </div>
+
+        <p className="cview-planned-lead">
+          The following contracts form the planned protocol execution
+          architecture. Autonomous execution, agent signing, and token
+          factory deployment remain deferred until Phase 0 autonomous market
+          intelligence is fully verified.
         </p>
 
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {PLANNED_CONTRACTS.map((contract) => (
-            <div
-              key={contract.name}
-              className="flex flex-col justify-between rounded border border-[var(--line)] bg-[var(--panel)] p-4"
-            >
-              <div>
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-semibold text-[var(--text)] text-sm">{contract.name}</h3>
-                  <span className="rounded border border-[var(--line-strong)] px-1.5 py-0.5 font-mono text-[9px] text-[var(--dim)] uppercase">
-                    Unassigned
-                  </span>
+        {filteredPlanned.length === 0 ? (
+          <div className="cview-empty">
+            <span className="cview-empty-code">NO RESULTS</span>
+            <p>No planned contracts match &ldquo;{search}&rdquo;.</p>
+          </div>
+        ) : (
+          <div className="cview-planned-grid">
+            {filteredPlanned.map((p) => (
+              <div key={p.name} className="cview-planned-card">
+                <div className="cview-planned-head">
+                  <span className="cview-planned-name">{p.name}</span>
+                  <span className="cview-planned-badge">UNASSIGNED</span>
                 </div>
-                <p className="mt-2 text-xs leading-relaxed text-[var(--muted)]">{contract.purpose}</p>
+                <p className="cview-planned-desc">{p.purpose}</p>
+                <div className="cview-planned-footer">
+                  <span>{p.sourceDoc}</span>
+                  <span className="cview-planned-status">{p.status}</span>
+                </div>
               </div>
-
-              <div className="mt-4 flex items-center justify-between border-t border-[var(--line)] pt-3 font-mono text-[10px]">
-                <span className="text-[var(--dim)]">{contract.sourceDoc}</span>
-                <span className="text-[var(--down)]">{contract.status}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
