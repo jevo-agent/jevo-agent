@@ -6738,49 +6738,359 @@ a, button { touch-action: manipulation; }
 }
 
 /* ==========================================================================
-   ABOUT JEV PAGE (/jev)
+   ABOUT JEV PAGE (/jev) · INSTITUTIONAL DECISION ENGINE
    ========================================================================== */
-.jev-about-page {
+.jev-page-root {
   min-height: 100vh;
   background: #050806;
   color: var(--text);
 }
-.jev-about-page .jev-hero-section {
-  padding-top: 110px;
-  padding-bottom: 48px;
+
+.jev-page-root .jev-container {
+  width: 100%;
+  max-width: 1240px;
+  margin-inline: auto;
+  padding-inline: clamp(20px, 4vw, 48px);
 }
-.jev-about-page .jev-badge-pill {
+
+.jev-page-root .jev-section {
+  padding-block: clamp(48px, 6vw, 76px);
+  border-bottom: 1px solid var(--line);
+}
+
+.jev-page-root .jev-sec-header {
+  margin-bottom: clamp(24px, 3.5vw, 36px);
+}
+
+.jev-page-root .jev-eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  text-transform: uppercase;
+  display: inline-block;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.jev-page-root .jev-sec-h2 {
+  font-size: clamp(22px, 2.5vw, 32px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin: 0 0 10px;
+  line-height: 1.2;
+}
+
+.jev-page-root .jev-sec-lead {
+  font-size: clamp(13px, 1.1vw, 15px);
+  color: var(--muted);
+  line-height: 1.6;
+  max-width: 680px;
+  margin: 0;
+}
+
+/* --- Section 1: Hero (< 78svh) --- */
+.jev-page-root .jev-hero {
+  padding-top: clamp(100px, 12vh, 120px);
+  padding-bottom: clamp(40px, 6vh, 64px);
+  border-bottom: 1px solid var(--line);
+}
+
+.jev-page-root .jev-hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: clamp(32px, 5vw, 64px);
+  align-items: center;
+}
+
+.jev-page-root .jev-hero-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.jev-page-root .jev-hero-h1 {
+  font-size: clamp(36px, 4.5vw, 56px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+  color: var(--text);
+  margin: 0;
+}
+
+.jev-page-root .jev-hero-lead {
+  font-size: clamp(14px, 1.2vw, 16px);
+  color: var(--muted);
+  line-height: 1.6;
+  max-width: 540px;
+  margin: 0;
+}
+
+.jev-page-root .jev-hero-ctas {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+/* Anatomy of a Decision Card */
+.jev-page-root .jev-anatomy-card {
+  background: #080c0a;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+
+.jev-page-root .jev-anatomy-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.jev-page-root .jev-card-head-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.jev-page-root .jev-card-title {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--text);
+}
+
+.jev-page-root .jev-card-badge {
   font-family: var(--mono);
   font-size: 10px;
-  letter-spacing: .1em;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   color: var(--accent);
-  background: rgb(2 198 165 / 12%);
-  border: 1px solid rgb(2 198 165 / 35%);
-  padding: 4px 10px;
+  background: rgba(2, 198, 165, 0.1);
+  border: 1px solid rgba(2, 198, 165, 0.3);
+  padding: 2px 8px;
   border-radius: 2px;
-  display: inline-block;
-  margin-bottom: 12px;
 }
-.jev-about-page .contrast-grid {
+
+.jev-page-root .jev-anatomy-body {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.jev-page-root .jev-anatomy-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.07);
+}
+
+.jev-page-root .jev-anatomy-row:last-of-type {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.jev-page-root .jev-field-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--dim);
+  letter-spacing: 0.08em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.jev-page-root .field-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.jev-page-root .jev-field-val {
+  font-size: 13px;
+  color: var(--text);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.jev-page-root .jev-field-val.jev-mono-val {
+  font-family: var(--mono);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.jev-page-root .jev-subject-val b {
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.jev-page-root .jev-sub-name {
+  font-size: 12px;
+  color: var(--dim);
+}
+
+.jev-page-root .decision-badge {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  border-radius: 2px;
+  text-transform: uppercase;
+}
+
+.jev-page-root .badge-promote {
+  background: rgba(2, 198, 165, 0.16);
+  color: var(--accent);
+  border: 1px solid rgba(2, 198, 165, 0.35);
+}
+
+.jev-page-root .badge-hold {
+  background: rgba(234, 179, 8, 0.12);
+  color: #eab308;
+  border: 1px solid rgba(234, 179, 8, 0.3);
+}
+
+.jev-page-root .badge-demote {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.jev-page-root .badge-proposed {
+  background: rgba(168, 85, 247, 0.14);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.jev-page-root .jev-factors-divider {
+  height: 1px;
+  background: var(--line);
+  margin: 6px 0;
+}
+
+.jev-page-root .jev-factors-subgrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.jev-page-root .jev-factor-chip {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.jev-page-root .jev-factor-chip.highlight-chip {
+  background: rgba(2, 198, 165, 0.05);
+  border-color: rgba(2, 198, 165, 0.3);
+}
+
+.jev-page-root .chip-name {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.jev-page-root .chip-score {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text);
+}
+
+.jev-page-root .highlight-chip .chip-name {
+  color: var(--accent);
+}
+
+.jev-page-root .highlight-chip .chip-score {
+  color: var(--accent);
+}
+
+.jev-page-root .jev-anatomy-legend {
+  padding: 10px 18px;
+  background: rgba(0, 0, 0, 0.3);
+  border-top: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  color: var(--dim);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.jev-page-root .jev-card-unavailable {
+  padding: 24px;
+}
+
+.jev-page-root .jev-empty-notice {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--dim);
+  margin: 0;
+}
+
+/* --- Section 2: Contrast Grid --- */
+.jev-page-root .jev-contrast-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
-  margin-top: 36px;
 }
-.jev-about-page .contrast-card {
+
+.jev-page-root .jev-contrast-box {
   background: #080c0a;
   border: 1px solid var(--line);
-  padding: 24px;
   border-radius: 3px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
-.jev-about-page .contrast-card.jev-card {
-  background: rgb(2 198 165 / 4%);
-  border-color: rgb(2 198 165 / 36%);
+
+.jev-page-root .jev-contrast-box.jev-active-box {
+  background: rgba(2, 198, 165, 0.03);
+  border-color: rgba(2, 198, 165, 0.35);
 }
-.jev-about-page .contrast-flow {
+
+.jev-page-root .jev-box-tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.jev-page-root .jev-box-tag.highlight {
+  color: var(--accent);
+}
+
+.jev-page-root .jev-box-flow {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -6788,217 +7098,459 @@ a, button { touch-action: manipulation; }
   font-family: var(--mono);
   font-size: 12px;
 }
-.jev-about-page .contrast-flow code {
+
+.jev-page-root .jev-box-flow code {
   background: #111613;
   padding: 4px 8px;
   border-radius: 2px;
   color: var(--text);
   border: 1px solid var(--line);
+  font-weight: 600;
 }
-.jev-about-page .contrast-flow.highlight-flow code {
-  background: rgb(2 198 165 / 15%);
+
+.jev-page-root .jev-box-flow.highlight-flow code {
+  background: rgba(2, 198, 165, 0.12);
   color: var(--accent);
-  border-color: rgb(2 198 165 / 40%);
+  border-color: rgba(2, 198, 165, 0.4);
 }
-.jev-about-page .contrast-flow .arrow {
+
+.jev-page-root .jev-box-flow .arrow {
   color: var(--dim);
-}
-.jev-about-page .contrast-desc {
   font-size: 13px;
-  line-height: 1.5;
+}
+
+.jev-page-root .jev-box-desc {
+  font-size: 13px;
+  line-height: 1.6;
   color: var(--muted);
   margin: 0;
 }
-.jev-about-page .jev-stages-grid {
+
+/* --- Section 3: Triplet Grid --- */
+.jev-page-root .jev-triplet-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 14px;
-  margin-top: 28px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
 }
-.jev-about-page .jev-stage-card {
+
+.jev-page-root .jev-triplet-card {
   background: #080c0a;
   border: 1px solid var(--line);
-  padding: 20px 16px;
   border-radius: 3px;
+  padding: 22px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
 }
-.jev-about-page .jev-stage-card.highlight-stage {
-  border-color: rgb(2 198 165 / 36%);
-  background: rgb(2 198 165 / 5%);
-}
-.jev-about-page .jev-stage-card .step-num {
+
+.jev-page-root .jev-card-tag {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   color: var(--accent);
 }
-.jev-about-page .jev-stage-card h3 {
-  font-family: var(--mono);
-  font-size: 12px;
-  letter-spacing: .06em;
+
+.jev-page-root .jev-triplet-card h3 {
+  font-size: 16px;
+  font-weight: 700;
   color: var(--text);
   margin: 0;
+  letter-spacing: -0.01em;
 }
-.jev-about-page .jev-stage-card p {
-  font-size: 12px;
+
+.jev-page-root .jev-triplet-card p {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted);
+  margin: 0;
+}
+
+/* --- Section 4: 7-Stage Stepper --- */
+.jev-page-root .jev-stepper-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+}
+
+.jev-page-root .jev-stepper-card {
+  background: #080c0a;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.15s ease;
+}
+
+.jev-page-root .jev-stepper-card.is-curation-gate {
+  border-color: rgba(2, 198, 165, 0.5);
+  background: rgba(2, 198, 165, 0.05);
+}
+
+.jev-page-root .stepper-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.jev-page-root .stepper-num {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.06em;
+}
+
+.jev-page-root .stepper-gate-tag {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  background: rgba(2, 198, 165, 0.15);
+  border: 1px solid rgba(2, 198, 165, 0.35);
+  padding: 1px 5px;
+  border-radius: 2px;
+}
+
+.jev-page-root .stepper-title {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.jev-page-root .stepper-desc {
+  font-size: 11.5px;
   line-height: 1.45;
   color: var(--muted);
   margin: 0;
 }
-.jev-about-page .safety-matrix-grid {
+
+/* --- Section 5: Guardrails --- */
+.jev-page-root .jev-guardrails-sub {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.jev-page-root .jev-notice-pill {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 4px 10px;
+  border-radius: 2px;
+}
+
+.jev-page-root .jev-matrix-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
-  margin-top: 28px;
-}
-.jev-about-page .safety-column {
-  background: #080c0a;
-  border: 1px solid var(--line);
-  padding: 24px;
-  border-radius: 3px;
-}
-.jev-about-page .safety-column.can-column {
-  border-left: 3px solid var(--accent);
-}
-.jev-about-page .safety-column.cannot-column {
-  border-left: 3px solid #ef4444;
-}
-.jev-about-page .safety-col-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-.jev-about-page .safety-col-head h3 {
-  font-family: var(--mono);
-  font-size: 13px;
-  letter-spacing: .08em;
-  margin: 0;
-}
-.jev-about-page .safety-col-head .dot.on {
-  color: var(--accent);
-}
-.jev-about-page .safety-col-head .dot.off {
-  color: #ef4444;
-  font-weight: 700;
-}
-.jev-about-page .safety-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.jev-about-page .safety-list li {
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--muted);
-}
-.jev-about-page .safety-list li b {
-  color: var(--text);
-  font-weight: 600;
-}
-.jev-about-page .jev-decision-meta {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-.jev-about-page .jev-decisions-feed {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
   margin-top: 24px;
 }
-.jev-about-page .jev-decision-row {
-  display: grid;
-  grid-template-columns: 220px 1fr 180px;
-  gap: 16px;
-  align-items: center;
+
+.jev-page-root .jev-matrix-col {
   background: #080c0a;
   border: 1px solid var(--line);
-  padding: 14px 18px;
-  border-radius: 2px;
+  border-radius: 3px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
-.jev-about-page .jev-decision-row .row-left {
+
+.jev-page-root .jev-matrix-col.can-col {
+  border-top: 2px solid var(--accent);
+}
+
+.jev-page-root .jev-matrix-col.cannot-col {
+  border-top: 2px solid #ef4444;
+}
+
+.jev-page-root .jev-col-heading {
   display: flex;
   align-items: center;
   gap: 10px;
 }
-.jev-about-page .jev-decision-row .asset-sym {
-  font-family: var(--mono);
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-}
-.jev-about-page .jev-decision-row .rank-change {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--dim);
-}
-.jev-about-page .jev-decision-row .decision-badge {
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: .06em;
-  padding: 2px 6px;
+
+.jev-page-root .matrix-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
   border-radius: 2px;
-  text-transform: uppercase;
-  font-weight: 600;
-}
-.jev-about-page .decision-promote {
-  background: rgb(2 198 165 / 16%);
-  color: var(--accent);
-  border: 1px solid rgb(2 198 165 / 35%);
-}
-.jev-about-page .decision-hold {
-  background: rgb(234 179 8 / 12%);
-  color: #eab308;
-  border: 1px solid rgb(234 179 8 / 30%);
-}
-.jev-about-page .decision-demote {
-  background: rgb(239 68 68 / 12%);
-  color: #ef4444;
-  border: 1px solid rgb(239 68 68 / 30%);
-}
-.jev-about-page .jev-decision-row .thesis-snippet {
-  margin: 0;
   font-family: var(--mono);
-  font-size: 11px;
-  line-height: 1.45;
-  color: var(--text-2);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 12px;
+  font-weight: 700;
 }
-.jev-about-page .jev-decision-row .row-right {
-  display: flex;
-  justify-content: flex-end;
-  gap: 16px;
+
+.jev-page-root .matrix-icon.can {
+  background: rgba(2, 198, 165, 0.15);
+  color: var(--accent);
+  border: 1px solid rgba(2, 198, 165, 0.35);
 }
-.jev-about-page .jev-decision-row .metric {
+
+.jev-page-root .matrix-icon.cannot {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.jev-page-root .jev-col-heading h3 {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text);
+  margin: 0;
+}
+
+.jev-page-root .jev-matrix-items {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  gap: 14px;
 }
-.jev-about-page .jev-decision-row .metric .label {
-  font-size: 8.5px;
+
+.jev-page-root .jev-matrix-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+}
+
+.jev-page-root .jev-matrix-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.jev-page-root .jev-matrix-item b {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.jev-page-root .jev-matrix-item p {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+  margin: 0;
+}
+
+/* --- Section 6: Latest Jev Decisions (Decision Audit) --- */
+.jev-page-root .jev-audit-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.jev-page-root .jev-audit-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.jev-page-root .audit-meta-item {
   color: var(--dim);
 }
-.jev-about-page .jev-decision-row .metric .val {
+
+.jev-page-root .audit-meta-item b {
+  color: var(--text);
+}
+
+.jev-page-root .audit-meta-badge {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  background: rgba(2, 198, 165, 0.1);
+  border: 1px solid rgba(2, 198, 165, 0.3);
+  padding: 3px 8px;
+  border-radius: 2px;
+}
+
+.jev-page-root .jev-audit-table {
+  background: #080c0a;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 16px;
+}
+
+.jev-page-root .jev-table-head {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.4fr) 110px 140px 140px 110px 90px;
+  gap: 12px;
+  padding: 12px 18px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--dim);
+}
+
+.jev-page-root .jev-table-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.jev-page-root .jev-table-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.4fr) 110px 140px 140px 110px 90px;
+  gap: 12px;
+  padding: 12px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  align-items: center;
+  transition: background 0.15s ease;
+}
+
+.jev-page-root .jev-table-row:last-child {
+  border-bottom: none;
+}
+
+.jev-page-root .jev-table-row:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.jev-page-root .cell-asset {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.jev-page-root .cell-asset b {
   font-family: var(--mono);
   font-size: 13px;
   font-weight: 700;
   color: var(--text);
 }
-.jev-about-page .jev-cta-row {
+
+.jev-page-root .cell-asset span {
+  font-size: 11.5px;
+  color: var(--dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jev-page-root .cell-rank code {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--text-2);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 2px 6px;
+  border-radius: 2px;
+}
+
+.jev-page-root .cell-score b {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.jev-page-root .cell-confidence span {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.jev-page-root .cell-age span {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--dim);
+}
+
+.jev-page-root .text-right {
+  text-align: right;
+}
+
+/* --- Section 7: CTA Quad --- */
+.jev-page-root .jev-cta-quad {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.jev-page-root .jev-cta-tile {
   display: flex;
-  gap: 12px;
-  margin-top: 32px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  justify-content: space-between;
+  background: #080c0a;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 20px;
+  min-height: 120px;
+  text-decoration: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.jev-page-root .jev-cta-tile:hover {
+  border-color: var(--accent);
+  background: rgba(2, 198, 165, 0.03);
+}
+
+.jev-page-root .cta-tile-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.jev-page-root .cta-tile-head h4 {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  margin: 0;
+}
+
+.jev-page-root .cta-arrow {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--accent);
+  transition: transform 0.15s ease;
+}
+
+.jev-page-root .jev-cta-tile:hover .cta-arrow {
+  transform: translateX(3px);
+}
+
+.jev-page-root .jev-cta-tile p {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+  margin: 0;
+}
+
+/* Responsive adjustments for /jev */
+@media (max-width: 1279px) and (min-width: 768px) {
+  .jev-page-root .jev-stepper-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 
 @media (max-width: 1024px) {
@@ -7008,16 +7560,48 @@ a, button { touch-action: manipulation; }
   .landing-root .scan-telemetry-strip {
     grid-template-columns: 1fr 1fr;
   }
-  .jev-about-page .contrast-grid,
-  .jev-about-page .safety-matrix-grid {
+  .jev-page-root .jev-hero-grid {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
+  .jev-page-root .jev-contrast-grid,
+  .jev-page-root .jev-matrix-grid {
     grid-template-columns: 1fr;
   }
-  .jev-about-page .jev-decision-row {
+  .jev-page-root .jev-triplet-grid {
     grid-template-columns: 1fr;
+  }
+  .jev-page-root .jev-cta-quad {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 860px) {
+  .jev-page-root .jev-table-head {
+    display: none;
+  }
+  .jev-page-root .jev-table-row {
+    grid-template-columns: 1fr 1fr;
     gap: 10px;
+    padding: 14px;
   }
-  .jev-about-page .jev-decision-row .row-right {
-    justify-content: flex-start;
+  .jev-page-root .cell-asset {
+    grid-column: span 2;
+  }
+  .jev-page-root .cell-age {
+    text-align: left;
+  }
+}
+
+@media (max-width: 767px) {
+  .jev-page-root .jev-stepper-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 639px) {
+  .jev-page-root .jev-cta-quad {
+    grid-template-columns: 1fr;
   }
 }
 @media (max-width: 640px) {

@@ -803,12 +803,12 @@ export function HeroCaPill() {
   const isValidCa = /^0x[0-9a-fA-F]{40}$/.test(rawCa.trim());
 
   async function copyCa() {
-    if (!isValidCa) return;
     try {
+      const textToCopy = isValidCa ? rawCa.trim() : "TBA";
       let copiedWithClipboard = false;
       if (navigator.clipboard?.writeText) {
         try {
-          await navigator.clipboard.writeText(rawCa.trim());
+          await navigator.clipboard.writeText(textToCopy);
           copiedWithClipboard = true;
         } catch {
           copiedWithClipboard = false;
@@ -816,7 +816,7 @@ export function HeroCaPill() {
       }
       if (!copiedWithClipboard) {
         const textarea = document.createElement("textarea");
-        textarea.value = rawCa.trim();
+        textarea.value = textToCopy;
         textarea.setAttribute("readonly", "true");
         textarea.style.position = "fixed";
         textarea.style.opacity = "0";
@@ -836,16 +836,13 @@ export function HeroCaPill() {
   return (
     <div className="hero-ca-wrapper">
       <button
-        className={`hero-ca${!isValidCa ? " is-disabled" : ""}`}
+        className="hero-ca"
         type="button"
-        onClick={isValidCa ? copyCa : undefined}
-        disabled={!isValidCa}
+        onClick={copyCa}
         aria-label={
-          !isValidCa
-            ? "Contract address TBA"
-            : copied
-              ? "Contract address copied"
-              : `Copy contract address ${rawCa.trim()}`
+          isValidCa
+            ? (copied ? "Contract address copied" : `Copy contract address ${rawCa.trim()}`)
+            : (copied ? "CA status copied" : "Copy token status TBA")
         }
       >
         {isValidCa ? (
@@ -859,11 +856,12 @@ export function HeroCaPill() {
           <>
             <span className="hero-ca-prefix">CA</span>
             <code>· TBA</code>
+            <span className="hero-ca-copy">[{copied ? "COPIED" : "COPY"}]</span>
           </>
         )}
       </button>
       <span className="hero-ca-feedback" aria-live="polite">
-        {copied ? "Contract address copied" : ""}
+        {copied ? (isValidCa ? "Contract address copied" : "CA status (TBA) copied") : ""}
       </span>
     </div>
   );

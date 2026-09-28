@@ -13,6 +13,8 @@ import {
 
 import { DecisionPlane } from "@/components/landing/DecisionPlane";
 import { LandingScroll } from "@/components/landing/LandingScroll";
+import { LandingHeader } from "@/components/landing/LandingHeader";
+import { LandingFooter } from "@/components/landing/LandingFooter";
 import { formatClock, formatCountdown, formatCycle } from "@/lib/format";
 import { groupMemoryRecords } from "@/lib/memory/grouping";
 import type { AgentRuntime, MemoryRecord } from "@/types/agent";
@@ -115,43 +117,6 @@ export function LandingPage(data: LandingPageProps) {
   );
 }
 
-function LandingHeader() {
-  return (
-    <header className="site-header">
-      <div className="wrap">
-        <Link className="brand" href="/" aria-label="JEVO home">
-          <Image
-            src="/logo.png"
-            alt=""
-            width={22}
-            height={22}
-            priority
-            className="brand-mark"
-          />
-          <span className="brand-name">JEVO</span>
-          <span className="brand-sub">/ Autonomous market system</span>
-        </Link>
-        <nav className="nav" aria-label="Sections">
-          <Link href="/jev">JEV</Link>
-          <a href="#agent">Agent</a>
-          <a href="#market">Market</a>
-          <a href="#pairings">Pairings</a>
-          <a href="#pipeline">Architecture</a>
-          <a href="#memory">Memory</a>
-          <Link href="/contracts">CONTRACTS</Link>
-        </nav>
-        <div className="header-actions">
-          <span className="label">
-            <span className="on">●</span> Jev <b>active</b>
-          </span>
-          <Link className="btn btn-primary btn-sm" href="/app">
-            Open app
-          </Link>
-        </div>
-      </div>
-    </header>
-  );
-}
 
 const PAIRING_FORMULA_COMPONENTS = [
   { key: "narrative", label: "Narrative Momentum", weight: 20 },
@@ -2669,42 +2634,4 @@ function FinalSection({ asset }: { asset?: Stock | null }) {
   );
 }
 
-function LandingFooter({ agent }: { agent: AgentRuntime }) {
-  return (
-    <footer className="site-footer">
-      <div className="wrap">
-        <div>
-          <Link className="brand" href="/">
-            <Image
-              src="/logo.png"
-              alt=""
-              width={22}
-              height={22}
-              className="brand-mark"
-            />
-            <span className="brand-name">JEVO</span>
-            <span className="hidden brand-sub">/ Powered by Jev</span>
-          </Link>
-          <p className="label footer-phase">
-            {agent.networkLabel ?? "UNAVAILABLE"} / phase 0 / simulated state
-          </p>
-        </div>
-        <nav className="foot-links" aria-label="Footer">
-          <Link href="/jev">Jev</Link>
-          <Link href="/app">App</Link>
-          <Link href="/pairing">Pairings</Link>
-          <Link href="/memory">Memory</Link>
-          <Link href="/contracts">Contracts</Link>
-          <a href="#pipeline">Architecture</a>
-        </nav>
-        <div className="foot-note">
-          <span className="label">
-            JEVO is an independent protocol and is not affiliated with,
-            sponsored by, or endorsed by Robinhood.
-          </span>
-          <span className="label">Not financial advice</span>
-        </div>
-      </div>
-    </footer>
-  );
-}
+
