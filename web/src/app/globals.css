@@ -872,8 +872,16 @@ a, button { touch-action: manipulation; }
 .landing-root .plane-guides path.field-trajectory { stroke: rgb(2 198 165 / 14%); stroke-dasharray: .1 .9; animation: plane-ambient-drift 20s linear infinite; animation-delay: var(--signal-delay, 0s); opacity: .78; }
 .landing-root .plane-guides line { stroke: rgb(220 235 215 / 9%); stroke-dasharray: 2 8; }
 .landing-root .decision-route { fill: none; stroke: rgb(2 198 165 / 22%); stroke-dasharray: .08 .92; stroke-linecap: round; stroke-width: 1; vector-effect: non-scaling-stroke; animation: plane-ambient-drift 18s linear infinite; animation-delay: var(--signal-delay, 0s); }
-.landing-root .signal-route { opacity: .24; }
-.landing-root .output-route { opacity: .1; }
+.landing-root .signal-route {
+  opacity: .24;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation:
+    signal-flow-in 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards,
+    plane-ambient-drift 18s 1.2s linear infinite;
+  animation-delay: var(--signal-delay, 0s), var(--signal-delay, 0s);
+}
+.landing-root .output-route { opacity: .1; stroke-dasharray: 1; stroke-dashoffset: 1; animation: signal-flow-in 1.4s cubic-bezier(0.4, 0, 0.2, 1) forwards, plane-ambient-drift 18s 1.4s linear infinite; animation-delay: var(--signal-delay, 0s), var(--signal-delay, 0s); }
 .landing-root .output-route:not(.is-primary) { opacity: .08; }
 .landing-root .nvda-route { stroke: var(--accent); stroke-dasharray: none; stroke-width: 1.8; opacity: .76; animation-name: plane-nvda-travel; animation-duration: 12s; }
 .landing-root .nvda-input-route { opacity: .42; }
@@ -893,6 +901,7 @@ a, button { touch-action: manipulation; }
 /* Dynamic Active Selected Route & Signal Marker */
 .landing-root .active-selected-route { fill: none; stroke: var(--accent); stroke-width: 2.2; stroke-dasharray: 100; stroke-dashoffset: 100; opacity: 1 !important; filter: drop-shadow(0 0 5px rgb(2 198 165 / 50%)); animation: route-draw 0.85s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
 @keyframes route-draw { to { stroke-dashoffset: 0; } }
+@keyframes signal-flow-in { to { stroke-dashoffset: 0; } }
 .landing-root .active-signal-marker { fill: #fff; stroke: var(--accent); stroke-width: 1.5; filter: drop-shadow(0 0 6px var(--accent)); }
 
 /* Cybernetic JEV Decision Gate */
@@ -987,7 +996,19 @@ a, button { touch-action: manipulation; }
 .landing-root .plane-launch-label .plane-accent { font-size: 13px; }
 
 /* High-Precision Output Register Terminal Card */
-.landing-root .plane-output-frame rect.output-backdrop { fill: rgb(6 14 12 / 96%); stroke: rgb(2 198 165 / 24%); stroke-width: 1; }
+.landing-root .plane-output-frame rect.output-backdrop {
+  fill: rgb(6 14 12 / 96%);
+  stroke: rgb(2 198 165 / 24%);
+  stroke-width: 1;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: output-border-trace 1.6s cubic-bezier(0.4, 0, 0.2, 1) 0.4s forwards;
+}
+@keyframes output-border-trace {
+  0%   { stroke-dashoffset: 1; stroke: rgb(2 198 165 / 0%); }
+  20%  { stroke: rgb(2 198 165 / 60%); }
+  100% { stroke-dashoffset: 0; stroke: rgb(2 198 165 / 24%); }
+}
 .landing-root .plane-output-frame rect.output-header-bar { fill: rgb(2 198 165 / 8%); }
 .landing-root .output-status-led { fill: var(--accent); filter: drop-shadow(0 0 4px var(--accent)); animation: led-pulse 2s infinite ease-in-out; }
 .landing-root .output-title { fill: var(--dim); font-family: var(--mono); font-size: 8px; letter-spacing: .13em; }

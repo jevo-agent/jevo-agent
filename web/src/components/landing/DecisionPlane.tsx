@@ -591,7 +591,7 @@ export function DecisionPlane({ asset, assets, pairing = null, launch = null }: 
 
         {/* High-Precision JEV Output Register (Solid institutional status card) */}
         <g className="plane-output-frame" aria-hidden="true">
-          <rect className="output-backdrop" x="676" y="48" width="220" height="410" rx="3" />
+          <rect className="output-backdrop" x="676" y="48" width="220" height="410" rx="3" pathLength={1} />
           <rect className="output-header-bar" x="676" y="48" width="220" height="26" rx="3" />
           <circle className="output-status-led" cx="688" cy="61" r="2.8" />
           <text className="output-title" x="698" y="65">JEV OUTPUT REGISTER</text>
