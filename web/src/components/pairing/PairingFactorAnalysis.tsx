@@ -12,7 +12,7 @@ export function PairingFactorAnalysis({ pairing }: PairingFactorAnalysisProps) {
   const setSelectedPairingFactorId = useAgentStore((state) => state.setSelectedPairingFactorId);
 
   return (
-    <section aria-labelledby="pair-factor-analysis-title" className="border-b border-[var(--jevo-line)]">
+    <section aria-labelledby="pair-factor-analysis-title" className="pairing-detail-section pairing-factor-section">
       <div className="flex min-h-16 flex-wrap items-center justify-between gap-3 border-b border-[var(--jevo-line)] px-5 py-4 sm:px-6"><h2 id="pair-factor-analysis-title" className="font-mono text-[0.68rem] tracking-[0.08em] uppercase">Pair factor analysis</h2><p className="protocol-label">Select a factor to inspect</p></div>
       <div className="overflow-x-auto"><div role="group" aria-label="Pairing factors" className="min-w-150 divide-y divide-[var(--jevo-line)]">{pairing.factors.map((factor, index) => {
         const selected = factor.id === selectedFactorId;

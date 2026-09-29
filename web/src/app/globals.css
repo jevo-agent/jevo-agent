@@ -6327,6 +6327,298 @@ a, button { touch-action: manipulation; }
   flex-wrap: wrap;
 }
 
+/* Pairing detail refinement ---------------------------------------------
+   Keep the terminal vocabulary, but give the lower detail surface a clear
+   reading order: thesis and evidence on the left, lifecycle and action on the
+   right. These selectors are intentionally scoped to the detail route. */
+.jevo-app .pairing-workspace {
+  padding-top: clamp(18px, 2.4vw, 32px);
+}
+
+.jevo-app .pairing-workspace-content {
+  padding: clamp(24px, 3.2vw, 44px) 0 82px;
+}
+
+.jevo-app .pairing-detail-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(286px, 342px);
+  gap: 16px;
+  align-items: start;
+}
+
+.jevo-app .pairing-detail-main {
+  display: grid;
+  min-width: 0;
+  gap: 16px;
+}
+
+.jevo-app .pairing-detail-section {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: rgb(14 17 15 / 78%);
+}
+
+.jevo-app .pairing-detail-section > div:first-child {
+  min-height: 58px;
+  padding: 16px 22px;
+}
+
+.jevo-app .pairing-detail-section > div:first-child h2 {
+  color: var(--text);
+  font-size: 0.68rem;
+  font-weight: 500;
+}
+
+.jevo-app .pairing-detail-section > div:first-child .protocol-label {
+  color: var(--dim);
+  font-size: 0.58rem;
+}
+
+.jevo-app .pairing-thesis-section > div:nth-child(2) {
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+}
+
+.jevo-app .pairing-thesis-section > div:nth-child(2) > div:first-child {
+  padding: clamp(26px, 3vw, 38px);
+  background: rgb(11 13 11 / 48%);
+}
+
+.jevo-app .pairing-thesis-section > div:nth-child(2) > div:first-child > p.text-4xl {
+  max-width: 19ch;
+  font-size: clamp(2.15rem, 3.2vw, 3.65rem);
+  line-height: 0.98;
+}
+
+.jevo-app .pairing-thesis-section > div:nth-child(2) > div:first-child > p.leading-7 {
+  max-width: 52ch;
+  line-height: 1.65;
+}
+
+.jevo-app .pairing-thesis-section > div:nth-child(2) > div:first-child dl {
+  margin-top: 30px;
+  background: rgb(16 19 16 / 55%);
+}
+
+.jevo-app .pairing-thesis-section > div:nth-child(2) > dl {
+  align-content: start;
+  padding: 22px 28px 24px;
+}
+
+.jevo-app .pairing-thesis-section > div:nth-child(2) > dl > div {
+  padding: 18px 0;
+}
+
+.jevo-app .pairing-thesis-section > div:nth-child(2) > dl > div:first-child {
+  padding-top: 4px;
+}
+
+.jevo-app .pairing-thesis-section > div:nth-child(2) > dl > div:last-child {
+  border-bottom: 0;
+  padding-bottom: 2px;
+}
+
+.jevo-app .pairing-factor-section .overflow-x-auto {
+  background: rgb(11 13 11 / 36%);
+}
+
+.jevo-app .pairing-factor-section .overflow-x-auto > div {
+  min-width: 0;
+}
+
+.jevo-app .pairing-factor-section button {
+  min-height: 78px;
+  border-bottom: 1px solid var(--line);
+}
+
+.jevo-app .pairing-factor-section button:last-child {
+  border-bottom: 0;
+}
+
+.jevo-app .pairing-factor-section button:hover {
+  background: rgb(240 242 233 / 3%);
+}
+
+.jevo-app .pairing-factor-section button[aria-pressed="true"] {
+  background: rgb(2 198 165 / 8%);
+  box-shadow: inset 2px 0 var(--accent);
+}
+
+.jevo-app .pairing-inspector-section > .grid {
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.5fr);
+}
+
+.jevo-app .pairing-inspector-section > .grid > div:first-child {
+  padding: clamp(24px, 3vw, 34px);
+}
+
+.jevo-app .pairing-inspector-section > .grid > div:first-child h3 {
+  font-size: clamp(1.85rem, 3vw, 3rem);
+}
+
+.jevo-app .pairing-inspector-section > .grid > div:first-child > p:last-child {
+  max-width: 58ch;
+  line-height: 1.7;
+}
+
+.jevo-app .pairing-inspector-section > .grid > dl {
+  padding: 24px 26px;
+  background: rgb(11 13 11 / 45%);
+}
+
+.jevo-app .pairing-alternatives-section > .grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.jevo-app .pairing-alternatives-section > .grid article {
+  min-height: 184px;
+  padding: 24px 26px;
+}
+
+.jevo-app .pairing-alternatives-section > div:last-child {
+  padding: 14px 22px;
+}
+
+.jevo-app .pairing-history-section ol {
+  background: rgb(11 13 11 / 28%);
+}
+
+.jevo-app .pairing-history-section ol li {
+  min-height: 68px;
+  align-items: center;
+  padding-block: 16px;
+}
+
+.jevo-app .pairing-detail-rail {
+  position: sticky;
+  top: 76px;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: rgb(13 16 13 / 92%);
+}
+
+.jevo-app .pairing-detail-rail .pairing-detail-section {
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+
+.jevo-app .pairing-detail-rail .pairing-detail-section:last-child {
+  border-bottom: 0;
+}
+
+.jevo-app .pairing-lifecycle-section ol {
+  display: grid;
+  gap: 5px;
+  padding: 18px 20px 22px;
+}
+
+.jevo-app .pairing-lifecycle-section ol li {
+  min-height: 66px;
+  border-top: 1px solid var(--line);
+  border-left: 2px solid var(--line);
+  background: rgb(11 13 11 / 30%);
+  padding: 14px 12px 14px 13px;
+}
+
+.jevo-app .pairing-lifecycle-section ol li:first-child {
+  border-top: 0;
+}
+
+.jevo-app .pairing-lifecycle-section ol li.is-active {
+  border-left-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.jevo-app .pairing-next-section > div:first-child,
+.jevo-app .pairing-next-section > div:last-child {
+  padding: 24px 22px;
+}
+
+.jevo-app .pairing-next-section > div:first-child > p:nth-child(2) {
+  color: var(--accent);
+  font-size: 0.62rem;
+}
+
+.jevo-app .pairing-next-section > div:first-child > div {
+  align-items: baseline;
+}
+
+.jevo-app .pairing-next-section > div:first-child > div h2 {
+  font-size: clamp(1.65rem, 2.2vw, 2.35rem);
+}
+
+@media (max-width: 1180px) {
+  .jevo-app .pairing-detail-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .jevo-app .pairing-detail-rail {
+    position: static;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(270px, 0.72fr);
+  }
+
+  .jevo-app .pairing-detail-rail .pairing-detail-section {
+    border-bottom: 0;
+  }
+
+  .jevo-app .pairing-detail-rail .pairing-detail-section + .pairing-detail-section {
+    border-left: 1px solid var(--line);
+  }
+}
+
+@media (max-width: 760px) {
+  .jevo-app .pairing-workspace-content {
+    padding: 20px 0 56px;
+  }
+
+  .jevo-app .pairing-detail-main {
+    gap: 12px;
+  }
+
+  .jevo-app .pairing-detail-section > div:first-child {
+    padding-inline: 16px;
+  }
+
+  .jevo-app .pairing-thesis-section > div:nth-child(2),
+  .jevo-app .pairing-inspector-section > .grid,
+  .jevo-app .pairing-alternatives-section > .grid,
+  .jevo-app .pairing-detail-rail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .jevo-app .pairing-thesis-section > div:nth-child(2) > div:first-child,
+  .jevo-app .pairing-thesis-section > div:nth-child(2) > dl,
+  .jevo-app .pairing-inspector-section > .grid > div:first-child,
+  .jevo-app .pairing-inspector-section > .grid > dl {
+    padding: 22px 18px;
+  }
+
+  .jevo-app .pairing-thesis-section > div:nth-child(2) > div:first-child > p.text-4xl {
+    max-width: 16ch;
+    font-size: clamp(2rem, 10vw, 3rem);
+  }
+
+  .jevo-app .pairing-detail-rail .pairing-detail-section + .pairing-detail-section {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+
+  .jevo-app .pairing-factor-section .overflow-x-auto > div {
+    min-width: 560px;
+  }
+
+  .jevo-app .pairing-alternatives-section > .grid article {
+    min-height: 0;
+    padding: 22px 18px;
+  }
+}
+
 @media (max-width: 1024px) {
   .jevo-app .pairing-thresholds-grid,
   .jevo-app .pairing-pillars-grid,
@@ -8878,4 +9170,3 @@ a, button { touch-action: manipulation; }
     height: 30px;
   }
 }
-

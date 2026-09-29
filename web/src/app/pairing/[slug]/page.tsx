@@ -51,16 +51,16 @@ export default function PairingDetailPage({ params }: PairingDetailPageProps) {
     >
       <div className="pairing-workspace">
         <PairingDetailHeader pairing={pairing} stock={stock} agent={state.data.agent} />
-        <div className="pairing-workspace-content py-6 sm:py-8">
-          <div className="grid border border-[var(--jevo-line)] xl:grid-cols-[minmax(0,1fr)_23rem]">
-            <div className="min-w-0">
+        <div className="pairing-workspace-content">
+          <div className="pairing-detail-layout">
+            <div className="pairing-detail-main">
               <PairingThesis pairing={pairing} />
               <PairingFactorAnalysis pairing={pairing} />
               <PairingFactorInspector pairing={pairing} stock={stock} agent={state.data.agent} />
               <AlternativePairings pairing={pairing} />
               <PairingHistory pairing={pairing} agent={state.data.agent} />
             </div>
-            <aside aria-label="Pairing state and next action" className="border-t border-[var(--jevo-line)] bg-[rgb(13_16_13_/_72%)] xl:border-t-0 xl:border-l xl:sticky xl:top-14">
+            <aside aria-label="Pairing state and next action" className="pairing-detail-rail">
               <PairingLifecycleDetail pairing={pairing} />
               <PairingNextAction pairing={pairing} />
             </aside>
