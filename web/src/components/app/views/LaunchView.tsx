@@ -16,27 +16,27 @@ interface LaunchViewProps {
 const STANDBY_STAGES = [
   {
     id: "CANDIDATE_SELECTED",
-    point: "T-24H",
+    point: "T-30H",
     desc: "Opportunity and pair thesis locked for launch review.",
   },
   {
     id: "NARRATIVE_VALIDATION",
-    point: "T-18H",
+    point: "T-22H30",
     desc: "Narrative pressure and why-now context verified above launch threshold.",
   },
   {
     id: "PAIRING_VALIDATION",
-    point: "T-12H",
+    point: "T-15H",
     desc: "Pairing score, metadata, Stock Token identity, and policy constraints validated.",
   },
   {
     id: "CONTRACT_PREPARATION",
-    point: "T-06H",
+    point: "T-07H30",
     desc: "Approved launch parameters assembled for Launch Executor and Pons adapter.",
   },
   {
     id: "FINAL_POLICY_CHECK",
-    point: "T-01H",
+    point: "T-01H15",
     desc: "Permissions, transaction simulation, launch limits, and guardian approval verified.",
   },
   {

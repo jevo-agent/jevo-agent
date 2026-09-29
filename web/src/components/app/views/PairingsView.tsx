@@ -202,7 +202,7 @@ export function PairingsView({ pairings, assets = [], agent }: PairingsViewProps
               <span className="p-step-num">04</span>
               <div className="p-step-content">
                 <strong>Launch Queue</strong>
-                <p>T-24H countdown and 8 pre-launch policy check verifications.</p>
+                <p>T-30H countdown and 8 pre-launch policy check verifications.</p>
               </div>
             </div>
           </div>

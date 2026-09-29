@@ -665,11 +665,11 @@ const EIGHT_POLICY_GATES = [
 ] as const;
 
 const STANDBY_PIPELINE_STAGES = [
-  { id: "CANDIDATE_SELECTED", point: "T-24H", desc: "Opportunity and pair thesis locked for launch review." },
-  { id: "NARRATIVE_VALIDATION", point: "T-18H", desc: "Narrative pressure and why-now context verified above launch threshold." },
-  { id: "PAIRING_VALIDATION", point: "T-12H", desc: "Pairing score, metadata, Stock Token identity, and policy constraints validated." },
-  { id: "CONTRACT_PREPARATION", point: "T-06H", desc: "Approved launch parameters assembled for Launch Executor and Pons adapter." },
-  { id: "FINAL_POLICY_CHECK", point: "T-01H", desc: "Permissions, transaction simulation, launch limits, and guardian approval verified." },
+  { id: "CANDIDATE_SELECTED", point: "T-30H", desc: "Opportunity and pair thesis locked for launch review." },
+  { id: "NARRATIVE_VALIDATION", point: "T-22H30", desc: "Narrative pressure and why-now context verified above launch threshold." },
+  { id: "PAIRING_VALIDATION", point: "T-15H", desc: "Pairing score, metadata, Stock Token identity, and policy constraints validated." },
+  { id: "CONTRACT_PREPARATION", point: "T-07H30", desc: "Approved launch parameters assembled for Launch Executor and Pons adapter." },
+  { id: "FINAL_POLICY_CHECK", point: "T-01H15", desc: "Permissions, transaction simulation, launch limits, and guardian approval verified." },
   { id: "CONTROLLED_EXECUTION", point: "T-00", desc: "Approved action submitted through restricted Launch Executor." },
 ];
 
@@ -733,7 +733,7 @@ function LandingPipelineStandbySection({
             <div className="clock">
               STANDBY
             </div>
-            <p className="label">Simulated 24h verification sequence / phase 0 · cycle {formatCycle(agent.activeCycle)}</p>
+            <p className="label">Simulated 30h verification sequence / phase 0 · cycle {formatCycle(agent.activeCycle)}</p>
             <ol className="cycle">
               {STANDBY_PIPELINE_STAGES.map((stage, index) => (
                 <li
@@ -1857,7 +1857,7 @@ function PipelineSection({
             <div className="clock">
               T-{formatCountdown(launch.countdownSeconds)}
             </div>
-            <p className="label">Simulated 24h cycle / phase 0</p>
+            <p className="label">Simulated 30h cycle / phase 0</p>
             <ol className="cycle">
               {launch.stages.map((stage, index) => (
                 <li

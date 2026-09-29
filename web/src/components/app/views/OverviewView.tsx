@@ -1963,7 +1963,7 @@ function LaunchSummary({
           </p>
           <div className="overview-summary-tags" style={{ display: "flex", gap: "8px", flexWrap: "wrap", margin: "14px 0 16px" }}>
             <span className="label" style={{ padding: "4px 8px", border: "1px solid var(--line)", background: "var(--panel)" }}>
-              6 Lifecycle Stages (T-24H → T-00)
+              6 Lifecycle Stages (T-30H → T-00)
             </span>
             <span className="label" style={{ padding: "4px 8px", border: "1px solid var(--line)", background: "var(--panel)" }}>
               8 Policy Gates Mandatory

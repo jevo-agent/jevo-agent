@@ -188,11 +188,11 @@ const protocolFixture = {
   launch: {
     cycleId: "LC-204", selectedPairingSlug: "nvda-gpu", stage: "PAIRING_VALIDATION", countdownSeconds: 85268, readiness: "READY",
     stages: [
-      { id: "CANDIDATE_SELECTED", scheduledPoint: "T-24H", status: "COMPLETE", description: "Opportunity and pair thesis were locked for launch review.", requirement: "Candidate selection is recorded in the active launch cycle." },
-      { id: "NARRATIVE_VALIDATION", scheduledPoint: "T-18H", status: "COMPLETE", description: "Narrative pressure and the why-now context remained above the launch threshold.", requirement: "The selected narrative must remain valid before pair validation." },
-      { id: "PAIRING_VALIDATION", scheduledPoint: "T-12H", status: "ACTIVE", description: "Pairing score, metadata, Stock Token identity, and policy constraints are being validated.", requirement: "Complete pair and policy validation before contract preparation." },
-      { id: "CONTRACT_PREPARATION", scheduledPoint: "T-06H", status: "PENDING", description: "Approved launch parameters will be assembled for the Launch Executor and Pons adapter.", requirement: "Use only the approved metadata and policy-bounded execution payload." },
-      { id: "FINAL_POLICY_CHECK", scheduledPoint: "T-01H", status: "PENDING", description: "Permissions, transaction simulation, launch limits, and guardian requirements will be reviewed.", requirement: "All policy checks and guardian approval must be complete before execution." },
+      { id: "CANDIDATE_SELECTED", scheduledPoint: "T-30H", status: "COMPLETE", description: "Opportunity and pair thesis were locked for launch review.", requirement: "Candidate selection is recorded in the active launch cycle." },
+      { id: "NARRATIVE_VALIDATION", scheduledPoint: "T-22H30", status: "COMPLETE", description: "Narrative pressure and the why-now context remained above the launch threshold.", requirement: "The selected narrative must remain valid before pair validation." },
+      { id: "PAIRING_VALIDATION", scheduledPoint: "T-15H", status: "ACTIVE", description: "Pairing score, metadata, Stock Token identity, and policy constraints are being validated.", requirement: "Complete pair and policy validation before contract preparation." },
+      { id: "CONTRACT_PREPARATION", scheduledPoint: "T-07H30", status: "PENDING", description: "Approved launch parameters will be assembled for the Launch Executor and Pons adapter.", requirement: "Use only the approved metadata and policy-bounded execution payload." },
+      { id: "FINAL_POLICY_CHECK", scheduledPoint: "T-01H15", status: "PENDING", description: "Permissions, transaction simulation, launch limits, and guardian approval verified.", requirement: "All policy checks and guardian approval must be complete before execution." },
       { id: "CONTROLLED_EXECUTION", scheduledPoint: "T-00", status: "PENDING", description: "The approved action may be submitted through the restricted Launch Executor.", requirement: "A backend-driven approval and execution event is required; no automatic transition occurs." },
     ],
     policyChecks: [
