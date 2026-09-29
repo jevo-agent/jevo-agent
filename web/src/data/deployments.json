@@ -1,6 +1,16 @@
 {
   "deployments": [
     {
+      "network": "mainnet",
+      "chainId": 4663,
+      "name": "JevoPairingRegistry",
+      "address": "0xeBfcBF9675F045095883A199ca4a40D59E873e4d",
+      "txHash": "0x7b98cdb6579cf58e413259a956253d3286bdb057796b937e2f6fd2ba0cae624c",
+      "deployer": "0x90200277AD2DB4Bb7E6fa5D94d0F8198F760219E",
+      "deployedAt": "2026-09-29T18:07:06Z",
+      "note": "Records operator-approved pairings. Owner-only, does not hold funds. Blockscout verified."
+    },
+    {
       "network": "testnet",
       "chainId": 46630,
       "name": "JevoPairingRegistry",
