@@ -64,7 +64,7 @@ export function HeaderSocialLinks() {
 
 export function SidebarSocialLinks() {
   return (
-    <div className="side-socials" data-social-group="sidebar">
+    <div className="hidden! side-socials" data-social-group="sidebar">
       <a
         href={SOCIAL_LINKS.x.url}
         target="_blank"
@@ -75,7 +75,6 @@ export function SidebarSocialLinks() {
         title="JEVO on X (Twitter)"
       >
         <XSocialIcon />
-        <span>X</span>
         <span className="side-social-arrow" aria-hidden="true">
           ↗
         </span>
@@ -90,7 +89,6 @@ export function SidebarSocialLinks() {
         title="JEVO on GitHub"
       >
         <GitHubSocialIcon />
-        <span>GITHUB</span>
         <span className="side-social-arrow" aria-hidden="true">
           ↗
         </span>
