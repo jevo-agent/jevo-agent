@@ -40,13 +40,13 @@ events and structured evidence, never hidden model chain-of-thought.
 
 ## What it is — and is not
 
-| JEVO Agent is | JEVO Agent is not |
-| --- | --- |
-| An autonomous market intelligence and ranking system | A chatbot or conversational assistant |
-| A JEV-powered structured decision interface | A stock-picking or return-prediction service |
-| A research surface for stock-token and meme-market opportunities | Financial, investment, or trading advice |
-| A stateful agent with memory, events, pairings, and launch controls | An unrestricted autonomous trader |
-| Testnet-aware infrastructure for a future launch lifecycle | A guarantee that any pairing or launch will succeed |
+| JEVO Agent is                                                       | JEVO Agent is not                                   |
+| ------------------------------------------------------------------- | --------------------------------------------------- |
+| An autonomous market intelligence and ranking system                | A chatbot or conversational assistant               |
+| A JEV-powered structured decision interface                         | A stock-picking or return-prediction service        |
+| A research surface for stock-token and meme-market opportunities    | Financial, investment, or trading advice            |
+| A stateful agent with memory, events, pairings, and launch controls | An unrestricted autonomous trader                   |
+| Testnet-aware infrastructure for a future launch lifecycle          | A guarantee that any pairing or launch will succeed |
 
 ## Core agent flow
 
@@ -102,20 +102,43 @@ that state through the API and receives invalidation events through SSE. The
 shared `@jevo/protocol-types` package keeps API envelopes, records, and event
 shapes aligned across the two applications.
 
+## Vercel deployment
+
+JEVO Agent is deployed through project at [www.jevoagent.tech](https://www.jevoagent.tech/).
+
+The repository's `vercel.json` defines two services in one deployment:
+
+- **web** — the Next.js application rooted at `web/`;
+- **api** — the Fastify worker/API rooted at `worker/`.
+
+The deployment rewrites `/api/v1/*` and `/api/cron/*` to the API service and
+routes the remaining application paths to the web service. Queue triggers for
+agent cycles and launch progression are kept in the web service configuration.
+
+Vercel Cron registrations are intentionally absent from the current Hobby
+configuration. The worker cron handlers, `CRON_SECRET` authentication,
+internal job routes, queue implementation, and manual/admin trigger remain
+available so a Pro schedule can be restored without redesigning the agent
+cycle.
+
+Production credentials belong in Vercel/server-side environment settings only.
+Never expose database, Redis, provider, queue, admin, or JEV credentials through
+`NEXT_PUBLIC_*` variables.
+
 ## Providers and data sources
 
 Provider selection is explicit. Development examples default to deterministic
 mock providers; production requires each granular mode to be configured rather
 than silently inheriting a default.
 
-| Signal or subsystem | Real adapter | Mock adapter / current fallback | Configuration |
-| --- | --- | --- | --- |
-| Market data | Alpha Vantage `GLOBAL_QUOTE` | `MockMarketDataProvider` | `MARKET_DATA_MODE` |
-| Narrative/news | Alpha Vantage `NEWS_SENTIMENT` | `MockNarrativeProvider` | `NARRATIVE_MODE` |
-| Social velocity | Not yet a production provider | `MockSocialProvider` | Explicitly mock in the current implementation |
-| Stock-token state | Robinhood Chain RPC with DexPaprika metadata | `MockStockTokenProvider` | `STOCK_TOKEN_MODE` |
-| JEV decisions | Vercel AI Gateway / TypeSafe `jev` adapter | `MockJevProvider` | `JEV_MODE` |
-| Pairing and launch state | Worker decision and lifecycle services backed by PostgreSQL | No silent UI-only substitute in production mode | Worker/API state |
+| Signal or subsystem      | Real adapter                                                | Mock adapter / current fallback                 | Configuration                                 |
+| ------------------------ | ----------------------------------------------------------- | ----------------------------------------------- | --------------------------------------------- |
+| Market data              | Alpha Vantage `GLOBAL_QUOTE`                                | `MockMarketDataProvider`                        | `MARKET_DATA_MODE`                            |
+| Narrative/news           | Alpha Vantage `NEWS_SENTIMENT`                              | `MockNarrativeProvider`                         | `NARRATIVE_MODE`                              |
+| Social velocity          | Not yet a production provider                               | `MockSocialProvider`                            | Explicitly mock in the current implementation |
+| Stock-token state        | Robinhood Chain RPC with DexPaprika metadata                | `MockStockTokenProvider`                        | `STOCK_TOKEN_MODE`                            |
+| JEV decisions            | Vercel AI Gateway / TypeSafe `jev` adapter                  | `MockJevProvider`                               | `JEV_MODE`                                    |
+| Pairing and launch state | Worker decision and lifecycle services backed by PostgreSQL | No silent UI-only substitute in production mode | Worker/API state                              |
 
 When `JEV_MODE=real`, the JEV credential is server-side only. The frontend
 never receives `AI_GATEWAY_API_KEY`, `JEV_API_KEY`, or provider request
@@ -134,10 +157,16 @@ operator-attested registry for approved stock × meme pairings.
 - Testnet faucet: `https://faucet.testnet.chain.robinhood.com`
 - Robinhood Chain mainnet chain ID: `4663`
 
+The current testnet deployment record is:
+
+| Contract              | Network                           | Address                                                                                                                                         | Transaction                                                                                                                                                                                |
+| --------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `JevoPairingRegistry` | Robinhood Chain testnet (`46630`) | [`0x90278dFC0F8cFdbb4d4a013f90f60964D54b87f4`](https://explorer.testnet.chain.robinhood.com/address/0x90278dFC0F8cFdbb4d4a013f90f60964D54b87f4) | [`0xadeea5a4b164000f1be3d39b1de1fb26de6e50850a006d7dd45b8c2e6ccc9a64`](https://explorer.testnet.chain.robinhood.com/tx/0xadeea5a4b164000f1be3d39b1de1fb26de6e50850a006d7dd45b8c2e6ccc9a64) |
+
 The registry does not hold funds, transfer tokens, execute launches, or prove
-the off-chain approval process. The deployment ledger is intentionally pending
-until a deployment is recorded in `contracts/DEPLOYMENTS.md`. Never place
-private keys or RPC credentials in source files or committed environment files.
+the off-chain approval process. Verify addresses and transactions on the
+explorer before relying on them. Never place private keys or RPC credentials in
+source files or committed environment files.
 
 ## Repository structure
 
@@ -338,13 +367,13 @@ bun src/mcp/server.ts
 
 Available tools:
 
-| Tool | Purpose |
-| --- | --- |
-| `get_stock_state` | Retrieve canonical stock state, rank, and JEV evaluation |
-| `rank_stocks` | Retrieve the latest ranked opportunities, with sorting and decision filters |
-| `get_pairing_candidates` | Retrieve operator-evaluated stock × meme pairing candidates |
-| `get_jevo_decision` | Retrieve a structured JEV decision and factor breakdown |
-| `get_agent_activity` | Retrieve memory and observable state-transition activity |
+| Tool                     | Purpose                                                                     |
+| ------------------------ | --------------------------------------------------------------------------- |
+| `get_stock_state`        | Retrieve canonical stock state, rank, and JEV evaluation                    |
+| `rank_stocks`            | Retrieve the latest ranked opportunities, with sorting and decision filters |
+| `get_pairing_candidates` | Retrieve operator-evaluated stock × meme pairing candidates                 |
+| `get_jevo_decision`      | Retrieve a structured JEV decision and factor breakdown                     |
+| `get_agent_activity`     | Retrieve memory and observable state-transition activity                    |
 
 The MCP surface is intentionally evidence-oriented. It does not expose hidden
 model reasoning or provide trading instructions.
