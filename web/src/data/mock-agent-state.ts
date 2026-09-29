@@ -186,7 +186,7 @@ const protocolFixture = {
     },
   ],
   launch: {
-    cycleId: "LC-204", selectedPairingSlug: "nvda-gpu", stage: "PAIRING_VALIDATION", countdownSeconds: 85268, readiness: "READY",
+    cycleId: "LC-204", selectedPairingSlug: "nvda-gpu", stage: "PAIRING_VALIDATION", countdownSeconds: 108000, readiness: "READY",
     stages: [
       { id: "CANDIDATE_SELECTED", scheduledPoint: "T-30H", status: "COMPLETE", description: "Opportunity and pair thesis were locked for launch review.", requirement: "Candidate selection is recorded in the active launch cycle." },
       { id: "NARRATIVE_VALIDATION", scheduledPoint: "T-22H30", status: "COMPLETE", description: "Narrative pressure and the why-now context remained above the launch threshold.", requirement: "The selected narrative must remain valid before pair validation." },
