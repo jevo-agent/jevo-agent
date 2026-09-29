@@ -102,6 +102,13 @@ export const PLANNED_CONTRACTS: readonly PlannedContract[] = [
     sourceDoc: "BRIEF.md §23",
     status: "PLANNED · NOT DEPLOYED",
   },
+  {
+    name: "Policy Gate Registry",
+    purpose:
+      "On-chain registry for the pre-launch policy gate checks (permissions, simulations, launch limits, guardian approval) verified before Controlled Execution. Not yet deployed.",
+    sourceDoc: "BRIEF.md §23, LaunchPipeline",
+    status: "PLANNED · NOT DEPLOYED",
+  },
 ] as const;
 
 export function validateDeployment(raw: unknown): ValidatedDeployment | null {
