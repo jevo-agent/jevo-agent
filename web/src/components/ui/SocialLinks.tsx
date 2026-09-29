@@ -15,12 +15,7 @@ export const SOCIAL_LINKS = {
 
 export function XSocialIcon(props: ComponentPropsWithoutRef<"svg">) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-      fill="currentColor"
-      {...props}
-    >
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor" {...props}>
       <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
     </svg>
   );
@@ -28,12 +23,7 @@ export function XSocialIcon(props: ComponentPropsWithoutRef<"svg">) {
 
 export function GitHubSocialIcon(props: ComponentPropsWithoutRef<"svg">) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-      fill="currentColor"
-      {...props}
-    >
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor" {...props}>
       <path
         fillRule="evenodd"
         clipRule="evenodd"
@@ -45,7 +35,7 @@ export function GitHubSocialIcon(props: ComponentPropsWithoutRef<"svg">) {
 
 export function HeaderSocialLinks() {
   return (
-    <div className="header-socials" data-social-group="header">
+    <div className="hidden! header-socials" data-social-group="header">
       <a
         href={SOCIAL_LINKS.x.url}
         target="_blank"
@@ -86,7 +76,9 @@ export function SidebarSocialLinks() {
       >
         <XSocialIcon />
         <span>X</span>
-        <span className="side-social-arrow" aria-hidden="true">↗</span>
+        <span className="side-social-arrow" aria-hidden="true">
+          ↗
+        </span>
       </a>
       <a
         href={SOCIAL_LINKS.github.url}
@@ -99,7 +91,9 @@ export function SidebarSocialLinks() {
       >
         <GitHubSocialIcon />
         <span>GITHUB</span>
-        <span className="side-social-arrow" aria-hidden="true">↗</span>
+        <span className="side-social-arrow" aria-hidden="true">
+          ↗
+        </span>
       </a>
     </div>
   );
