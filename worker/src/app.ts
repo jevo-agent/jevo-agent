@@ -14,7 +14,9 @@ const app = await createServer();
 // Vercel's Fastify runtime expects the function listener on port 3000. Keep
 // the local worker's configured port for non-Vercel execution.
 const listenPort = isVercelRuntime() ? 3000 : env.PORT;
-await app.listen({ port: listenPort, host: env.HOST });
+// Vercel captures the underlying http.Server during module evaluation and
+// starts it on its own proxy port. Do not await this intercepted call.
+void app.listen({ port: listenPort, host: env.HOST });
 logger.info({ port: listenPort }, "JEVO stateless API service listening");
 
 export default app;
