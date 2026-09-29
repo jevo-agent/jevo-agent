@@ -202,7 +202,7 @@ export function getDeploymentsByNetwork(
 export function getDeploymentSummary(deployments?: ValidatedDeployment[]): string {
   const list = deployments ?? getValidatedDeployments();
   const jevoCount = list.length;
-  return `${jevoCount} JEVO · ${MONITORED_COUNT} MONITORED`;
+  return `${jevoCount} JEVO · ${MONITORED_COUNT}\u00A0MONITORED`;
 }
 
 export function getExplorerAddressUrl(network: NetworkType, address: string): string {

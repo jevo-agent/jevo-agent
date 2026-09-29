@@ -372,8 +372,7 @@ export function ContractsView() {
             aria-controls="panel-deployed"
             onClick={() => setActiveTab("deployed")}
           >
-            JEVO DEPLOYED
-            <span className="tab-count">{deployments.length}</span>
+            JEVO DEPLOYED <span className="tab-count">({deployments.length})</span>
           </button>
           <button
             type="button"
@@ -384,8 +383,7 @@ export function ContractsView() {
             aria-controls="panel-monitored"
             onClick={() => setActiveTab("monitored")}
           >
-            MONITORED STOCK TOKENS
-            <span className="tab-count">{monitored.length}</span>
+            MONITORED STOCK TOKENS <span className="tab-count">({monitored.length})</span>
           </button>
           <button
             type="button"
@@ -396,8 +394,7 @@ export function ContractsView() {
             aria-controls="panel-planned"
             onClick={() => setActiveTab("planned")}
           >
-            PLANNED
-            <span className="tab-count">{plannedCount}</span>
+            PLANNED <span className="tab-count">({plannedCount})</span>
           </button>
         </div>
 

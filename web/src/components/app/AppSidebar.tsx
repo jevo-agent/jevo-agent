@@ -170,7 +170,7 @@ export function AppSidebar({ agent, activeSection: activeSectionProp }: AppSideb
             <div className="row">
               <span className="label">Contracts</span>
               <Link href="/contracts" className="side-net-link" aria-label="View registered contracts">
-                <b>{getDeploymentSummary()}</b> ↗
+                <b>{getDeploymentSummary()}</b>&nbsp;↗
               </Link>
             </div>
           </div>
