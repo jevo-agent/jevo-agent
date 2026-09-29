@@ -8776,3 +8776,100 @@ a, button { touch-action: manipulation; }
 .tabs button[aria-selected="true"] .tab-count {
   color: var(--accent);
 }
+
+/* Social links (Landing Header & App Sidebar) */
+.header-socials {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.header-social-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  color: var(--muted);
+  background: transparent;
+  text-decoration: none;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.header-social-link:hover {
+  color: var(--text);
+  border-color: var(--line-strong);
+  background: rgb(220 235 215 / 5%);
+}
+
+.header-social-link svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.side-socials {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.side-social-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 0 8px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.side-social-link:hover {
+  border-color: var(--line-strong);
+  color: var(--text);
+  background: rgb(220 235 215 / 4%);
+}
+
+.side-social-link svg {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  fill: currentColor;
+}
+
+.side-social-link .side-social-arrow {
+  color: var(--dim);
+  font-size: 10px;
+  transition: color 0.15s;
+}
+
+.side-social-link:hover .side-social-arrow {
+  color: var(--accent);
+}
+
+.app-drawer-footer {
+  margin-top: auto;
+  border-top: 1px solid var(--line);
+  padding: 14px;
+}
+
+@media (max-width: 640px) {
+  .header-socials {
+    gap: 4px;
+  }
+  .header-social-link {
+    width: 30px;
+    height: 30px;
+  }
+}
+

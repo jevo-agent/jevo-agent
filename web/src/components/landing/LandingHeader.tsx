@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { HeaderSocialLinks } from "@/components/ui/SocialLinks";
 
 interface LandingHeaderProps {
   currentSection?: "landing" | "jev" | string;
@@ -41,6 +42,7 @@ export function LandingHeader({ currentSection }: LandingHeaderProps) {
           <Link href="/contracts">CONTRACTS</Link>
         </nav>
         <div className="header-actions">
+          <HeaderSocialLinks />
           <span className="label">
             <span className="on">●</span> Jev <b>active</b>
           </span>

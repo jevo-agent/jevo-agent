@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import type { AgentRuntime } from "@/types/agent";
 import { formatCycle } from "@/lib/format";
 import { getDeploymentSummary } from "@/lib/deployments";
+import { SidebarSocialLinks } from "@/components/ui/SocialLinks";
 
 interface AppSidebarProps { agent: AgentRuntime; activeSection?: string; }
 
@@ -153,6 +154,7 @@ export function AppSidebar({ agent, activeSection: activeSectionProp }: AppSideb
           {navLinks}
         </nav>
         <div className="ref-sidebar-bottom">
+          <SidebarSocialLinks />
           <div className="side-net">
             <span className="label">Network context</span>
             <div className="row">
@@ -219,6 +221,9 @@ export function AppSidebar({ agent, activeSection: activeSectionProp }: AppSideb
             <nav className="side-nav app-drawer-nav" aria-label="Mobile app sections">
               {navLinks}
             </nav>
+            <div className="app-drawer-footer">
+              <SidebarSocialLinks />
+            </div>
           </aside>
         </>
       ) : null}
