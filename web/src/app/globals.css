@@ -8092,7 +8092,7 @@ a, button { touch-action: manipulation; }
 
 .cview-head {
   display: grid;
-  grid-template-columns: 24px 1fr minmax(200px, 2fr) 110px 140px;
+  grid-template-columns: 24px 1fr minmax(200px, 2fr) 68px 140px;
   gap: 12px;
   padding: 8px 16px;
   background: rgba(255, 255, 255, 0.025);
@@ -8107,7 +8107,7 @@ a, button { touch-action: manipulation; }
 
 .cview-row {
   display: grid;
-  grid-template-columns: 24px 1fr minmax(200px, 2fr) 110px 140px;
+  grid-template-columns: 24px 1fr minmax(200px, 2fr) 68px 140px;
   gap: 12px;
   padding: 10px 16px;
   min-height: 58px;
@@ -8217,23 +8217,24 @@ a, button { touch-action: manipulation; }
 }
 
 .cview-copy-btn {
+  display: grid;
+  place-items: center;
+  width: 28px;
   height: 28px;
-  padding: 0 10px;
+  padding: 0;
   border: 1px solid var(--line);
   border-radius: 2px;
   background: transparent;
   color: var(--muted);
-  font-family: var(--mono);
-  font-size: 10.5px;
-  letter-spacing: 0.04em;
   cursor: pointer;
-  transition: border-color 0.12s, color 0.12s;
-  white-space: nowrap;
+  transition: border-color 0.12s, color 0.12s, background-color 0.12s;
+  flex: none;
 }
 
 .cview-copy-btn:hover {
   border-color: var(--line-strong);
   color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .cview-copy-btn:focus-visible {
@@ -8244,6 +8245,7 @@ a, button { touch-action: manipulation; }
 .cview-copy-btn.is-copied {
   border-color: var(--accent);
   color: var(--accent);
+  background: rgb(2 198 165 / 10%);
 }
 
 .cview-explorer-btn {
@@ -8251,18 +8253,21 @@ a, button { touch-action: manipulation; }
   place-items: center;
   width: 28px;
   height: 28px;
+  padding: 0;
   border: 1px solid var(--line);
   border-radius: 2px;
+  background: transparent;
   color: var(--muted);
-  font-size: 13px;
-  transition: border-color 0.12s, color 0.12s;
+  transition: border-color 0.12s, color 0.12s, background-color 0.12s;
   cursor: pointer;
   text-decoration: none;
+  flex: none;
 }
 
 .cview-explorer-btn:hover {
   border-color: var(--accent);
   color: var(--accent);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .cview-explorer-btn:focus-visible {
@@ -8459,7 +8464,7 @@ a, button { touch-action: manipulation; }
 @media (max-width: 1023px) {
   .cview-head,
   .cview-row {
-    grid-template-columns: 24px 1fr 90px 100px;
+    grid-template-columns: 24px 1fr 68px 100px;
   }
   /* Hide address column header label on medium */
   .cview-head .cview-addr-col {
@@ -8515,8 +8520,8 @@ a, button { touch-action: manipulation; }
 
 @media (max-width: 480px) {
   .cview-actions-col {
-    flex-direction: column;
-    gap: 4px;
+    flex-direction: row;
+    gap: 6px;
   }
 }
 
