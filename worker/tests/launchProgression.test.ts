@@ -80,7 +80,7 @@ describe("Launch Stage Auto-Progression (Job & Transitions)", () => {
     id?: string;
     scheduledAt: Date;
     readiness?: "PREPARING" | "READY" | "PAUSED";
-    completedStages?: string[]; // e.g. ["T-24H"]
+    completedStages?: string[]; // e.g. ["T-30H"]
     checksPassed?: number;
     checksTotal?: number;
     transactionStatus?: "NOT_SUBMITTED";
@@ -88,7 +88,7 @@ describe("Launch Stage Auto-Progression (Job & Transitions)", () => {
     const launchId = options.id || `LC-TEST-${randomUUID().slice(0, 8).toUpperCase()}`;
     const pairingId = `pc-launch-${randomUUID().slice(0, 8)}`;
     const readiness = options.readiness || "PREPARING";
-    const completedStages = new Set(options.completedStages || ["T-24H"]);
+    const completedStages = new Set(options.completedStages || ["T-30H"]);
     const checksPassed = options.checksPassed ?? 0;
     const checksTotal = options.checksTotal ?? 8;
     const transactionStatus = options.transactionStatus || "NOT_SUBMITTED";
@@ -126,7 +126,7 @@ describe("Launch Stage Auto-Progression (Job & Transitions)", () => {
       readiness,
       checksPassed,
       checksTotal,
-      stageDeadlineAt: new Date(options.scheduledAt.getTime() + 6 * 60 * 60 * 1000),
+      stageDeadlineAt: new Date(options.scheduledAt.getTime() + 7.5 * 60 * 60 * 1000),
       transactionStatus,
     });
 
@@ -146,28 +146,28 @@ describe("Launch Stage Auto-Progression (Job & Transitions)", () => {
   }
 
   it("seeds launch with overdue deadline, asserts stage flips COMPLETE and emits LAUNCH_STAGE_ADVANCED", async () => {
-    // S was 7 hours ago -> T-18H (+6h) deadline has passed, T-12H (+12h) has not
+    // S was 8 hours ago -> T-22H30 (+7.5h) deadline has passed, T-15H (+15h) has not
     const now = new Date();
-    const scheduledAt = new Date(now.getTime() - 7 * 60 * 60 * 1000);
+    const scheduledAt = new Date(now.getTime() - 8 * 60 * 60 * 1000);
     const launchId = await seedTestLaunch({
       scheduledAt,
-      completedStages: ["T-24H"],
+      completedStages: ["T-30H"],
     });
 
     const results = await advanceDueLaunchStages(now);
 
     const match = results.find((r) => r.launchCandidateId === launchId);
     expect(match).toBeDefined();
-    expect(match?.stageLabel).toBe("T-18H");
+    expect(match?.stageLabel).toBe("T-22H30");
     expect(match?.newStage).toBe("NARRATIVE_VALIDATION");
 
     // Check DB cycle row
-    const [t18Row] = await db
+    const [t22Row] = await db
       .select()
       .from(launchCycles)
-      .where(and(eq(launchCycles.launchCandidateId, launchId), eq(launchCycles.stageLabel, "T-18H")));
-    expect(t18Row.status).toBe("COMPLETE");
-    expect(t18Row.completedAt).not.toBeNull();
+      .where(and(eq(launchCycles.launchCandidateId, launchId), eq(launchCycles.stageLabel, "T-22H30")));
+    expect(t22Row.status).toBe("COMPLETE");
+    expect(t22Row.completedAt).not.toBeNull();
 
     // Check DB candidate row
     const [candidate] = await db
@@ -175,7 +175,7 @@ describe("Launch Stage Auto-Progression (Job & Transitions)", () => {
       .from(launchCandidates)
       .where(eq(launchCandidates.id, launchId));
     expect(candidate.stage).toBe("NARRATIVE_VALIDATION");
-    // T-18H is milestone only, checksPassed remains untouched at 0
+    // T-22H30 is milestone only, checksPassed remains untouched at 0
     expect(candidate.checksPassed).toBe(0);
 
     // Verify protocol event LAUNCH_STAGE_ADVANCED
@@ -185,17 +185,17 @@ describe("Launch Stage Auto-Progression (Job & Transitions)", () => {
       .where(and(eq(protocolEvents.subjectId, launchId), eq(protocolEvents.eventType, "LAUNCH_STAGE_ADVANCED")));
     expect(events.length).toBeGreaterThanOrEqual(1);
     const eventPayload = events[events.length - 1].payload as Record<string, unknown>;
-    expect(eventPayload.stageLabel).toBe("T-18H");
+    expect(eventPayload.stageLabel).toBe("T-22H30");
     expect(eventPayload.newStage).toBe("NARRATIVE_VALIDATION");
   });
 
-  it("asserts transition to T-01H sets checksPassed = checksTotal (8/8)", async () => {
-    // S was 23.5 hours ago -> T-01H (+23h) has passed, T-00 (+24h) has not
+  it("asserts transition to T-01H15 sets checksPassed = checksTotal (8/8)", async () => {
+    // S was 29 hours ago -> T-01H15 (+28.75h) has passed, T-00 (+30h) has not
     const now = new Date();
-    const scheduledAt = new Date(now.getTime() - 23.5 * 60 * 60 * 1000);
+    const scheduledAt = new Date(now.getTime() - 29 * 60 * 60 * 1000);
     const launchId = await seedTestLaunch({
       scheduledAt,
-      completedStages: ["T-24H", "T-18H", "T-12H", "T-06H"],
+      completedStages: ["T-30H", "T-22H30", "T-15H", "T-07H30"],
       checksPassed: 0,
       checksTotal: 8,
     });
@@ -203,7 +203,7 @@ describe("Launch Stage Auto-Progression (Job & Transitions)", () => {
     const results = await advanceDueLaunchStages(now);
 
     const match = results.find(
-      (r) => r.launchCandidateId === launchId && r.stageLabel === "T-01H",
+      (r) => r.launchCandidateId === launchId && r.stageLabel === "T-01H15",
     );
     expect(match).toBeDefined();
     expect(match?.newStage).toBe("FINAL_POLICY_CHECK");
@@ -219,12 +219,12 @@ describe("Launch Stage Auto-Progression (Job & Transitions)", () => {
   });
 
   it("asserts transition to T-00 sets readiness='READY' while transactionStatus STRICTLY remains 'NOT_SUBMITTED'", async () => {
-    // S was 24.5 hours ago -> T-00 (+24h) has passed
+    // S was 30.5 hours ago -> T-00 (+30h) has passed
     const now = new Date();
-    const scheduledAt = new Date(now.getTime() - 24.5 * 60 * 60 * 1000);
+    const scheduledAt = new Date(now.getTime() - 30.5 * 60 * 60 * 1000);
     const launchId = await seedTestLaunch({
       scheduledAt,
-      completedStages: ["T-24H", "T-18H", "T-12H", "T-06H", "T-01H"],
+      completedStages: ["T-30H", "T-22H30", "T-15H", "T-07H30", "T-01H15"],
       checksPassed: 8,
       checksTotal: 8,
       readiness: "PREPARING",
@@ -265,7 +265,7 @@ describe("Launch Stage Auto-Progression (Job & Transitions)", () => {
     const launchId = await seedTestLaunch({
       scheduledAt,
       readiness: "PAUSED",
-      completedStages: ["T-24H"],
+      completedStages: ["T-30H"],
     });
 
     const results = await advanceDueLaunchStages(now);
@@ -281,7 +281,7 @@ describe("Launch Stage Auto-Progression (Job & Transitions)", () => {
       .where(eq(launchCycles.launchCandidateId, launchId));
 
     const pendingStages = stages.filter((s) => s.status === "PENDING");
-    expect(pendingStages.length).toBe(5); // T-18H, T-12H, T-06H, T-01H, T-00 all still PENDING
+    expect(pendingStages.length).toBe(5); // T-22H30, T-15H, T-07H30, T-01H15, T-00 all still PENDING
 
     const [candidate] = await db
       .select()
@@ -292,19 +292,19 @@ describe("Launch Stage Auto-Progression (Job & Transitions)", () => {
   });
 
   it("runs job twice in succession, asserting stage does not advance twice or duplicate events", async () => {
-    // S was 7 hours ago -> only T-18H is overdue
+    // S was 8 hours ago -> only T-22H30 is overdue
     const now = new Date();
-    const scheduledAt = new Date(now.getTime() - 7 * 60 * 60 * 1000);
+    const scheduledAt = new Date(now.getTime() - 8 * 60 * 60 * 1000);
     const launchId = await seedTestLaunch({
       scheduledAt,
-      completedStages: ["T-24H"],
+      completedStages: ["T-30H"],
     });
 
     // 1st run
     const firstRunResults = await advanceDueLaunchStages(now);
     const firstMatch = firstRunResults.filter((r) => r.launchCandidateId === launchId);
     expect(firstMatch.length).toBe(1);
-    expect(firstMatch[0].stageLabel).toBe("T-18H");
+    expect(firstMatch[0].stageLabel).toBe("T-22H30");
 
     // Count events after 1st run
     const eventsAfterFirstRun = await db
@@ -328,12 +328,12 @@ describe("Launch Stage Auto-Progression (Job & Transitions)", () => {
   });
 
   it("advances multiple overdue checkpoints one-by-one in strict sequential order", async () => {
-    // S was 19 hours ago -> T-18H (+6h), T-12H (+12h), T-06H (+18h) are all overdue, T-01H (+23h) is NOT
+    // S was 24 hours ago -> T-22H30 (+7.5h), T-15H (+15h), T-07H30 (+22.5h) are all overdue, T-01H15 (+28.75h) is NOT
     const now = new Date();
-    const scheduledAt = new Date(now.getTime() - 19 * 60 * 60 * 1000);
+    const scheduledAt = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const launchId = await seedTestLaunch({
       scheduledAt,
-      completedStages: ["T-24H"],
+      completedStages: ["T-30H"],
     });
 
     const results = await advanceDueLaunchStages(now);
@@ -341,9 +341,9 @@ describe("Launch Stage Auto-Progression (Job & Transitions)", () => {
 
     // Exactly 3 stages advanced
     expect(candidateResults.length).toBe(3);
-    expect(candidateResults[0].stageLabel).toBe("T-18H");
-    expect(candidateResults[1].stageLabel).toBe("T-12H");
-    expect(candidateResults[2].stageLabel).toBe("T-06H");
+    expect(candidateResults[0].stageLabel).toBe("T-22H30");
+    expect(candidateResults[1].stageLabel).toBe("T-15H");
+    expect(candidateResults[2].stageLabel).toBe("T-07H30");
 
     // Candidate ends up at CONTRACT_PREPARATION
     const [candidate] = await db
@@ -356,7 +356,7 @@ describe("Launch Stage Auto-Progression (Job & Transitions)", () => {
     const [t01Row] = await db
       .select()
       .from(launchCycles)
-      .where(and(eq(launchCycles.launchCandidateId, launchId), eq(launchCycles.stageLabel, "T-01H")));
+      .where(and(eq(launchCycles.launchCandidateId, launchId), eq(launchCycles.stageLabel, "T-01H15")));
     expect(t01Row.status).toBe("PENDING");
   });
 });

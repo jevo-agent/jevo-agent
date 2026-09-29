@@ -18,27 +18,27 @@ const scheduleLaunchBodySchema = z.object({
 
 export const LAUNCH_CHECKLIST_STAGES = [
   {
-    stageLabel: "T-24H",
+    stageLabel: "T-30H",
     description: "Opportunity and pair thesis were locked for launch review.",
     status: "COMPLETE" as const,
   },
   {
-    stageLabel: "T-18H",
+    stageLabel: "T-22H30",
     description: "Narrative pressure and the why-now context remained above the launch threshold.",
     status: "PENDING" as const,
   },
   {
-    stageLabel: "T-12H",
+    stageLabel: "T-15H",
     description: "Pairing score, metadata, Stock Token identity, and policy constraints are being validated.",
     status: "PENDING" as const,
   },
   {
-    stageLabel: "T-06H",
+    stageLabel: "T-07H30",
     description: "Approved launch parameters will be assembled for the Launch Executor and Pons adapter.",
     status: "PENDING" as const,
   },
   {
-    stageLabel: "T-01H",
+    stageLabel: "T-01H15",
     description: "Permissions, transaction simulation, launch limits, and guardian requirements will be reviewed.",
     status: "PENDING" as const,
   },
@@ -109,7 +109,7 @@ export const adminLaunchRoutes: FastifyPluginAsync = async (fastify) => {
 
     const launchId = `LC-${randomUUID().slice(0, 6).toUpperCase()}`;
     const now = new Date();
-    const stageDeadlineAt = new Date(now.getTime() + 6 * 60 * 60 * 1000); // T-18H checkpoint: +6 hours
+    const stageDeadlineAt = new Date(now.getTime() + 7.5 * 60 * 60 * 1000); // T-22H30 checkpoint: +7.5 hours
 
     // 1. Insert 1 row into launch_candidates
     await db.insert(launchCandidates).values({
@@ -123,7 +123,7 @@ export const adminLaunchRoutes: FastifyPluginAsync = async (fastify) => {
       transactionStatus: "NOT_SUBMITTED",
     });
 
-    // 2. Insert 6 rows into launch_cycles (T-24H COMPLETE, rest PENDING)
+    // 2. Insert 6 rows into launch_cycles (T-30H COMPLETE, rest PENDING)
     await db.insert(launchCycles).values(
       LAUNCH_CHECKLIST_STAGES.map((s, idx) => ({
         id: `lc-stage-${launchId}-${idx + 1}`,

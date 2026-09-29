@@ -522,11 +522,11 @@ describe("Admin API (BACKEND 10)", () => {
         .where(eq(launchCycles.launchCandidateId, scheduledLaunchId));
       expect(stages.length).toBe(6);
 
-      const t24 = stages.find((s) => s.stageLabel === "T-24H");
-      expect(t24?.status).toBe("COMPLETE");
-      expect(t24?.completedAt).not.toBeNull();
+      const t30 = stages.find((s) => s.stageLabel === "T-30H");
+      expect(t30?.status).toBe("COMPLETE");
+      expect(t30?.completedAt).not.toBeNull();
 
-      const pendingStages = stages.filter((s) => s.stageLabel !== "T-24H");
+      const pendingStages = stages.filter((s) => s.stageLabel !== "T-30H");
       expect(pendingStages.length).toBe(5);
       for (const p of pendingStages) {
         expect(p.status).toBe("PENDING");

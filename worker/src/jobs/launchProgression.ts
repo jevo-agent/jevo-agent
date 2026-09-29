@@ -12,21 +12,21 @@ export const LAUNCH_PROGRESSION_QUEUE_NAME = "launch-progression";
 
 /**
  * 6-stage lifecycle configuration with timing offsets relative to scheduling time S.
- * Timing per specification:
- *   T-24H = S (completed during initial scheduling)
- *   T-18H = S + 6 hours
- *   T-12H = S + 12 hours
- *   T-06H = S + 18 hours
- *   T-01H = S + 23 hours
- *   T-00  = S + 24 hours
+ * Timing per specification (30-hour lifecycle):
+ *   T-30H   = S (completed during initial scheduling)
+ *   T-22H30 = S + 7.5 hours
+ *   T-15H   = S + 15 hours
+ *   T-07H30 = S + 22.5 hours
+ *   T-01H15 = S + 28.75 hours
+ *   T-00    = S + 30 hours
  */
 export const LAUNCH_STAGE_SEQUENCE = [
-  { stageLabel: "T-24H", stage: "CANDIDATE_SELECTED" as const, offsetMs: 0 },
-  { stageLabel: "T-18H", stage: "NARRATIVE_VALIDATION" as const, offsetMs: 6 * 60 * 60 * 1000 },
-  { stageLabel: "T-12H", stage: "PAIRING_VALIDATION" as const, offsetMs: 12 * 60 * 60 * 1000 },
-  { stageLabel: "T-06H", stage: "CONTRACT_PREPARATION" as const, offsetMs: 18 * 60 * 60 * 1000 },
-  { stageLabel: "T-01H", stage: "FINAL_POLICY_CHECK" as const, offsetMs: 23 * 60 * 60 * 1000 },
-  { stageLabel: "T-00",  stage: "CONTROLLED_EXECUTION" as const, offsetMs: 24 * 60 * 60 * 1000 },
+  { stageLabel: "T-30H",   stage: "CANDIDATE_SELECTED" as const, offsetMs: 0 },
+  { stageLabel: "T-22H30", stage: "NARRATIVE_VALIDATION" as const, offsetMs: 7.5 * 60 * 60 * 1000 },
+  { stageLabel: "T-15H",   stage: "PAIRING_VALIDATION" as const, offsetMs: 15 * 60 * 60 * 1000 },
+  { stageLabel: "T-07H30", stage: "CONTRACT_PREPARATION" as const, offsetMs: 22.5 * 60 * 60 * 1000 },
+  { stageLabel: "T-01H15", stage: "FINAL_POLICY_CHECK" as const, offsetMs: 28.75 * 60 * 60 * 1000 },
+  { stageLabel: "T-00",    stage: "CONTROLLED_EXECUTION" as const, offsetMs: 30 * 60 * 60 * 1000 },
 ] as const;
 
 export interface LaunchStageAdvanceResult {
@@ -62,16 +62,16 @@ export async function advanceDueLaunchStages(
       continue;
     }
 
-    // Fetch cycle rows to determine scheduling time S from T-24H completedAt
+    // Fetch cycle rows to determine scheduling time S from T-30H completedAt
     const initialCycleRows = await db
       .select()
       .from(launchCycles)
       .where(eq(launchCycles.launchCandidateId, candidate.id));
 
-    const t24 = initialCycleRows.find((r) => r.stageLabel === "T-24H");
-    const scheduledTime = t24?.completedAt
-      ? new Date(t24.completedAt).getTime()
-      : new Date(candidate.stageDeadlineAt).getTime() - 6 * 60 * 60 * 1000;
+    const t30 = initialCycleRows.find((r) => r.stageLabel === "T-30H");
+    const scheduledTime = t30?.completedAt
+      ? new Date(t30.completedAt).getTime()
+      : new Date(candidate.stageDeadlineAt).getTime() - 7.5 * 60 * 60 * 1000;
 
     // Advance stages sequentially in strict order (never skipping intermediate stages)
     while (true) {
@@ -143,8 +143,8 @@ export async function advanceDueLaunchStages(
         stageDeadlineAt: nextDeadlineAt,
       };
 
-      // Rule 3: Transisi ke T-01H ("Final Policy Check") -> checksPassed = checksTotal (8/8)
-      if (nextStageMeta.stageLabel === "T-01H") {
+      // Rule 3: Transisi ke T-01H15 ("Final Policy Check") -> checksPassed = checksTotal (8/8)
+      if (nextStageMeta.stageLabel === "T-01H15") {
         candidateUpdates.checksPassed = candidate.checksTotal;
       }
 

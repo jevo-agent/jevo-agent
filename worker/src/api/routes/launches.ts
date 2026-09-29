@@ -10,23 +10,23 @@ export interface LaunchIdParams {
 }
 
 const STAGE_ORDER: Record<string, { id: LaunchStage; requirement: string }> = {
-  "T-24H": {
+  "T-30H": {
     id: "CANDIDATE_SELECTED",
     requirement: "Candidate selection is recorded in the active launch cycle.",
   },
-  "T-18H": {
+  "T-22H30": {
     id: "NARRATIVE_VALIDATION",
     requirement: "The selected narrative must remain valid before pair validation.",
   },
-  "T-12H": {
+  "T-15H": {
     id: "PAIRING_VALIDATION",
     requirement: "Complete pair and policy validation before contract preparation.",
   },
-  "T-06H": {
+  "T-07H30": {
     id: "CONTRACT_PREPARATION",
     requirement: "Use only the approved metadata and policy-bounded execution payload.",
   },
-  "T-01H": {
+  "T-01H15": {
     id: "FINAL_POLICY_CHECK",
     requirement: "All policy checks and guardian approval must be complete before execution.",
   },
