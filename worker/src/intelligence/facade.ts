@@ -25,7 +25,17 @@ export interface ProviderModeInfo {
   marketDataMode: "mock" | "real";
   narrativeMode: "mock" | "real";
   stockTokenMode: "mock" | "real";
+  /** Social input is intentionally fixture-backed until a real provider exists. */
+  socialMode: "mock";
   isSimulated: boolean;
+}
+
+export interface ProviderModeSelection {
+  providerMode: "mock" | "real";
+  jevMode: "mock" | "real";
+  marketDataMode: "mock" | "real";
+  narrativeMode: "mock" | "real";
+  stockTokenMode: "mock" | "real";
 }
 
 export interface CanonicalIntelligenceDTO {
@@ -52,22 +62,39 @@ export interface CanonicalIntelligenceDTO {
  * Returns explicit runtime provider mode information.
  * Strictly guarantees that simulated/mock environments are never reported as "real".
  */
-export function getProviderModeInfo(): ProviderModeInfo {
+export function buildProviderModeInfo(
+  modes: ProviderModeSelection,
+): ProviderModeInfo {
+  const socialMode = "mock" as const;
   const isSimulated =
-    env.PROVIDER_MODE === "mock" ||
-    env.JEV_MODE === "mock" ||
-    env.MARKET_DATA_MODE === "mock" ||
-    env.NARRATIVE_MODE === "mock" ||
-    env.STOCK_TOKEN_MODE === "mock";
+    socialMode === "mock" ||
+    modes.providerMode === "mock" ||
+    modes.jevMode === "mock" ||
+    modes.marketDataMode === "mock" ||
+    modes.narrativeMode === "mock" ||
+    modes.stockTokenMode === "mock";
 
   return {
+    // This aggregate is deliberately conservative: any mocked input means
+    // the runtime is simulated, even when other providers are real.
     providerMode: isSimulated ? "mock" : "real",
+    jevMode: modes.jevMode,
+    marketDataMode: modes.marketDataMode,
+    narrativeMode: modes.narrativeMode,
+    stockTokenMode: modes.stockTokenMode,
+    socialMode,
+    isSimulated,
+  };
+}
+
+export function getProviderModeInfo(): ProviderModeInfo {
+  return buildProviderModeInfo({
+    providerMode: env.PROVIDER_MODE,
     jevMode: env.JEV_MODE,
     marketDataMode: env.MARKET_DATA_MODE,
     narrativeMode: env.NARRATIVE_MODE,
     stockTokenMode: env.STOCK_TOKEN_MODE,
-    isSimulated,
-  };
+  });
 }
 
 /**

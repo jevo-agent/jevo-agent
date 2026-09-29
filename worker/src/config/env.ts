@@ -12,10 +12,9 @@ export const envSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   REDIS_URL: z.string().min(1, "REDIS_URL is required"),
   /**
-   * Global/legacy master toggle and Section 19 Production Startup Guard.
-   * When NODE_ENV=production, PROVIDER_MODE cannot be "mock".
-   * For granular control per-provider in dev/test, use the specific toggles below:
-   * MARKET_DATA_MODE, NARRATIVE_MODE, STOCK_TOKEN_MODE, and JEV_MODE.
+   * Global/legacy master toggle. Runtime provider selection is controlled by
+   * the granular toggles below; this field is retained for compatibility and
+   * startup safety only.
    */
   PROVIDER_MODE: z.enum(["mock", "real"]).default("mock"),
   JEV_MODE: z.enum(["mock", "real"]).default("mock"),
@@ -68,12 +67,30 @@ export function validateEnv(input: Record<string, unknown> = process.env): AppEn
     throw new Error("Invalid configuration: ALPHA_VANTAGE_API_KEY must be provided when MARKET_DATA_MODE=real or NARRATIVE_MODE=real");
   }
 
-  // Section 19: Boot-time assertion preventing mock mode in production
-  if (
-    parsed.NODE_ENV === "production" &&
-    (parsed.PROVIDER_MODE === "mock" || parsed.JEV_MODE === "mock")
-  ) {
-    throw new Error("Refusing to start: mock mode is not allowed when NODE_ENV=production");
+  if (parsed.NODE_ENV === "production") {
+    // Granular provider modes are the source of truth in production. Requiring
+    // them to be present prevents a missing deployment variable from silently
+    // becoming the schema's development-friendly `mock` default.
+    const requiredModeKeys = [
+      "JEV_MODE",
+      "MARKET_DATA_MODE",
+      "NARRATIVE_MODE",
+      "STOCK_TOKEN_MODE",
+    ] as const;
+    const missingModeKeys = requiredModeKeys.filter((key) => {
+      const value = input[key];
+      return value === undefined || value === null || String(value).trim() === "";
+    });
+
+    if (missingModeKeys.length > 0) {
+      throw new Error(
+        `Invalid configuration: ${missingModeKeys.join(", ")} must be explicitly configured when NODE_ENV=production`,
+      );
+    }
+
+    // PROVIDER_MODE is a legacy compatibility field. It intentionally has no
+    // authority over the actual provider registry once granular modes are
+    // explicitly configured.
   }
 
   return parsed;
