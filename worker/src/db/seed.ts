@@ -1,48 +1,49 @@
 import { db, pool } from "./client";
 import { assets, memeConcepts } from "./schema";
 import { logger } from "../observability/logger";
+import { CANONICAL_ROBINHOOD_STOCK_TOKENS } from "../providers/robinhood/constants";
 
 export const INITIAL_ASSETS = [
   {
     symbol: "NVDA",
     name: "NVIDIA Stock Token",
-    stockTokenAddress: "0x1000000000000000000000000000000000000001",
+    stockTokenAddress: CANONICAL_ROBINHOOD_STOCK_TOKENS.NVDA?.stockTokenAddress,
     active: true,
   },
   {
     symbol: "TSLA",
     name: "Tesla Stock Token",
-    stockTokenAddress: "0x1000000000000000000000000000000000000002",
+    stockTokenAddress: CANONICAL_ROBINHOOD_STOCK_TOKENS.TSLA?.stockTokenAddress,
     active: true,
   },
   {
     symbol: "PLTR",
     name: "Palantir Stock Token",
-    stockTokenAddress: "0x1000000000000000000000000000000000000003",
+    stockTokenAddress: CANONICAL_ROBINHOOD_STOCK_TOKENS.PLTR?.stockTokenAddress,
     active: true,
   },
   {
     symbol: "AAPL",
     name: "Apple Stock Token",
-    stockTokenAddress: "0x1000000000000000000000000000000000000004",
+    stockTokenAddress: CANONICAL_ROBINHOOD_STOCK_TOKENS.AAPL?.stockTokenAddress,
     active: true,
   },
   {
     symbol: "GME",
     name: "GameStop Stock Token",
-    stockTokenAddress: "0x1000000000000000000000000000000000000005",
+    stockTokenAddress: CANONICAL_ROBINHOOD_STOCK_TOKENS.GME?.stockTokenAddress,
     active: true,
   },
   {
     symbol: "AMD",
     name: "AMD Stock Token",
-    stockTokenAddress: "0x1000000000000000000000000000000000000006",
+    stockTokenAddress: CANONICAL_ROBINHOOD_STOCK_TOKENS.AMD?.stockTokenAddress,
     active: true,
   },
   {
     symbol: "COIN",
     name: "Coinbase Stock Token",
-    stockTokenAddress: "0x1000000000000000000000000000000000000007",
+    stockTokenAddress: CANONICAL_ROBINHOOD_STOCK_TOKENS.COIN?.stockTokenAddress,
     active: true,
   },
 ];
@@ -120,9 +121,22 @@ export async function seedAssets() {
   logger.info("Seeding initial stock assets...");
 
   for (const asset of INITIAL_ASSETS) {
+    if (!asset.stockTokenAddress) {
+      logger.warn(
+        { symbol: asset.symbol },
+        "Asset has no canonical stockTokenAddress in CANONICAL_ROBINHOOD_STOCK_TOKENS; skipping",
+      );
+      continue;
+    }
+
     await db
       .insert(assets)
-      .values(asset)
+      .values({
+        symbol: asset.symbol,
+        name: asset.name,
+        stockTokenAddress: asset.stockTokenAddress,
+        active: asset.active,
+      })
       .onConflictDoUpdate({
         target: assets.symbol,
         set: {
