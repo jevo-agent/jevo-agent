@@ -9,7 +9,7 @@ export class MockStockTokenProvider implements StockTokenProvider {
 
   async getOnchainPrice(address: string): Promise<{ price: number; capturedAt: string }> {
     const asset = Object.values(MOCK_ASSETS).find(
-      (a) => a.stockTokenAddress.toLowerCase() === address.toLowerCase(),
+      (a) => a.stockTokenAddress?.toLowerCase() === address.toLowerCase(),
     );
 
     const price = asset ? (MOCK_MARKET_DATA[asset.symbol]?.price ?? 100.0) : 100.0;

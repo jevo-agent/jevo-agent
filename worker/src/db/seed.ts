@@ -46,6 +46,54 @@ export const INITIAL_ASSETS = [
     stockTokenAddress: CANONICAL_ROBINHOOD_STOCK_TOKENS.COIN?.stockTokenAddress,
     active: true,
   },
+  {
+    symbol: "MSFT",
+    name: "Microsoft Stock Token",
+    stockTokenAddress: null,
+    active: true,
+  },
+  {
+    symbol: "GOOGL",
+    name: "Alphabet Stock Token",
+    stockTokenAddress: null,
+    active: true,
+  },
+  {
+    symbol: "AMZN",
+    name: "Amazon Stock Token",
+    stockTokenAddress: null,
+    active: true,
+  },
+  {
+    symbol: "META",
+    name: "Meta Stock Token",
+    stockTokenAddress: null,
+    active: true,
+  },
+  {
+    symbol: "AVGO",
+    name: "Broadcom Stock Token",
+    stockTokenAddress: null,
+    active: true,
+  },
+  {
+    symbol: "MSTR",
+    name: "MicroStrategy Stock Token",
+    stockTokenAddress: null,
+    active: true,
+  },
+  {
+    symbol: "HOOD",
+    name: "Robinhood Stock Token",
+    stockTokenAddress: null,
+    active: true,
+  },
+  {
+    symbol: "SOFI",
+    name: "SoFi Stock Token",
+    stockTokenAddress: null,
+    active: true,
+  },
 ];
 
 export const CURATED_MEME_CONCEPTS = [
@@ -121,27 +169,19 @@ export async function seedAssets() {
   logger.info("Seeding initial stock assets...");
 
   for (const asset of INITIAL_ASSETS) {
-    if (!asset.stockTokenAddress) {
-      logger.warn(
-        { symbol: asset.symbol },
-        "Asset has no canonical stockTokenAddress in CANONICAL_ROBINHOOD_STOCK_TOKENS; skipping",
-      );
-      continue;
-    }
-
     await db
       .insert(assets)
       .values({
         symbol: asset.symbol,
         name: asset.name,
-        stockTokenAddress: asset.stockTokenAddress,
+        stockTokenAddress: asset.stockTokenAddress ?? null,
         active: asset.active,
       })
       .onConflictDoUpdate({
         target: assets.symbol,
         set: {
           name: asset.name,
-          stockTokenAddress: asset.stockTokenAddress,
+          stockTokenAddress: asset.stockTokenAddress ?? null,
           active: asset.active,
         },
       });

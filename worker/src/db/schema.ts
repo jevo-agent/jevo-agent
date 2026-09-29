@@ -21,7 +21,7 @@ import type {
 export const assets = pgTable("assets", {
   symbol: text("symbol").primaryKey(),
   name: text("name").notNull(),
-  stockTokenAddress: text("stock_token_address").notNull().unique(),
+  stockTokenAddress: text("stock_token_address").unique(),
   active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });

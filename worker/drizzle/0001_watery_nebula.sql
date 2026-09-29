@@ -1,0 +1,1 @@
+ALTER TABLE "assets" ALTER COLUMN "stock_token_address" DROP NOT NULL;

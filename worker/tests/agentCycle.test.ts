@@ -10,6 +10,7 @@ import {
   protocolEvents,
   rankHistory,
 } from "../src/db/schema";
+import { INITIAL_ASSETS } from "../src/db/seed";
 import { DecisionEngine, MockJevProvider } from "../src/jev";
 import {
   closeCycleQueue,
@@ -75,7 +76,7 @@ describe("Agent Cycle Orchestration (BACKEND 05)", () => {
       expect(result.status).toBe("COMPLETED");
       expect(result.cycleId).toBe(integrationCycleId);
       expect(result.kind).toBe("DELTA");
-      expect(result.assetsScanned).toBe(7); // NVDA, TSLA, PLTR, AAPL, GME, AMD, COIN
+      expect(result.assetsScanned).toBe(INITIAL_ASSETS.length);
       expect(result.signalsProcessed).toBeGreaterThan(0);
       expect(result.rankingSummary).toBeDefined();
 
@@ -88,43 +89,43 @@ describe("Agent Cycle Orchestration (BACKEND 05)", () => {
       expect(cycleRow).toBeDefined();
       expect(cycleRow.status).toBe("COMPLETED");
       expect(cycleRow.kind).toBe("DELTA");
-      expect(cycleRow.assetsScanned).toBe(7);
+      expect(cycleRow.assetsScanned).toBe(INITIAL_ASSETS.length);
       expect(cycleRow.completedAt).not.toBeNull();
 
-      // 2. Verify jev_decisions table (7 decisions recorded, 1 per asset)
+      // 2. Verify jev_decisions table (decisions recorded, 1 per asset)
       const decisions = await db
         .select()
         .from(jevDecisions)
         .where(eq(jevDecisions.cycleId, integrationCycleId));
 
-      expect(decisions.length).toBe(7);
+      expect(decisions.length).toBe(INITIAL_ASSETS.length);
       const nvdaDecision = decisions.find((d) => d.symbol === "NVDA");
       expect(nvdaDecision).toBeDefined();
       expect(nvdaDecision!.decision).toBe("PROMOTE");
       expect(nvdaDecision!.confidence).toBe(94);
 
-      // 3. Verify opportunity_scores table (7 rows, scores > 0)
+      // 3. Verify opportunity_scores table (rows, scores > 0)
       const scores = await db
         .select()
         .from(opportunityScores)
         .where(eq(opportunityScores.cycleId, integrationCycleId));
 
-      expect(scores.length).toBe(7);
+      expect(scores.length).toBe(INITIAL_ASSETS.length);
       const nvdaScore = scores.find((s) => s.symbol === "NVDA");
       expect(nvdaScore).toBeDefined();
       expect(nvdaScore!.score).toBeGreaterThan(50);
       expect(nvdaScore!.marketMomentum).toBeGreaterThan(0);
       expect(nvdaScore!.socialVelocity).toBeGreaterThan(0);
 
-      // 4. Verify rank_history table (7 rows, ranked #1 to #7)
+      // 4. Verify rank_history table (ranked #1 to #N)
       const ranks = await db
         .select()
         .from(rankHistory)
         .where(eq(rankHistory.cycleId, integrationCycleId));
 
-      expect(ranks.length).toBe(7);
+      expect(ranks.length).toBe(INITIAL_ASSETS.length);
       const rankedNumbers = ranks.map((r) => r.currentRank).sort((a, b) => a - b);
-      expect(rankedNumbers).toEqual([1, 2, 3, 4, 5, 6, 7]);
+      expect(rankedNumbers).toEqual(Array.from({ length: INITIAL_ASSETS.length }, (_, i) => i + 1));
 
       // 5. Verify memory_events & protocol_events
       const memories = await db
@@ -189,13 +190,13 @@ describe("Agent Cycle Orchestration (BACKEND 05)", () => {
         .select()
         .from(jevDecisions)
         .where(eq(jevDecisions.cycleId, idempotentCycleId));
-      expect(countDecisionsRun1.length).toBe(7);
+      expect(countDecisionsRun1.length).toBe(INITIAL_ASSETS.length);
 
       const countRanksRun1 = await db
         .select()
         .from(rankHistory)
         .where(eq(rankHistory.cycleId, idempotentCycleId));
-      expect(countRanksRun1.length).toBe(7);
+      expect(countRanksRun1.length).toBe(INITIAL_ASSETS.length);
 
       // Run cycle second time with the exact same cycleId
       const secondRun = await executeAgentCycle("DELTA", {
@@ -207,13 +208,13 @@ describe("Agent Cycle Orchestration (BACKEND 05)", () => {
         .select()
         .from(jevDecisions)
         .where(eq(jevDecisions.cycleId, idempotentCycleId));
-      expect(countDecisionsRun2.length).toBe(7);
+      expect(countDecisionsRun2.length).toBe(INITIAL_ASSETS.length);
 
       const countRanksRun2 = await db
         .select()
         .from(rankHistory)
         .where(eq(rankHistory.cycleId, idempotentCycleId));
-      expect(countRanksRun2.length).toBe(7);
+      expect(countRanksRun2.length).toBe(INITIAL_ASSETS.length);
     });
   });
 
@@ -274,9 +275,9 @@ describe("Agent Cycle Orchestration (BACKEND 05)", () => {
       });
       expect(resultA.status).toBe("COMPLETED");
 
-      // In cycle A, all 7 assets are evaluated
-      expect(decideForAssetCalls).toBe(7);
-      expect(evaluateQualitativeScoresCalls).toBe(7);
+      // In cycle A, all assets are evaluated
+      expect(decideForAssetCalls).toBe(INITIAL_ASSETS.length);
+      expect(evaluateQualitativeScoresCalls).toBe(INITIAL_ASSETS.length);
 
       // Reset spy counters before cycle B
       decideForAssetCalls = 0;

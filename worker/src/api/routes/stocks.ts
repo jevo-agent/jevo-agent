@@ -5,8 +5,8 @@ import type {
   OpportunityScoreDetail,
   PairingCandidateRecord,
   RankSnapshot,
-  StockAsset,
 } from "@jevo/protocol-types";
+import type { StockAsset } from "../../providers/types";
 import { desc, eq } from "drizzle-orm";
 import { db } from "../../db/client";
 import {

@@ -1,10 +1,13 @@
 import type {
   MarketSnapshot,
   SignalObservation,
-  StockAsset,
+  StockAsset as ProtocolStockAsset,
 } from "@jevo/protocol-types";
 
-export type { MarketSnapshot, SignalObservation, StockAsset };
+export type StockAsset = Omit<ProtocolStockAsset, "stockTokenAddress"> & {
+  stockTokenAddress: string | null;
+};
+export type { MarketSnapshot, SignalObservation };
 
 export interface MarketDataProvider {
   getSnapshot(symbol: string): Promise<MarketSnapshot>;

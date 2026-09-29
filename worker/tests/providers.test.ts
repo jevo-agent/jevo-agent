@@ -11,6 +11,7 @@ import {
   withProviderHealth,
   wrapProviderWithHealthLogging,
 } from "../src/providers";
+import { MOCK_ASSETS } from "../src/providers/mock/fixtures";
 
 describe("Provider Contracts & Mocks (BACKEND 02)", () => {
   afterAll(async () => {
@@ -47,7 +48,7 @@ describe("Provider Contracts & Mocks (BACKEND 02)", () => {
       expect(typeof onchainPrice.capturedAt).toBe("string");
 
       const assetsList = await provider.listActiveAssets();
-      expect(assetsList.length).toBe(7);
+      expect(assetsList.length).toBe(Object.keys(MOCK_ASSETS).length);
       const symbols = assetsList.map((a) => a.symbol);
       expect(symbols).toContain("NVDA");
       expect(symbols).toContain("COIN");

@@ -66,6 +66,70 @@ const FIXTURE_CHOICES: Record<string, { choice: string; confidence: number; sign
       "Exchange volumes stable",
     ],
   },
+  MSFT: {
+    choice: "HOLD",
+    confidence: 88,
+    signals: [
+      "Copilot enterprise integration continues at scale",
+      "Steady revenue growth across commercial cloud",
+    ],
+  },
+  GOOGL: {
+    choice: "HOLD",
+    confidence: 85,
+    signals: [
+      "Gemini multimodal benchmarks solid",
+      "Search ads market share resilient",
+    ],
+  },
+  AMZN: {
+    choice: "HOLD",
+    confidence: 84,
+    signals: [
+      "AWS custom Graviton/Trainium rollout progressing",
+      "E-commerce operating income expanding",
+    ],
+  },
+  META: {
+    choice: "PROMOTE",
+    confidence: 91,
+    signals: [
+      "Llama open source developer moat strengthening",
+      "Engagement and advertising conversions accelerating",
+    ],
+  },
+  AVGO: {
+    choice: "HOLD",
+    confidence: 86,
+    signals: [
+      "AI networking switches and custom XPU backlog expanding",
+      "VMware synergy integration on track",
+    ],
+  },
+  MSTR: {
+    choice: "PROMOTE",
+    confidence: 93,
+    signals: [
+      "Direct crypto treasury reflexivity premium",
+      "Exceptional social and speculative attention velocity",
+    ],
+  },
+  HOOD: {
+    choice: "HOLD",
+    confidence: 82,
+    signals: [
+      "Retail equities and crypto volume elevated",
+      "International tokenization rollout pending",
+    ],
+  },
+  SOFI: {
+    choice: "HOLD",
+    confidence: 80,
+    signals: [
+      "Member growth steady across lending and financial services",
+      "Rate environment sensitivity moderating",
+    ],
+  },
 };
 
 const FIXTURE_SCORES: Record<string, Record<string, number>> = {
@@ -117,6 +181,62 @@ const FIXTURE_SCORES: Record<string, Record<string, number>> = {
     memeCompatibility: 89,
     cryptoAdjacency: 98,
     pairCompatibility: 92,
+  },
+  MSFT: {
+    narrativeMomentum: 92,
+    culturalRelevance: 88,
+    memeCompatibility: 72,
+    cryptoAdjacency: 60,
+    pairCompatibility: 82,
+  },
+  GOOGL: {
+    narrativeMomentum: 90,
+    culturalRelevance: 89,
+    memeCompatibility: 70,
+    cryptoAdjacency: 62,
+    pairCompatibility: 80,
+  },
+  AMZN: {
+    narrativeMomentum: 89,
+    culturalRelevance: 87,
+    memeCompatibility: 68,
+    cryptoAdjacency: 64,
+    pairCompatibility: 78,
+  },
+  META: {
+    narrativeMomentum: 94,
+    culturalRelevance: 93,
+    memeCompatibility: 86,
+    cryptoAdjacency: 78,
+    pairCompatibility: 91,
+  },
+  AVGO: {
+    narrativeMomentum: 91,
+    culturalRelevance: 83,
+    memeCompatibility: 65,
+    cryptoAdjacency: 72,
+    pairCompatibility: 85,
+  },
+  MSTR: {
+    narrativeMomentum: 96,
+    culturalRelevance: 95,
+    memeCompatibility: 96,
+    cryptoAdjacency: 99,
+    pairCompatibility: 95,
+  },
+  HOOD: {
+    narrativeMomentum: 88,
+    culturalRelevance: 89,
+    memeCompatibility: 88,
+    cryptoAdjacency: 91,
+    pairCompatibility: 87,
+  },
+  SOFI: {
+    narrativeMomentum: 85,
+    culturalRelevance: 80,
+    memeCompatibility: 76,
+    cryptoAdjacency: 75,
+    pairCompatibility: 79,
   },
 };
 

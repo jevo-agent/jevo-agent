@@ -17,11 +17,12 @@ describe("Database Schema & Uniqueness Constraints (BACKEND 01)", () => {
     await db.delete(memeConcepts).where(eq(memeConcepts.id, "concept-gpu-test"));
   });
 
-  it("has the 7 required stock assets seeded properly", async () => {
+  it("has exactly 15 stock assets seeded properly (7 canonical + 8 unverified)", async () => {
     const rows = await db.select().from(assets);
     const symbols = rows.map((r) => r.symbol);
 
-    expect(rows.length).toBeGreaterThanOrEqual(7);
+    expect(rows.length).toBe(15);
+    // 7 canonical Robinhood tokens
     expect(symbols).toContain("NVDA");
     expect(symbols).toContain("TSLA");
     expect(symbols).toContain("PLTR");
@@ -29,6 +30,14 @@ describe("Database Schema & Uniqueness Constraints (BACKEND 01)", () => {
     expect(symbols).toContain("GME");
     expect(symbols).toContain("AMD");
     expect(symbols).toContain("COIN");
+
+    // 8 newly expanded symbols
+    const newSymbols = ["MSFT", "GOOGL", "AMZN", "META", "AVGO", "MSTR", "HOOD", "SOFI"];
+    for (const sym of newSymbols) {
+      expect(symbols).toContain(sym);
+      const row = rows.find((r) => r.symbol === sym);
+      expect(row?.stockTokenAddress).toBeNull();
+    }
   });
 
   it("CRITICAL: rejects duplicate (cycle_id, symbol) insert on rank_history", async () => {
