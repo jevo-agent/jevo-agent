@@ -102,7 +102,7 @@ that state through the API and receives invalidation events through SSE. The
 shared `@jevo/protocol-types` package keeps API envelopes, records, and event
 shapes aligned across the two applications.
 
-## Vercel deployment
+## Production Deployment
 
 JEVO Agent is deployed through project at [www.jevoagent.tech](https://www.jevoagent.tech/).
 
