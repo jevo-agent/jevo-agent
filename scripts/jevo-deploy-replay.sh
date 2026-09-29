@@ -19,10 +19,10 @@ if ! command -v jq >/dev/null 2>&1; then
     exit 1
 fi
 
-# Locate broadcast file
-BROADCAST_FILE="$REPO_ROOT/contracts/broadcast/Deploy.s.sol/46630/run-latest.json"
-if [[ ! -f "$BROADCAST_FILE" ]]; then
-    echo "[!] Error: Broadcast file not found at: $BROADCAST_FILE" >&2
+# Locate broadcast file (auto-detect most recently modified across all chain-id subfolders)
+BROADCAST_FILE=$(ls -t "$REPO_ROOT/contracts/broadcast/Deploy.s.sol"/*/run-latest.json 2>/dev/null | head -n 1 || true)
+if [[ -z "$BROADCAST_FILE" || ! -f "$BROADCAST_FILE" ]]; then
+    echo "[!] Error: Broadcast file not found under: $REPO_ROOT/contracts/broadcast/Deploy.s.sol/*/run-latest.json" >&2
     exit 1
 fi
 

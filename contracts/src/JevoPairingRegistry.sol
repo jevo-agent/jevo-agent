@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 /**
  * @title JevoPairingRegistry
  * @notice Immutable record registry for operator-approved pairings between stocks and meme tokens.
- * @dev Testnet-only demo contract. Does not hold funds, handle tokens, or execute launches.
+ * @dev Immutable transparency registry. Does not hold funds, handle tokens, or execute launches.
  */
 contract JevoPairingRegistry {
     /// @notice Record representing an approved pairing.
