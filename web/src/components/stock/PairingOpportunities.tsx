@@ -14,7 +14,7 @@ export function PairingOpportunities({ asset, pairing }: PairingOpportunitiesPro
   ];
 
   return (
-    <section className="flex h-full flex-col" aria-labelledby="pairing-opportunities-title">
+    <section className="flex flex-1 flex-col" aria-labelledby="pairing-opportunities-title">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--jevo-line)] px-5 py-4"><h2 id="pairing-opportunities-title" className="font-mono text-[0.65rem] tracking-[0.08em] text-[var(--jevo-text)] uppercase">Pairing opportunities</h2><p className="font-mono text-[0.6rem] tracking-[0.08em] text-[var(--jevo-muted)] uppercase">{opportunities.length} candidates</p></div>
       <div className="divide-y divide-[var(--jevo-line)]">
         {opportunities.map((opportunity, index) => <Link key={opportunity.label} href={opportunity.href} className="block p-5 transition-colors hover:bg-[rgb(255_255_255_/_1.5%)]" aria-label={`Open ${opportunity.label} pairing analysis`}><div className="flex items-baseline justify-between gap-4"><strong className="text-xl font-medium tracking-[-0.06em] text-[var(--jevo-text)]">{opportunity.label.split(" × ")[0]} × <span className={index === 0 ? "text-[var(--jevo-accent)]" : "text-[var(--jevo-text)]"}>{opportunity.label.split(" × ")[1]}</span></strong><em className={index === 0 ? "font-mono text-lg not-italic text-[var(--jevo-accent)]" : "font-mono text-lg not-italic text-[var(--jevo-text)]"}>{opportunity.score}</em></div><p className="mt-2 text-sm leading-6 text-[var(--jevo-muted)]">{opportunity.description}</p></Link>)}

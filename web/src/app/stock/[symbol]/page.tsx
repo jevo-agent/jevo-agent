@@ -41,7 +41,7 @@ export default function StockDetailPage({ params }: StockPageProps) {
               <DecisionSummary asset={asset} agent={state.data.agent} />
               <JevEvaluation asset={asset} />
             </div>
-            <aside className="border-t border-[var(--jevo-line)] lg:border-t-0 lg:border-l">
+            <aside className="flex flex-col border-t border-[var(--jevo-line)] lg:border-t-0 lg:border-l">
               <SignalInspector asset={asset} />
               <PairingOpportunities asset={asset} pairing={primaryPairing} />
             </aside>
