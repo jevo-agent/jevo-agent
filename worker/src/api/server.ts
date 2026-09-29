@@ -12,6 +12,7 @@ import { stocksRoutes } from "./routes/stocks";
 import { adminRoutes } from "./routes/admin";
 import { cronRoutes } from "./routes/cron";
 import { internalRoutes } from "./routes/internal";
+import { intelligenceRoutes } from "./routes/intelligence";
 
 export async function createServer(): Promise<FastifyInstance> {
   const app = fastify({
@@ -75,6 +76,7 @@ export async function createServer(): Promise<FastifyInstance> {
       await v1.register(eventsRoutes);
       await v1.register(adminRoutes, { prefix: "/admin" });
       await v1.register(internalRoutes);
+      await v1.register(intelligenceRoutes, { prefix: "/intelligence" });
     },
     { prefix: "/api/v1" },
   );
