@@ -64,7 +64,7 @@ export function HeaderSocialLinks() {
 
 export function SidebarSocialLinks() {
   return (
-    <div className="side-socials" data-social-group="sidebar">
+    <div className="hidden! side-socials" data-social-group="sidebar">
       <a
         href={SOCIAL_LINKS.x.url}
         target="_blank"
