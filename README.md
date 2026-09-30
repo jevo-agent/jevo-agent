@@ -10,7 +10,7 @@
 
 **Autonomous market intelligence for discovering, evaluating, and preparing the next stock × meme opportunity.**
 
-[**Live site**](https://www.jevoagent.tech/) · [**X**](https://x.com/jevoaagentt) · [**GitHub**](https://github.com/Castforge-prompt/Jevo)
+<!-- [**Live site**](https://www.jevoagent.tech/) · [**X**](https://x.com/jevoaagentt) · [**GitHub**](https://github.com/Castforge-prompt/Jevo) -->
 
 </div>
 
@@ -104,7 +104,7 @@ shapes aligned across the two applications.
 
 ## Production Deployment
 
-JEVO Agent is deployed through project at [www.jevoagent.tech](https://www.jevoagent.tech/).
+<!-- JEVO Agent is deployed through project at [www.jevoagent.tech](https://www.jevoagent.tech/). -->
 
 The repository's `vercel.json` defines two services in one deployment:
 
