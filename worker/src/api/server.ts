@@ -21,9 +21,9 @@ export async function createServer(): Promise<FastifyInstance> {
   });
 
   // Diagnostic error handler to expose underlying DB driver causes in Vercel logs
-  app.setErrorHandler((error, request, reply) => {
+  app.setErrorHandler((error: any, request, reply) => {
     const statusCode =
-      error.statusCode && error.statusCode >= 400 && error.statusCode < 600
+      error?.statusCode && error.statusCode >= 400 && error.statusCode < 600
         ? error.statusCode
         : 500;
 
