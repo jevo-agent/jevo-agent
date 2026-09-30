@@ -25,6 +25,12 @@ export interface ApiEnvelope<T> {
 }
 
 function getBaseUrl(): string {
+  // In the browser, prefer same-origin relative path /api/v1 so any custom domain
+  // (e.g. jevoagent.tech) works seamlessly without cross-origin CORS barriers.
+  if (typeof window !== "undefined") {
+    return "/api/v1";
+  }
+
   const envUrl =
     typeof process !== "undefined" ? process.env.NEXT_PUBLIC_API_URL : undefined;
   if (envUrl) {
@@ -38,9 +44,7 @@ function getBaseUrl(): string {
     return "/api/fixture";
   }
 
-  throw new Error(
-    "JEVO API is not configured. Set NEXT_PUBLIC_API_URL or explicitly enable NEXT_PUBLIC_JEVO_DEMO_MODE.",
-  );
+  return "/api/v1";
 }
 
 export function isJevoDemoMode() {
