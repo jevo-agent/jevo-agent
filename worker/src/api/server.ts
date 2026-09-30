@@ -42,8 +42,12 @@ export async function createServer(): Promise<FastifyInstance> {
     });
   });
 
-  // Register CORS to allow web frontend access (e.g. Next.js at NEXT_PUBLIC_APP_URL or localhost in dev)
-  const allowedOrigins = new Set<string>();
+  // Register CORS to allow web frontend access
+  const allowedOrigins = new Set<string>([
+    "https://jevoagent.tech",
+    "https://www.jevoagent.tech",
+    "https://jevo.vercel.app",
+  ]);
   if (env.NEXT_PUBLIC_APP_URL) {
     allowedOrigins.add(env.NEXT_PUBLIC_APP_URL);
   }
@@ -57,24 +61,23 @@ export async function createServer(): Promise<FastifyInstance> {
       // Allow requests with no origin (e.g. curl, server-to-server)
       if (!origin) return cb(null, true);
 
-      // Section 19 safety guard: in production, strictly allow ONLY configured NEXT_PUBLIC_APP_URL
-      if (env.NODE_ENV === "production") {
-        if (allowedOrigins.has(origin)) {
+      try {
+        const parsed = new URL(origin);
+        if (
+          allowedOrigins.has(origin) ||
+          parsed.hostname === "jevoagent.tech" ||
+          parsed.hostname.endsWith(".jevoagent.tech") ||
+          parsed.hostname.endsWith(".vercel.app") ||
+          parsed.hostname === "localhost" ||
+          parsed.hostname === "127.0.0.1"
+        ) {
           return cb(null, true);
         }
-        return cb(new Error("CORS origin not allowed in production"), false);
+      } catch {
+        // invalid URL
       }
 
-      // In development/test: allow explicit origins or local frontend hosts
-      if (
-        allowedOrigins.has(origin) ||
-        origin.startsWith("http://localhost:") ||
-        origin.startsWith("http://127.0.0.1:")
-      ) {
-        return cb(null, true);
-      }
-
-      return cb(new Error("CORS origin not allowed"), false);
+      return cb(new Error("CORS origin not allowed in production"), false);
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
