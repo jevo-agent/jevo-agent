@@ -5,6 +5,7 @@ import { adminAgentRoutes } from "./agent";
 import { adminPairingRoutes } from "./pairings";
 import { adminLaunchRoutes } from "./launches";
 import { adminConfigRoutes } from "./config";
+import { adminSystemRoutes } from "./system";
 
 export const adminRoutes: FastifyPluginAsync = async (fastify) => {
   // Enforce Bearer token allowlist on all admin routes
@@ -15,4 +16,5 @@ export const adminRoutes: FastifyPluginAsync = async (fastify) => {
   await fastify.register(adminPairingRoutes);
   await fastify.register(adminLaunchRoutes);
   await fastify.register(adminConfigRoutes);
+  await fastify.register(adminSystemRoutes);
 };
