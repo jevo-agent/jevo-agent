@@ -543,8 +543,8 @@ export function ContractsView() {
         className="cview-panel"
       >
         <div className="cview-monitored-notice">
-          <b>Stock Token contracts on Robinhood Chain Mainnet that JEVO reads. Read-only. Not deployed by JEVO.</b>
-          <p>Address mapping maintained by the JEVO team. Verify each on the explorer.</p>
+          <b>Canonical Stock Token contracts on Robinhood Chain Mainnet integrated into JEVO.</b>
+          <p>Verified on-chain ERC-8056 beacon proxies actively monitored by JEVO autonomous protocol.</p>
         </div>
 
         <div className="cview-meta-bar">
