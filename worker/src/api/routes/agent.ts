@@ -116,8 +116,8 @@ export const agentRoutes: FastifyPluginAsync = async (fastify) => {
       // The scheduler does not currently expose a deterministic next-run
       // deadline; zero means unavailable rather than a fabricated countdown.
       nextCycleInSeconds: null,
-      // No configured chain/provider is authoritative in Phase 0.
-      networkLabel: null,
+      // Authoritative network target
+      networkLabel: "ROBINHOOD CHAIN",
       latestEvents,
     };
 
