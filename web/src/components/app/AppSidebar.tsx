@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 
 import type { AgentRuntime } from "@/types/agent";
 import { formatCycle } from "@/lib/format";
-import { getDeploymentSummary } from "@/lib/deployments";
+import { getDeploymentSummary, CHAIN_ID_MAP } from "@/lib/deployments";
 import { SidebarSocialLinks } from "@/components/ui/SocialLinks";
 
 interface AppSidebarProps { agent: AgentRuntime; activeSection?: string; }
@@ -48,6 +48,8 @@ export function AppSidebar({ agent, activeSection: activeSectionProp }: AppSideb
     return sections.some((section) => section.id === hash) ? hash : "overview";
   });
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const isTestnet = agent.networkLabel?.toLowerCase().includes("testnet") ?? false;
+  const chainId = isTestnet ? CHAIN_ID_MAP.testnet : CHAIN_ID_MAP.mainnet;
   const appPage = pathname === "/app";
 
   const effectiveSection =
@@ -167,7 +169,7 @@ export function AppSidebar({ agent, activeSection: activeSectionProp }: AppSideb
             </div>
             <div className="row">
               <span className="label">Chain ID</span>
-              <span className="label"><b>—</b></span>
+              <span className="label"><b>{chainId}</b></span>
             </div>
             <div className="row">
               <span className="label">Contracts</span>
