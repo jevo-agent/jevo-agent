@@ -1,3 +1,4 @@
+import { STATUS_CODES } from "node:http";
 import fastify, { type FastifyInstance } from "fastify";
 import cors from "@fastify/cors";
 import { env } from "../config/env";
@@ -17,6 +18,28 @@ import { intelligenceRoutes } from "./routes/intelligence";
 export async function createServer(): Promise<FastifyInstance> {
   const app = fastify({
     logger: false,
+  });
+
+  // Diagnostic error handler to expose underlying DB driver causes in Vercel logs
+  app.setErrorHandler((error, request, reply) => {
+    const statusCode =
+      error.statusCode && error.statusCode >= 400 && error.statusCode < 600
+        ? error.statusCode
+        : 500;
+
+    if (statusCode >= 500) {
+      console.error("[API_500_DIAGNOSTIC]", {
+        url: request.raw.url,
+        message: error.message,
+        cause: error.cause,
+      });
+    }
+
+    return reply.status(statusCode).send({
+      statusCode,
+      error: STATUS_CODES[statusCode] ?? error.name ?? "Error",
+      message: error.message,
+    });
   });
 
   // Register CORS to allow web frontend access (e.g. Next.js at NEXT_PUBLIC_APP_URL or localhost in dev)
