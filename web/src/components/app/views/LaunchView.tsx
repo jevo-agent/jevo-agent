@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
 import { formatCountdown } from "@/lib/format";
@@ -90,6 +91,18 @@ const STANDBY_POLICY_CHECKS = [
 ];
 
 export function LaunchView({ launch, pairing, agent }: LaunchViewProps) {
+  const [secondsRemaining, setSecondsRemaining] = useState(
+    launch?.countdownSeconds ?? 108000,
+  );
+
+  useEffect(() => {
+    setSecondsRemaining(launch?.countdownSeconds ?? 108000);
+    const interval = setInterval(() => {
+      setSecondsRemaining((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [launch?.countdownSeconds]);
+
   // When no active launch exists:
   if (!launch) {
     return (
@@ -312,7 +325,7 @@ export function LaunchView({ launch, pairing, agent }: LaunchViewProps) {
             </b>
           </p>
           <div className="clock-big">
-            T-{formatCountdown(launch.countdownSeconds)}
+            T-{formatCountdown(secondsRemaining)}
           </div>
           <p className="label">Phase 0 / worker launch state</p>
           <ol className="lcycle">

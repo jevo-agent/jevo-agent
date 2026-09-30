@@ -1796,6 +1796,18 @@ function PipelineSection({
   );
   const [selectedStageIndex, setSelectedStageIndex] =
     useState(canonicalStageIndex);
+  const [secondsRemaining, setSecondsRemaining] = useState(
+    launch.countdownSeconds ?? 108000,
+  );
+
+  useEffect(() => {
+    setSecondsRemaining(launch.countdownSeconds ?? 108000);
+    const interval = setInterval(() => {
+      setSecondsRemaining((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [launch.countdownSeconds]);
+
   return (
     <section className="section" id="pipeline">
       <div className="wrap">
@@ -1855,7 +1867,7 @@ function PipelineSection({
               </b>
             </p>
             <div className="clock">
-              T-{formatCountdown(launch.countdownSeconds)}
+              T-{formatCountdown(secondsRemaining)}
             </div>
             <p className="label">Simulated 30h cycle / phase 0</p>
             <ol className="cycle">

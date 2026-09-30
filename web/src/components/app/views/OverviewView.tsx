@@ -1924,6 +1924,18 @@ function LaunchSummary({
   passedChecks: number;
   isError?: boolean;
 }) {
+  const [secondsRemaining, setSecondsRemaining] = useState(
+    launch?.countdownSeconds ?? 108000,
+  );
+
+  useEffect(() => {
+    setSecondsRemaining(launch?.countdownSeconds ?? 108000);
+    const interval = setInterval(() => {
+      setSecondsRemaining((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [launch?.countdownSeconds]);
+
   if (isError) {
     return (
       <div className="app-launch-layout empty-state">
@@ -1986,7 +1998,7 @@ function LaunchSummary({
         <span className="label">
           Next agent launch / {pairing ? `${pairing.stockSymbol} × ${pairing.symbol}` : "STANDBY"}
         </span>
-        <div className="clock-big">T-{formatCountdown(launch.countdownSeconds)}</div>
+        <div className="clock-big">T-{formatCountdown(secondsRemaining)}</div>
         <span className="label">{launch.cycleId} / Phase 0 / worker state</span>
         <ul className="lcycle">
           {launch.stages.map((stage) => (
